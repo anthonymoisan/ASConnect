@@ -2,10 +2,20 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>NSCameraUsageDescription</key>
+	<string>Autoriser l’accès à la caméra pour prendre une photo.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Autoriser l’accès à la photothèque pour importer une photo.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Autoriser le microphone si nécessaire pour la vidéo.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Votre position est utilisée pour centrer la carte.</string>	
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>Votre position est utilisée pour centrer la carte.</string>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>Asconnect</string>
+	<string>AS Connect</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -13,7 +23,7 @@
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>asconnect</string>
+	<string>AS Connect</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
@@ -45,5 +55,9 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>fetch</string>
+	</array>
 </dict>
 </plist>

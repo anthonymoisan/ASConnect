@@ -1,0 +1,321 @@
+{
+  "@@locale": "es",
+
+  "appTitle": "ASConnexion",
+  "systemLanguage": "Sistema",
+
+  "menu": "Menú",
+  "menuNavigation": "Navegación",
+  "menuMyProfile": "Mi perfil",
+  "menuContact": "Contactarnos",
+  "menuPrivacyPolicy": "Política de privacidad",
+  "menuVersion": "Versión",
+  "menuContactSubject": "Contacto desde la app",
+
+  "languageLabel": "Idioma",
+  "currentLanguage": "Actual: {label}",
+  "@currentLanguage": {
+    "placeholders": {
+      "label": { "type": "String" }
+    }
+  },
+
+  "cancel": "Cancelar",
+  "confirm": "Confirmar",
+  "ok": "OK",
+
+  "logoutTitle": "Cerrar sesión",
+  "logoutConfirm": "¿Seguro(a) que deseas cerrar sesión en la aplicación?",
+
+  "tabCommunity": "Conectarse con la comunidad",
+  "tabChats": "Mis chats",
+  "tabPoi": "Puntos de interés",
+
+  "profileUpdated": "Perfil actualizado ✅",
+
+  "loginTitle": "Iniciar sesión",
+  "loginIntro": "La aplicación ASConnect está destinada únicamente a cuidadores que tienen un hijo con el síndrome de Angelman, una enfermedad genética rara.",
+  "emailLabel": "Correo electrónico",
+  "emailHintRequired": "Introduce tu correo",
+  "emailHintInvalid": "Correo no válido",
+  "passwordLabel": "Contraseña",
+  "show": "Mostrar",
+  "hide": "Ocultar",
+  "passwordRequired": "Introduce tu contraseña",
+  "loginButton": "Iniciar sesión",
+  "loginLoading": "Conectando…",
+  "createAccount": "Crear una cuenta",
+  "forgotPassword": "¿Olvidaste tu contraseña?",
+
+  "invalidCredentials": "Credenciales inválidas.",
+  "accessDeniedKey": "Acceso denegado: clave de la aplicación ausente o inválida.",
+  "badRequest": "Solicitud no válida (400).",
+  "tooManyAttempts": "Demasiados intentos. Inténtalo de nuevo en un momento.",
+  "serviceUnavailable": "Servicio no disponible. Inténtalo más tarde.",
+  "serverErrorWithCode": "Error del servidor ({code}).",
+  "unexpectedServerResponse": "Respuesta inesperada del servidor.",
+  "cannotConnectServer": "No se puede conectar con el servidor.",
+  "timeoutCheckConnection": "Tiempo de espera agotado. Verifica tu conexión.",
+  "errorWithMessage": "Error: {message}",
+
+  "missingAppKeyWarning": "⚠️ Falta la clave de la app. Ejecuta la app con --dart-define=PUBLIC_APP_KEY=tu_clave_publica",
+
+  "signupTitle": "Crear una cuenta",
+  "signupSectionPerson": "Persona con síndrome de Angelman",
+  "signupSectionAuth": "Autenticación",
+  "consentTitle": "Consentimiento",
+
+  "firstNameLabel": "Nombre",
+  "firstNameRequired": "El nombre es obligatorio",
+  "lastNameLabel": "Apellido",
+  "lastNameRequired": "El apellido es obligatorio",
+
+  "birthdateLabel": "Fecha de nacimiento (dd/mm/aaaa)",
+  "birthdateRequired": "La fecha de nacimiento es obligatoria",
+  "chooseDate": "Elegir una fecha",
+  "signupBirthdateHelp": "Fecha de nacimiento",
+
+  "genotypeLabel": "Genotipo",
+  "genotypeRequired": "El genotipo es obligatorio",
+  "genotypeDeletion": "Deleción",
+  "genotypeMutation": "Mutación",
+  "genotypeUpd": "UPD",
+  "genotypeIcd": "ICD",
+  "genotypeClinical": "Clínico",
+  "genotypeMosaic": "Mosaico",
+
+  "signupPhotoHint": "Foto del niño/a (obligatoria, < 4 MB)",
+  "importPhoto": "Importar una foto",
+  "takePhoto": "Tomar una foto",
+  "deletePhoto": "Eliminar la foto",
+  "signupPhotoRequired": "La foto es obligatoria",
+  "signupAddPhotoToContinue": "Añade una foto para continuar",
+  "signupPhotoTooLarge": "La foto supera 4 MB ({mb} MB).",
+  "@signupPhotoTooLarge": {
+    "placeholders": {
+      "mb": { "type": "String" }
+    }
+  },
+  "signupPhotoCannotLoad": "No se pudo cargar la foto: {message}",
+  "@signupPhotoCannotLoad": {
+    "placeholders": {
+      "message": { "type": "String" }
+    }
+  },
+
+  "signupPasswordTooWeak": "La contraseña es demasiado débil",
+  "signupPwdRuleMin8": "Mín. 8 caracteres",
+  "signupPwdRuleUpper": "1 mayúscula",
+  "signupPwdRuleDigit": "1 número",
+  "signupPwdRuleSpecial": "1 carácter especial",
+
+  "secretQuestionLabel": "Pregunta secreta",
+  "secretQuestionRequired": "La pregunta secreta es obligatoria",
+  "secretQuestion1": "¿Apellido de soltera de la madre?",
+  "secretQuestion2": "¿Nombre de tu actor de cine favorito?",
+  "secretQuestion3": "¿Nombre de tu mascota favorita?",
+
+  "secretAnswerLabel": "Respuesta",
+  "secretAnswerRequired": "La respuesta es obligatoria",
+
+  "consentCheckbox": "Acepto las condiciones de uso de mis datos y doy mi consentimiento.",
+  "signupConsentNotGiven": "No has dado tu consentimiento",
+
+  "signupCreating": "Creando…",
+  "signupCreateBtn": "Crear mi cuenta",
+
+  "signupSuccess": "Cuenta creada con éxito.",
+  "signupEmailAlreadyExistsRedirect": "Tu correo ya está en nuestra base de datos. Serás redirigido/a a la página de inicio de sesión.",
+  "signupSelectBirthdate": "Selecciona una fecha de nacimiento",
+  "signupChooseGenotype": "Elige un genotipo",
+  "signupChooseSecretQuestion": "Elige una pregunta secreta",
+  "signupEnterSecretAnswer": "Introduce la respuesta secreta",
+
+  "signupApiFailed": "Fallo de API ({code}): {body}",
+  "@signupApiFailed": {
+    "placeholders": {
+      "code": { "type": "int" },
+      "body": { "type": "String" }
+    }
+  },
+
+  "forgotPasswordTitle": "Contraseña olvidada",
+  "forgotEmailLabel": "Correo electrónico",
+  "forgotFetchQuestionTooltip": "Obtener la pregunta",
+  "forgotEnterValidEmail": "Introduce un correo válido.",
+  "forgotUnknownEmail": "Correo desconocido.",
+  "forgotErrorCode": "Error ({code})",
+  "@forgotErrorCode": {
+    "placeholders": {
+      "code": { "type": "int" }
+    }
+  },
+  "forgotTimeoutRetry": "Tiempo agotado. Inténtalo de nuevo.",
+  "forgotErrorWithMessage": "Error: {message}",
+  "@forgotErrorWithMessage": {
+    "placeholders": {
+      "message": { "type": "String" }
+    }
+  },
+
+  "forgotQuestionFallback": "Pregunta secreta",
+  "forgotQuestionLabel": "Pregunta",
+
+  "forgotSecretAnswerLabel": "Respuesta secreta",
+  "forgotAnswerRequired": "La respuesta es obligatoria",
+  "forgotEnterYourAnswer": "Introduce tu respuesta.",
+
+  "forgotVerify": "Verificar",
+  "forgotAnswerCorrectSnack": "Respuesta correcta 👍",
+  "forgotAnswerIncorrectAttempts": "Respuesta incorrecta ({attempts}/3).",
+  "@forgotAnswerIncorrectAttempts": {
+    "placeholders": {
+      "attempts": { "type": "int" }
+    }
+  },
+  "forgotFailedAttempts": "Intentos fallidos: {attempts} / 3",
+  "@forgotFailedAttempts": {
+    "placeholders": {
+      "attempts": { "type": "int" }
+    }
+  },
+
+  "forgotAnswerOkHint": "✅ Respuesta correcta, puedes establecer una nueva contraseña.",
+
+  "forgotNewPasswordLabel": "Nueva contraseña",
+  "forgotPasswordRequired": "La contraseña es obligatoria",
+  "forgotPasswordTooWeak": "La contraseña es demasiado débil",
+  "forgotPwdRuleMin8": "Al menos 8 caracteres",
+  "forgotPwdRuleUpper": "Al menos 1 mayúscula",
+  "forgotPwdRuleSpecial": "Al menos 1 carácter especial",
+
+  "forgotConfirmPasswordLabel": "Confirmar contraseña",
+  "forgotEnterNewPasswordFirst": "Introduce primero la nueva contraseña",
+  "forgotPasswordsDoNotMatch": "Las contraseñas no coinciden",
+  "forgotPasswordsMatch": "Las contraseñas coinciden",
+
+  "forgotResetSuccess": "Contraseña restablecida ✅",
+  "forgotResetFailed": "Fallo ({code}).",
+  "@forgotResetFailed": {
+    "placeholders": {
+      "code": { "type": "int" }
+    }
+  },
+
+  "tooManyAttemptsTitle": "Demasiados intentos",
+  "tooManyAttemptsMessage": "Has superado el número de intentos.\n\nEscribe a contact@fastfrance.org para explicar tu problema de inicio de sesión.",
+
+  "forgotValidating": "Enviando…",
+
+  "editProfileTitle": "Editar perfil",
+  "loadingProfile": "Cargando perfil…",
+  "timeoutLoadingProfile": "Tiempo de espera al cargar el perfil.",
+  "errorLoadingProfile": "Error al cargar: {message}",
+  "@errorLoadingProfile": {
+    "placeholders": {
+      "message": { "type": "String" }
+    }
+  },
+
+  "import": "Importar",
+  "deleteMyPhoto": "Eliminar mi foto",
+  "cancelSelection": "Cancelar selección",
+
+  "photoTooLarge": "La foto supera 4 MB ({size} MB).",
+  "@photoTooLarge": {
+    "placeholders": {
+      "size": { "type": "String" }
+    }
+  },
+  "cannotGetPhoto": "No se pudo obtener la foto: {message}",
+  "@cannotGetPhoto": {
+    "placeholders": {
+      "message": { "type": "String" }
+    }
+  },
+
+  "photoRequired": "Foto obligatoria",
+  "photoRequiredAddToSave": "Añade una foto para guardar",
+  "photoRequiredAfterDelete": "Foto obligatoria: importa o toma una nueva foto.",
+  "photoDeleted": "Foto eliminada ✅",
+
+  "profileInfoSection": "Información del perfil",
+
+  "firstName": "Nombre",
+  "lastName": "Apellido",
+  "birthDateLabel": "Fecha de nacimiento (dd/mm/aaaa)",
+  "birthDateRequired": "La fecha de nacimiento es obligatoria",
+
+  "genotype": "Genotipo",
+
+  "city": "Ciudad",
+  "geolocateMe": "Usar mi ubicación",
+  "locationUpdated": "Ubicación actualizada",
+  "locationUpdatedWithCity": "Ubicación actualizada ({city})",
+  "@locationUpdatedWithCity": {
+    "placeholders": {
+      "city": { "type": "String" }
+    }
+  },
+
+  "geolocation": "Geolocalización",
+  "geolocationHint": "Recuerda actualizar tu geolocalización si cambió desde tu registro.",
+
+  "secretQuestionSection": "Pregunta secreta",
+  "question": "Pregunta",
+  "answer": "Respuesta",
+
+  "changeMyPassword": "Cambiar mi contraseña",
+  "changePasswordTitle": "Cambiar contraseña",
+  "newPasswordLabel": "Nueva contraseña",
+  "confirmPasswordLabel": "Confirmar contraseña",
+  "passwordTooWeak": "La contraseña es demasiado débil",
+  "enterPassword": "Introduce una contraseña",
+  "passwordsDoNotMatch": "Las contraseñas no coinciden",
+  "passwordsMatch": "Las contraseñas coinciden",
+  "pwdRuleMin8": "Al menos 8 caracteres",
+  "pwdRuleUpper": "Al menos 1 mayúscula",
+  "pwdRuleSpecial": "Al menos 1 carácter especial",
+  "passwordChanged": "Contraseña cambiada ✅",
+
+  "save": "Guardar",
+  "saving": "Guardando…",
+  "savedChanges": "Cambios guardados ✅",
+
+  "timeoutTryAgain": "Tiempo agotado. Inténtalo de nuevo.",
+
+  "failedWithCode": "Fallo ({code})",
+  "@failedWithCode": {
+    "placeholders": {
+      "code": { "type": "int" }
+    }
+  },
+
+  "versionMadeByFastFrance": "Esta aplicación ha sido desarrollada por FAST France",
+  "versionNumber": "Versión {version}",
+  "@versionNumber": {
+    "placeholders": {
+      "version": { "type": "String" }
+    }
+  },
+
+  "privacyTitle": "Política de privacidad",
+  "privacyRightToBeForgotten": "Derecho al olvido",
+
+  "privacyDeleteTitle": "Atención",
+  "privacyDeleteConfirmBody": "Esta acción es irreversible.\n\nTu perfil y los datos asociados se eliminarán definitivamente.\n\n¿Quieres continuar?",
+
+  "privacyDeletedOkTitle": "Cuenta eliminada",
+  "privacyDeletedOkBody": "Tu cuenta ha sido eliminada.\nSerás redirigido a la página de inicio de sesión.",
+
+  "privacyDeleteFailedWithCode": "No se pudo eliminar (código {code}).",
+  "@privacyDeleteFailedWithCode": {
+    "placeholders": {
+      "code": { "type": "int" }
+    }
+  },
+
+  "timeoutRetry": "Tiempo de espera agotado. Inténtalo de nuevo.",
+
+  "consentText": "Política de privacidad – Aplicación ASConnect\n\n1) Responsable del tratamiento\nLos datos recopilados en la aplicación ASConnect son tratados por FAST France como responsable del tratamiento.\nPara cualquier pregunta relativa a sus datos o al ejercicio de sus derechos, puede contactarnos en: contact@fastfrance.org.\n\n2) Finalidades del tratamiento\nLos tratamientos de datos realizados a través de la aplicación persiguen las siguientes finalidades:\n• Crear y gestionar su cuenta de usuario para acceder a la aplicación ASConnect;\n• Utilizar funciones de geolocalización para visualizar:\n  o puntos de interés relacionados con el síndrome de Angelman,\n  o y/o perfiles de personas afectadas, según distintos criterios (distancia geográfica, genotipo, rango de edad);\n• Mejorar el servicio y personalizar la experiencia del usuario, incluyendo la posibilidad de elegir si desea mostrar una foto, su nombre o su apellido.\n\n3) Categorías de datos recopilados\nSe pueden recopilar los siguientes datos:\n• Datos de identificación:\n  o apellido, nombre, correo electrónico, contraseña, foto,\n  o pregunta y respuesta secretas (en caso de olvido de la contraseña);\n• Datos sensibles:\n  o genotipo, ubicación del teléfono (geolocalización).\nLa base legal de estos tratamientos se basa en el consentimiento explícito e informado del usuario.\n\n4) Plazo de conservación\nLos datos se conservan durante todo el tiempo de uso de la cuenta y luego se eliminan en un plazo máximo de 12 meses tras la última actividad.\nEl usuario puede ejercer su derecho al olvido en cualquier momento directamente en la aplicación, a través de:\nPolítica de privacidad → Derecho al olvido.\n\n5) Destinatarios y alojamiento\nLos datos se alojan de forma segura en los servidores de PythonAnywhere.\nLos datos se almacenan en la Unión Europea.\n(Para más información sobre la política de privacidad del proveedor, consulte https://www.pythonanywhere.com/privacy/.)\n\n6) Derechos de los usuarios\nDe conformidad con el Reglamento (UE) 2016/679 (RGPD), los usuarios disponen de los siguientes derechos:\n• Derecho de acceso, rectificación y supresión (“derecho al olvido”) — directamente desde su perfil o desde Política de privacidad → Derecho al olvido;\n• Derecho de oposición, portabilidad y limitación del tratamiento;\n• Derecho a retirar el consentimiento en cualquier momento.\nPara ejercer estos derechos (distintos del derecho al olvido dentro de la aplicación), puede enviar un correo a: contact@fastfrance.org.\n\n7) Seguridad y confidencialidad\nTodos los datos se cifran durante el almacenamiento y la transmisión.\nLas contraseñas se almacenan mediante hash siguiendo buenas prácticas de seguridad y toda la comunicación con el servicio se realiza mediante HTTPS.\n\n8) Consentimiento explícito\nEl registro en la aplicación ASConnect requiere el consentimiento explícito e informado del usuario para los tratamientos descritos en la sección 2.\nEl usuario puede retirar su consentimiento en cualquier momento desde la configuración de su cuenta o contactando con contact@fastfrance.org."
+}

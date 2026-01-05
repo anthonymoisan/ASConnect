@@ -1,0 +1,321 @@
+{
+  "@@locale": "en",
+
+  "appTitle": "ASConnexion",
+  "systemLanguage": "System",
+
+  "menu": "Menu",
+  "menuNavigation": "Navigation",
+  "menuMyProfile": "My profile",
+  "menuContact": "Contact us",
+  "menuPrivacyPolicy": "Privacy policy",
+  "menuVersion": "Version",
+  "menuContactSubject": "Contact via app",
+
+  "languageLabel": "Language",
+  "currentLanguage": "Current: {label}",
+  "@currentLanguage": {
+    "placeholders": {
+      "label": { "type": "String" }
+    }
+  },
+
+  "cancel": "Cancel",
+  "confirm": "Confirm",
+  "ok": "OK",
+
+  "logoutTitle": "Sign out",
+  "logoutConfirm": "Are you sure you want to sign out of the app?",
+
+  "tabCommunity": "Connect with the community",
+  "tabChats": "My chats",
+  "tabPoi": "Points of interest",
+
+  "profileUpdated": "Profile updated ✅",
+
+  "loginTitle": "Sign in",
+  "loginIntro": "The ASConnect app is intended only for caregivers who have a child with Angelman syndrome, a rare genetic disorder.",
+  "emailLabel": "Email address",
+  "emailHintRequired": "Please enter your email",
+  "emailHintInvalid": "Invalid email",
+  "passwordLabel": "Password",
+  "show": "Show",
+  "hide": "Hide",
+  "passwordRequired": "Please enter your password",
+  "loginButton": "Sign in",
+  "loginLoading": "Signing in…",
+  "createAccount": "Create an account",
+  "forgotPassword": "Forgot your password?",
+
+  "invalidCredentials": "Invalid credentials.",
+  "accessDeniedKey": "Access denied: missing or invalid app key.",
+  "badRequest": "Invalid request (400).",
+  "tooManyAttempts": "Too many attempts. Try again in a moment.",
+  "serviceUnavailable": "Service unavailable. Please try again later.",
+  "serverErrorWithCode": "Server error ({code}).",
+  "unexpectedServerResponse": "Unexpected server response.",
+  "cannotConnectServer": "Unable to connect to the server.",
+  "timeoutCheckConnection": "Request timed out. Check your connection.",
+  "errorWithMessage": "Error: {message}",
+
+  "missingAppKeyWarning": "⚠️ App key missing. Run the app with --dart-define=PUBLIC_APP_KEY=your_public_key",
+
+  "signupTitle": "Create an account",
+  "signupSectionPerson": "Person with Angelman syndrome",
+  "signupSectionAuth": "Authentication",
+  "consentTitle": "Consent",
+
+  "firstNameLabel": "First name",
+  "firstNameRequired": "First name is required",
+  "lastNameLabel": "Last name",
+  "lastNameRequired": "Last name is required",
+
+  "birthdateLabel": "Date of birth (dd/mm/yyyy)",
+  "birthdateRequired": "Date of birth is required",
+  "chooseDate": "Choose a date",
+  "signupBirthdateHelp": "Date of birth",
+
+  "genotypeLabel": "Genotype",
+  "genotypeRequired": "Genotype is required",
+  "genotypeDeletion": "Deletion",
+  "genotypeMutation": "Mutation",
+  "genotypeUpd": "UPD",
+  "genotypeIcd": "ICD",
+  "genotypeClinical": "Clinical",
+  "genotypeMosaic": "Mosaic",
+
+  "signupPhotoHint": "Child’s photo (required, < 4 MB)",
+  "importPhoto": "Import a photo",
+  "takePhoto": "Take a photo",
+  "deletePhoto": "Delete photo",
+  "signupPhotoRequired": "Photo is required",
+  "signupAddPhotoToContinue": "Add a photo to continue",
+  "signupPhotoTooLarge": "The photo exceeds 4 MB ({mb} MB).",
+  "@signupPhotoTooLarge": {
+    "placeholders": {
+      "mb": { "type": "String" }
+    }
+  },
+  "signupPhotoCannotLoad": "Unable to load the photo: {message}",
+  "@signupPhotoCannotLoad": {
+    "placeholders": {
+      "message": { "type": "String" }
+    }
+  },
+
+  "signupPasswordTooWeak": "Password is too weak",
+  "signupPwdRuleMin8": "Min. 8 characters",
+  "signupPwdRuleUpper": "1 uppercase letter",
+  "signupPwdRuleDigit": "1 digit",
+  "signupPwdRuleSpecial": "1 special character",
+
+  "secretQuestionLabel": "Security question",
+  "secretQuestionRequired": "Security question is required",
+  "secretQuestion1": "Mother’s maiden name?",
+  "secretQuestion2": "Your favorite movie actor’s name?",
+  "secretQuestion3": "Your favorite pet’s name?",
+
+  "secretAnswerLabel": "Answer",
+  "secretAnswerRequired": "Answer is required",
+
+  "consentCheckbox": "I accept the terms of use for my data and I give my consent.",
+  "signupConsentNotGiven": "You did not give your consent",
+
+  "signupCreating": "Creating…",
+  "signupCreateBtn": "Create my account",
+
+  "signupSuccess": "Account created successfully.",
+  "signupEmailAlreadyExistsRedirect": "Your email is already in our database. You will be redirected to the login page.",
+  "signupSelectBirthdate": "Please select a date of birth",
+  "signupChooseGenotype": "Please choose a genotype",
+  "signupChooseSecretQuestion": "Please choose a security question",
+  "signupEnterSecretAnswer": "Please enter the security answer",
+
+  "signupApiFailed": "API failed ({code}): {body}",
+  "@signupApiFailed": {
+    "placeholders": {
+      "code": { "type": "int" },
+      "body": { "type": "String" }
+    }
+  },
+
+  "forgotPasswordTitle": "Forgot password",
+  "forgotEmailLabel": "Email address",
+  "forgotFetchQuestionTooltip": "Fetch the question",
+  "forgotEnterValidEmail": "Enter a valid email.",
+  "forgotUnknownEmail": "Unknown email.",
+  "forgotErrorCode": "Error ({code})",
+  "@forgotErrorCode": {
+    "placeholders": {
+      "code": { "type": "int" }
+    }
+  },
+  "forgotTimeoutRetry": "Timeout. Please try again.",
+  "forgotErrorWithMessage": "Error: {message}",
+  "@forgotErrorWithMessage": {
+    "placeholders": {
+      "message": { "type": "String" }
+    }
+  },
+
+  "forgotQuestionFallback": "Security question",
+  "forgotQuestionLabel": "Question",
+
+  "forgotSecretAnswerLabel": "Security answer",
+  "forgotAnswerRequired": "Answer is required",
+  "forgotEnterYourAnswer": "Enter your answer.",
+
+  "forgotVerify": "Verify",
+  "forgotAnswerCorrectSnack": "Correct answer 👍",
+  "forgotAnswerIncorrectAttempts": "Incorrect answer ({attempts}/3).",
+  "@forgotAnswerIncorrectAttempts": {
+    "placeholders": {
+      "attempts": { "type": "int" }
+    }
+  },
+  "forgotFailedAttempts": "Failed attempts: {attempts} / 3",
+  "@forgotFailedAttempts": {
+    "placeholders": {
+      "attempts": { "type": "int" }
+    }
+  },
+
+  "forgotAnswerOkHint": "✅ Correct answer, you can set a new password.",
+
+  "forgotNewPasswordLabel": "New password",
+  "forgotPasswordRequired": "Password is required",
+  "forgotPasswordTooWeak": "Password is too weak",
+  "forgotPwdRuleMin8": "At least 8 characters",
+  "forgotPwdRuleUpper": "At least 1 uppercase letter",
+  "forgotPwdRuleSpecial": "At least 1 special character",
+
+  "forgotConfirmPasswordLabel": "Confirm password",
+  "forgotEnterNewPasswordFirst": "Enter the new password first",
+  "forgotPasswordsDoNotMatch": "Passwords do not match",
+  "forgotPasswordsMatch": "Passwords match",
+
+  "forgotResetSuccess": "Password reset ✅",
+  "forgotResetFailed": "Failed ({code}).",
+  "@forgotResetFailed": {
+    "placeholders": {
+      "code": { "type": "int" }
+    }
+  },
+
+  "tooManyAttemptsTitle": "Too many attempts",
+  "tooManyAttemptsMessage": "Too many tries.\n\nEmail contact@fastfrance.org to explain your login issue.",
+
+  "forgotValidating": "Submitting…",
+
+  "editProfileTitle": "Edit profile",
+  "loadingProfile": "Loading profile…",
+  "timeoutLoadingProfile": "Timeout while loading profile.",
+  "errorLoadingProfile": "Loading error: {message}",
+  "@errorLoadingProfile": {
+    "placeholders": {
+      "message": { "type": "String" }
+    }
+  },
+
+  "import": "Import",
+  "deleteMyPhoto": "Delete my photo",
+  "cancelSelection": "Cancel selection",
+
+  "photoTooLarge": "The photo exceeds 4 MB ({size} MB).",
+  "@photoTooLarge": {
+    "placeholders": {
+      "size": { "type": "String" }
+    }
+  },
+  "cannotGetPhoto": "Unable to get the photo: {message}",
+  "@cannotGetPhoto": {
+    "placeholders": {
+      "message": { "type": "String" }
+    }
+  },
+
+  "photoRequired": "Photo required",
+  "photoRequiredAddToSave": "Please add a photo to save",
+  "photoRequiredAfterDelete": "Photo required: import or take a new photo.",
+  "photoDeleted": "Photo deleted ✅",
+
+  "profileInfoSection": "Profile information",
+
+  "firstName": "First name",
+  "lastName": "Last name",
+  "birthDateLabel": "Date of birth (dd/mm/yyyy)",
+  "birthDateRequired": "Date of birth is required",
+
+  "genotype": "Genotype",
+
+  "city": "City",
+  "geolocateMe": "Use my location",
+  "locationUpdated": "Location updated",
+  "locationUpdatedWithCity": "Location updated ({city})",
+  "@locationUpdatedWithCity": {
+    "placeholders": {
+      "city": { "type": "String" }
+    }
+  },
+
+  "geolocation": "Geolocation",
+  "geolocationHint": "Remember to update your location if it changed since you signed up.",
+
+  "secretQuestionSection": "Security question",
+  "question": "Question",
+  "answer": "Answer",
+
+  "changeMyPassword": "Change my password",
+  "changePasswordTitle": "Change my password",
+  "newPasswordLabel": "New password",
+  "confirmPasswordLabel": "Confirm password",
+  "passwordTooWeak": "Password is too weak",
+  "enterPassword": "Enter a password",
+  "passwordsDoNotMatch": "Passwords do not match",
+  "passwordsMatch": "Passwords match",
+  "pwdRuleMin8": "At least 8 characters",
+  "pwdRuleUpper": "At least 1 uppercase letter",
+  "pwdRuleSpecial": "At least 1 special character",
+  "passwordChanged": "Password changed ✅",
+
+  "save": "Save",
+  "saving": "Saving…",
+  "savedChanges": "Changes saved ✅",
+
+  "timeoutTryAgain": "Timeout. Please try again.",
+
+  "failedWithCode": "Failed ({code})",
+  "@failedWithCode": {
+    "placeholders": {
+      "code": { "type": "int" }
+    }
+  },
+
+  "versionMadeByFastFrance": "This app is developed by FAST France",
+  "versionNumber": "Version {version}",
+  "@versionNumber": {
+    "placeholders": {
+      "version": { "type": "String" }
+    }
+  },
+
+  "privacyTitle": "Privacy policy",
+  "privacyRightToBeForgotten": "Right to be forgotten",
+
+  "privacyDeleteTitle": "Warning",
+  "privacyDeleteConfirmBody": "This action is irreversible.\n\nYour profile and associated data will be permanently deleted.\n\nDo you want to continue?",
+
+  "privacyDeletedOkTitle": "Account deleted",
+  "privacyDeletedOkBody": "Your account has been deleted.\nYou will be redirected to the login page.",
+
+  "privacyDeleteFailedWithCode": "Unable to delete (code {code}).",
+  "@privacyDeleteFailedWithCode": {
+    "placeholders": {
+      "code": { "type": "int" }
+    }
+  },
+
+  "timeoutRetry": "Request timed out. Please try again.",
+
+  "consentText": "Privacy policy – ASConnect app\n\n1) Data controller\nThe data collected in the ASConnect app is processed by FAST France as the data controller.\nIf you have any questions about your data or how to exercise your rights, contact us at: contact@fastfrance.org.\n\n2) Purposes of processing\nData processing carried out through the app serves the following purposes:\n• Creating and managing your user account to access the ASConnect app;\n• Using geolocation features to display:\n  o points of interest related to Angelman syndrome,\n  o and/or profiles of concerned people, according to various criteria (geographic distance, genotype, age range);\n• Improving the service and personalizing the user experience, including allowing users to choose whether to display a photo, their first name, or last name.\n\n3) Categories of data collected\nThe following data may be collected:\n• Identification data:\n  o last name, first name, email address, password, photo,\n  o secret question and answer (in case of forgotten password);\n• Sensitive data:\n  o genotype, phone location (geolocation).\nThe legal basis for this processing is the user’s explicit and informed consent.\n\n4) Data retention period\nData is kept for the duration of account use, then deleted within a maximum of 12 months after the last activity.\nUsers can exercise their right to be forgotten at any time directly in the app via:\nPrivacy policy → Right to be forgotten.\n\n5) Recipients and data hosting\nData is securely hosted on PythonAnywhere servers.\nData is stored in the European Union.\n(For more information about the host’s privacy policy, see https://www.pythonanywhere.com/privacy/.)\n\n6) Users’ rights\nIn accordance with Regulation (EU) 2016/679 (GDPR), users have the following rights:\n• Right of access, rectification and deletion (“right to be forgotten”) — directly via their profile or via Privacy policy → Right to be forgotten;\n• Right to object, data portability and restriction of processing;\n• Right to withdraw consent at any time.\nTo exercise these rights (other than the in-app right to be forgotten), email: contact@fastfrance.org.\n\n7) Security and confidentiality\nAll data is encrypted during storage and transmission.\nPasswords are hashed according to security best practices, and all communications with the service use HTTPS.\n\n8) Explicit consent\nRegistering for the ASConnect app requires the user’s explicit and informed consent for the processing described in section 2.\nUsers may withdraw consent at any time via account settings or by contacting contact@fastfrance.org."
+}

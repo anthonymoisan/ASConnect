@@ -1,0 +1,322 @@
+{
+  "@@locale": "fr",
+
+  "appTitle": "ASConnexion",
+  "systemLanguage": "Système",
+
+  "menu": "Menu",
+  "menuNavigation": "Navigation",
+  "menuMyProfile": "Mon profil",
+  "menuContact": "Nous contacter",
+  "menuPrivacyPolicy": "Politique de confidentialité",
+  "menuVersion": "Version",
+  "menuContactSubject": "Contact via application",
+
+  "languageLabel": "Langue",
+  "currentLanguage": "Actuelle : {label}",
+  "@currentLanguage": {
+    "placeholders": {
+      "label": { "type": "String" }
+    }
+  },
+
+  "cancel": "Annuler",
+  "confirm": "Valider",
+  "ok": "OK",
+
+  "logoutTitle": "Déconnexion",
+  "logoutConfirm": "Êtes-vous certain(e) de vous déconnecter de l’application ?",
+
+  "tabCommunity": "Se connecter à la communauté",
+  "tabChats": "Mes discussions",
+  "tabPoi": "Points d’intérêts",
+
+  "profileUpdated": "Profil mis à jour ✅",
+
+  "loginTitle": "Se connecter",
+  "loginIntro": "L'application ASConnect est à destination uniquement des aidants ayant un enfant porteur du syndrome d'Angelman, une maladie génétique rare.",
+  "loginButton": "Se connecter",
+  "loginLoading": "Connexion…",
+  "createAccount": "Créer un compte",
+  "forgotPassword": "Vous avez oublié votre mot de passe ?",
+
+  "emailLabel": "Adresse e-mail",
+  "emailHintRequired": "Renseigne ton e-mail",
+  "emailHintInvalid": "E-mail invalide",
+
+  "passwordLabel": "Mot de passe",
+  "passwordRequired": "Renseigne ton mot de passe",
+  "show": "Afficher",
+  "hide": "Masquer",
+
+  "invalidCredentials": "Identifiants invalides.",
+  "accessDeniedKey": "Accès refusé: clé d'application manquante ou invalide.",
+  "badRequest": "Requête invalide (400).",
+  "tooManyAttempts": "Trop de tentatives. Réessaie dans un instant.",
+  "serviceUnavailable": "Service indisponible. Réessaie plus tard.",
+  "serverErrorWithCode": "Erreur serveur ({code}).",
+  "unexpectedServerResponse": "Réponse inattendue du serveur.",
+  "cannotConnectServer": "Connexion au serveur impossible.",
+  "timeoutCheckConnection": "Délai dépassé. Vérifie ta connexion.",
+  "errorWithMessage": "Erreur: {message}",
+
+  "missingAppKeyWarning": "⚠️ Clé d'application absente. Lance l'app avec --dart-define=PUBLIC_APP_KEY=ta_cle_publique",
+
+  "signupTitle": "Créer un compte",
+  "signupSectionPerson": "Personne porteuse du SA",
+  "signupSectionAuth": "Authentification",
+  "consentTitle": "Consentement",
+
+  "firstNameLabel": "Prénom",
+  "firstNameRequired": "Prénom requis",
+  "lastNameLabel": "Nom",
+  "lastNameRequired": "Nom requis",
+
+  "birthdateLabel": "Date de naissance (jj/mm/aaaa)",
+  "birthdateRequired": "Date de naissance requise",
+  "chooseDate": "Choisir une date",
+  "signupBirthdateHelp": "Date de naissance",
+
+  "genotypeLabel": "Génotype",
+  "genotypeRequired": "Génotype requis",
+  "genotypeDeletion": "Délétion",
+  "genotypeMutation": "Mutation",
+  "genotypeUpd": "UPD",
+  "genotypeIcd": "ICD",
+  "genotypeClinical": "Clinique",
+  "genotypeMosaic": "Mosaïque",
+
+  "signupPhotoHint": "Photo de l’enfant (obligatoire, < 4 Mo)",
+  "importPhoto": "Importer une photo",
+  "takePhoto": "Prendre une photo",
+  "deletePhoto": "Supprimer la photo",
+  "signupPhotoRequired": "Photo obligatoire",
+  "signupAddPhotoToContinue": "Ajoute une photo pour continuer",
+  "signupPhotoTooLarge": "La photo dépasse 4 Mo ({mb} Mo).",
+  "@signupPhotoTooLarge": {
+    "placeholders": {
+      "mb": { "type": "String" }
+    }
+  },
+  "signupPhotoCannotLoad": "Impossible de récupérer la photo : {message}",
+  "@signupPhotoCannotLoad": {
+    "placeholders": {
+      "message": { "type": "String" }
+    }
+  },
+
+  "signupPasswordTooWeak": "Mot de passe trop faible",
+  "signupPwdRuleMin8": "Min. 8 caractères",
+  "signupPwdRuleUpper": "1 majuscule",
+  "signupPwdRuleDigit": "1 chiffre",
+  "signupPwdRuleSpecial": "1 caractère spécial",
+
+  "secretQuestionLabel": "Question secrète",
+  "secretQuestionRequired": "Question secrète requise",
+  "secretQuestion1": "Nom de naissance de la maman ?",
+  "secretQuestion2": "Nom de votre acteur de cinéma favori ?",
+  "secretQuestion3": "Nom de votre animal de compagnie favori ?",
+
+  "secretAnswerLabel": "Réponse",
+  "secretAnswerRequired": "Réponse requise",
+
+  "consentCheckbox": "J'accepte les conditions d'usage de mes données et je donne mon consentement.",
+  "signupConsentNotGiven": "Vous n'avez pas donné votre consentement",
+
+  "signupCreating": "Création…",
+  "signupCreateBtn": "Créer mon compte",
+
+  "signupSuccess": "Compte créé avec succès.",
+  "signupEmailAlreadyExistsRedirect": "Votre email est déjà dans notre base. Vous allez être redirigé(e) vers la page de connexion.",
+  "signupSelectBirthdate": "Sélectionne une date de naissance",
+  "signupChooseGenotype": "Choisis un génotype",
+  "signupChooseSecretQuestion": "Choisis une question secrète",
+  "signupEnterSecretAnswer": "Renseigne la réponse secrète",
+
+  "signupApiFailed": "Échec API ({code}) : {body}",
+  "@signupApiFailed": {
+    "placeholders": {
+      "code": { "type": "int" },
+      "body": { "type": "String" }
+    }
+  },
+
+  "forgotPasswordTitle": "Mot de passe oublié",
+  "forgotEmailLabel": "Adresse e-mail",
+  "forgotFetchQuestionTooltip": "Récupérer la question",
+  "forgotEnterValidEmail": "Saisis un e-mail valide.",
+  "forgotUnknownEmail": "E-mail inconnu.",
+  "forgotErrorCode": "Erreur ({code})",
+  "@forgotErrorCode": {
+    "placeholders": {
+      "code": { "type": "int" }
+    }
+  },
+  "forgotTimeoutRetry": "Délai dépassé. Réessaie.",
+  "forgotErrorWithMessage": "Erreur: {message}",
+  "@forgotErrorWithMessage": {
+    "placeholders": {
+      "message": { "type": "String" }
+    }
+  },
+
+  "forgotQuestionFallback": "Question secrète",
+  "forgotQuestionLabel": "Question",
+
+  "forgotSecretAnswerLabel": "Réponse secrète",
+  "forgotAnswerRequired": "Réponse requise",
+  "forgotEnterYourAnswer": "Saisis ta réponse.",
+
+  "forgotVerify": "Vérifier",
+  "forgotAnswerCorrectSnack": "Réponse correcte 👍",
+  "forgotAnswerIncorrectAttempts": "Réponse incorrecte ({attempts}/3).",
+  "@forgotAnswerIncorrectAttempts": {
+    "placeholders": {
+      "attempts": { "type": "int" }
+    }
+  },
+  "forgotFailedAttempts": "Tentatives échouées : {attempts} / 3",
+  "@forgotFailedAttempts": {
+    "placeholders": {
+      "attempts": { "type": "int" }
+    }
+  },
+  "forgotAnswerOkHint": "✅ Réponse correcte, tu peux saisir un nouveau mot de passe.",
+
+  "forgotNewPasswordLabel": "Nouveau mot de passe",
+  "forgotPasswordRequired": "Mot de passe requis",
+  "forgotPasswordTooWeak": "Mot de passe trop faible",
+  "forgotPwdRuleMin8": "Au moins 8 caractères",
+  "forgotPwdRuleUpper": "Au moins 1 majuscule",
+  "forgotPwdRuleSpecial": "Au moins 1 caractère spécial",
+
+  "forgotConfirmPasswordLabel": "Confirmer le mot de passe",
+  "forgotEnterNewPasswordFirst": "Saisis le nouveau mot de passe",
+  "forgotPasswordsDoNotMatch": "Les mots de passe ne correspondent pas",
+  "forgotPasswordsMatch": "Les mots de passe correspondent",
+
+  "forgotResetSuccess": "Mot de passe réinitialisé ✅",
+  "forgotResetFailed": "Échec ({code}).",
+  "@forgotResetFailed": {
+    "placeholders": {
+      "code": { "type": "int" }
+    }
+  },
+
+  "tooManyAttemptsTitle": "Trop de tentatives",
+  "tooManyAttemptsMessage": "Nombre d’essais dépassé.\n\nÉcrire à contact@fastfrance.org pour exposer votre problème de connexion.",
+
+  "forgotValidating": "Validation…",
+
+  "editProfileTitle": "Modifier le profil",
+  "loadingProfile": "Chargement du profil…",
+  "timeoutLoadingProfile": "Timeout en chargeant le profil.",
+  "errorLoadingProfile": "Erreur chargement: {message}",
+  "@errorLoadingProfile": {
+    "placeholders": {
+      "message": { "type": "String" }
+    }
+  },
+
+  "import": "Importer",
+  "deleteMyPhoto": "Supprimer ma photo",
+  "cancelSelection": "Annuler la sélection",
+
+  "photoTooLarge": "La photo dépasse 4 Mo ({size} Mo).",
+  "@photoTooLarge": {
+    "placeholders": {
+      "size": { "type": "String" }
+    }
+  },
+  "cannotGetPhoto": "Impossible de récupérer la photo : {message}",
+  "@cannotGetPhoto": {
+    "placeholders": {
+      "message": { "type": "String" }
+    }
+  },
+
+  "photoRequired": "Photo obligatoire",
+  "photoRequiredAddToSave": "Ajoutez une photo pour enregistrer",
+  "photoRequiredAfterDelete": "Photo obligatoire : importez ou prenez une nouvelle photo.",
+  "photoDeleted": "Photo supprimée ✅",
+
+  "profileInfoSection": "Informations du profil",
+
+  "firstName": "Prénom",
+  "lastName": "Nom",
+  "birthDateLabel": "Date de naissance (jj/mm/aaaa)",
+  "birthDateRequired": "Date de naissance requise",
+
+  "genotype": "Génotype",
+
+  "city": "Ville",
+  "geolocateMe": "Me géolocaliser",
+  "locationUpdated": "Localisation mise à jour",
+  "locationUpdatedWithCity": "Localisation mise à jour ({city})",
+  "@locationUpdatedWithCity": {
+    "placeholders": {
+      "city": { "type": "String" }
+    }
+  },
+
+  "geolocation": "Géolocalisation",
+  "geolocationHint": "Pensez à changer votre géolocalisation si celle-ci a changé par rapport à votre inscription.",
+
+  "secretQuestionSection": "Question secrète",
+  "question": "Question",
+  "answer": "Réponse",
+
+  "changeMyPassword": "Changer mon mot de passe",
+  "changePasswordTitle": "Changer mon mot de passe",
+  "newPasswordLabel": "Nouveau mot de passe",
+  "confirmPasswordLabel": "Confirmer le mot de passe",
+  "passwordTooWeak": "Mot de passe trop faible",
+  "enterPassword": "Saisis un mot de passe",
+  "passwordsDoNotMatch": "Les mots de passe ne correspondent pas",
+  "passwordsMatch": "Les mots de passe correspondent",
+  "pwdRuleMin8": "Au moins 8 caractères",
+  "pwdRuleUpper": "Au moins 1 majuscule",
+  "pwdRuleSpecial": "Au moins 1 caractère spécial",
+  "passwordChanged": "Mot de passe changé ✅",
+
+  "save": "Enregistrer",
+  "saving": "Enregistrement…",
+  "savedChanges": "Modifications enregistrées ✅",
+
+  "timeoutTryAgain": "Délai dépassé. Réessaie.",
+
+  "failedWithCode": "Échec ({code})",
+  "@failedWithCode": {
+    "placeholders": {
+      "code": { "type": "int" }
+    }
+  },
+
+  "versionMadeByFastFrance": "Cette application est réalisée par FAST France",
+  "versionNumber": "Version {version}",
+  "@versionNumber": {
+    "placeholders": {
+      "version": { "type": "String" }
+    }
+  },
+
+  "privacyTitle": "Politique de confidentialité",
+  "privacyRightToBeForgotten": "Droit à l’oubli",
+
+  "privacyDeleteTitle": "Attention",
+  "privacyDeleteConfirmBody": "Cette action est irréversible.\n\nVotre profil et vos données associées seront supprimés définitivement.\n\nVoulez-vous continuer ?",
+
+  "privacyDeletedOkTitle": "Compte supprimé",
+  "privacyDeletedOkBody": "Votre compte a bien été supprimé.\nVous allez être redirigé vers la page de connexion.",
+
+  "privacyDeleteFailedWithCode": "Suppression impossible (code {code}).",
+  "@privacyDeleteFailedWithCode": {
+    "placeholders": {
+      "code": { "type": "int" }
+    }
+  },
+
+  "timeoutRetry": "Délai dépassé. Réessaie.",
+
+  "consentText": "Politique de confidentialité – Application ASConnect\n\n1) Identité du responsable de traitement\nLes données collectées dans l’application ASConnect sont traitées par FAST France, en qualité de responsable de traitement.\nPour toute question relative à vos données ou à l’exercice de vos droits, vous pouvez nous contacter à : contact@fastfrance.org.\n\n2) Finalités des traitements\nLes traitements de données réalisés via l’application poursuivent les finalités suivantes :\n• Création et gestion de votre compte utilisateur pour un accès nominatif à l’application ASConnect ;\n• Utilisation des fonctionnalités de géolocalisation afin de visualiser :\n  o des points d’intérêt liés au syndrome d’Angelman,\n  o et/ou des profils de personnes concernées, selon différents critères (distance géographique, génotype, tranche d’âge) ;\n• Amélioration du service et personnalisation de l’expérience utilisateur, incluant la possibilité pour l’utilisateur de choisir s’il souhaite ou non afficher une photo, son nom ou son prénom.\n\n3) Catégories de données collectées\nLes données suivantes peuvent être collectées :\n• Données d’identification :\n  o nom, prénom, adresse e-mail, mot de passe, photo,\n  o question et réponse secrète (en cas d’oubli du mot de passe) ;\n• Données sensibles :\n  o génotype, localisation du téléphone (géolocalisation).\nLa base légale de ces traitements repose sur le consentement explicite et éclairé de l’utilisateur.\n\n4) Durée de conservation des données\nLes données sont conservées pendant toute la durée d’utilisation du compte, puis supprimées dans un délai maximum de 12 mois après la dernière activité.\nL’utilisateur peut à tout moment exercer son droit à l’oubli directement dans l’application, via le menu :\nPolitique de confidentialité → Droit à l’oubli.\n\n5) Destinataires et hébergement des données\nLes données sont hébergées de manière sécurisée sur les serveurs de PythonAnywhere.\nLes données sont stockées dans l’Union européenne.\n(Pour plus d’informations sur la politique de protection des données de l’hébergeur, consultez https://www.pythonanywhere.com/privacy/.)\n\n6) Droits des utilisateurs\nConformément au Règlement (UE) 2016/679 (RGPD), les utilisateurs disposent des droits suivants :\n• Droit d’accès, de rectification et d’effacement (« droit à l’oubli ») — directement via leur profil ou le menu Politique de confidentialité → Droit à l’oubli ;\n• Droit d’opposition, de portabilité et de limitation du traitement ;\n• Droit de retrait du consentement à tout moment.\nPour exercer ces droits (autres que le droit à l’oubli accessible depuis l’application), vous pouvez envoyer un e-mail à contact@fastfrance.org.\n\n7) Sécurité et confidentialité\nToutes les données sont chiffrées lors du stockage et de la transmission.\nLes mots de passe sont hachés selon les bonnes pratiques de sécurité, et toutes les communications avec le service se font via le protocole HTTPS.\n\n8) Consentement explicite\nL’inscription à l’application ASConnect requiert le consentement explicite et éclairé de l’utilisateur pour les traitements décrits à la section 2.\nL’utilisateur peut retirer ce consentement à tout moment via les paramètres de son compte ou par contact direct à contact@fastfrance.org."
+}

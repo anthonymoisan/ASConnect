@@ -1,0 +1,41 @@
+1) mkdir -p ~/backups/mysql
+mkdir -p ~/bin
+
+2) Mettre les identifiants MySQL “proprement” (sans mot de passe en clair dans le script)
+nano ~/.my.cnf
+
+[client]
+user=TON_USER_MYSQL
+password=TON_MDP_MYSQL
+host=TON_HOST_MYSQL
+
+chmod 600 ~/.my.cnf
+
+3) Installer rclone
+python3 -m pip install --user rclone
+
+4) Visualiser les sauvegardes
+~/bin/rclone ls gdrive:PythonAnywhereBackups/mysql/'AnthonyMoisan$AngelmanResult'
+
+5) Répertoire de restauration
+mkdir -p ~/restore
+
+
+////RESTAURATION
+bash ~/bin/backup_mysql_to_gdrive.sh tâche managée qui permet de faire une copie d'AS_Connexion dans le drive
+
+1) copier le backup dans restore à partir de google drive
+~/bin/rclone copy \
+  gdrive:PythonAnywhereBackups/mysql/'AnthonyMoisan$ASConnexion'/mysql_'AnthonyMoisan$ASConnexion'_2025-12-22_15-12.sql.gz \
+  /home/AnthonyMoisan/restore/
+
+2) Sauvegarde rapide avant restauration
+mysqldump --no-tablespaces 'AnthonyMoisan$ASConnexion' | gzip > ~/restore/backup_before_restore.sql.gz
+
+3) Remplacement de la base de données
+a) recréer la base sous Database > ASConnexion
+
+b) regénérer la base de données à partir du fichier compressé
+gunzip -c ~/restore/mysql_'AnthonyMoisan$ASConnexion'_2025-12-22_15-12.sql.gz | mysql 'AnthonyMoisan$ASConnexion'
+
+
