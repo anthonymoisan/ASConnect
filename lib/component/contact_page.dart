@@ -1,4 +1,3 @@
-// lib/contact_page.dart
 import 'dart:convert';
 import 'dart:io';
 import 'dart:async';
@@ -7,6 +6,13 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:ionicons/ionicons.dart';
 import 'package:http/http.dart' as http;
+
+// ✅ Import l10n
+import '../l10n/app_localizations.dart';
+
+extension L10nX on BuildContext {
+  AppLocalizations get l10n => AppLocalizations.of(this)!;
+}
 
 class ContactPage extends StatefulWidget {
   const ContactPage({super.key});
@@ -24,13 +30,11 @@ class _ContactPageState extends State<ContactPage> {
   bool _sending = false;
   late int _a;
   late int _b;
-  late String _captchaToken; // pour validation serveur (anti-rejeu)
+  late String _captchaToken; // validation serveur (anti-rejeu)
 
-  // API publique (proxy)
   static const String _apiBase = 'https://anthonymoisan.pythonanywhere.com';
   static const String _contactPath = '/api/public/contact';
 
-  // Clé d'application publique injectée via --dart-define=PUBLIC_APP_KEY=...
   static const String _publicAppKey = String.fromEnvironment(
     'PUBLIC_APP_KEY',
     defaultValue: '',
@@ -59,9 +63,9 @@ class _ContactPageState extends State<ContactPage> {
     super.dispose();
   }
 
-  String? _required(String? v, String label) {
+  String? _required(String? v, String fieldLabel) {
     final s = (v ?? '').trim();
-    return s.isEmpty ? '$label requis' : null;
+    return s.isEmpty ? context.l10n.fieldRequired(fieldLabel) : null;
   }
 
   bool get _captchaOK {
@@ -81,13 +85,18 @@ class _ContactPageState extends State<ContactPage> {
         .timeout(const Duration(seconds: 15));
   }
 
+  void _snack(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
+  }
+
   Future<void> _sendMessage() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
+
     if (!_captchaOK) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text("Captcha incorrect.")));
+      _snack(context.l10n.contactCaptchaIncorrect);
       return;
     }
 
@@ -101,7 +110,6 @@ class _ContactPageState extends State<ContactPage> {
       final payload = {
         'subject': subject,
         'body': body,
-        // champs captcha envoyés au serveur
         'captcha_answer': int.parse(_captchaCtrl.text.trim()),
         'captcha_token': _captchaToken,
       };
@@ -110,8 +118,7 @@ class _ContactPageState extends State<ContactPage> {
       try {
         resp = await _postOnce(uri, payload);
       } on TimeoutException {
-        // 1 retry léger
-        resp = await _postOnce(uri, payload);
+        resp = await _postOnce(uri, payload); // retry léger
       }
 
       Map<String, dynamic>? jsonResp;
@@ -121,50 +128,38 @@ class _ContactPageState extends State<ContactPage> {
       } catch (_) {}
 
       if (resp.statusCode >= 200 && resp.statusCode < 300) {
-        if (!mounted) return;
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Message envoyé ✅')));
+        _snack(context.l10n.contactMessageSent);
         _formKey.currentState?.reset();
         _titleCtrl.clear();
         _messageCtrl.clear();
         _regenCaptcha();
-        Navigator.of(context).pop(true);
+        if (mounted) Navigator.of(context).pop(true);
         return;
       }
 
-      // Gestion d'erreurs plus parlante
-      String err = 'Échec de l’envoi (${resp.statusCode})';
+      // Erreurs plus parlantes (i18n)
+      String err = context.l10n.contactSendFailedWithCode(resp.statusCode);
+
       if (resp.statusCode == 401 || resp.statusCode == 403) {
-        err = "Accès refusé (clé d'application manquante ou invalide).";
+        err = context.l10n.contactAccessDenied;
       } else if (resp.statusCode == 429) {
-        err = "Trop de requêtes. Réessaie dans quelques secondes.";
+        err = context.l10n.contactTooManyRequests;
       } else if (resp.statusCode == 502 || resp.statusCode == 504) {
-        err = "Service temporairement indisponible. Réessaie plus tard.";
+        err = context.l10n.contactServiceUnavailable;
       } else {
         final serverMsg =
             jsonResp?['error'] ?? jsonResp?['message'] ?? jsonResp?['detail'];
         if (serverMsg is String && serverMsg.isNotEmpty) err = serverMsg;
       }
 
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(err)));
+      _snack(err);
       _regenCaptcha();
     } on SocketException {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Vérifie ta connexion internet.")),
-      );
+      _snack(context.l10n.contactCheckInternet);
     } on TimeoutException {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Délai dépassé. Réessaie plus tard.")),
-      );
+      _snack(context.l10n.contactTimeout);
     } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text("Erreur inattendue : $e")));
+      _snack(context.l10n.unexpectedError(e.toString()));
     } finally {
       if (mounted) setState(() => _sending = false);
     }
@@ -183,8 +178,8 @@ class _ContactPageState extends State<ContactPage> {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          'Nous contacter',
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+          context.l10n.contactPageTitle,
+          style: theme.textTheme.titleMedium?.copyWith(
             fontWeight: FontWeight.w900,
             color: Colors.black,
           ),
@@ -205,7 +200,7 @@ class _ContactPageState extends State<ContactPage> {
                   ),
                   const SizedBox(width: 8),
                   Text(
-                    'Envoyer un message',
+                    context.l10n.contactSendMessageTitle,
                     style: theme.textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.w800,
                     ),
@@ -214,17 +209,18 @@ class _ContactPageState extends State<ContactPage> {
               ),
               const SizedBox(height: 16),
 
-              // Titre
+              // Titre / Subject
               TextFormField(
                 controller: _titleCtrl,
                 textCapitalization: TextCapitalization.sentences,
-                decoration: const InputDecoration(
-                  labelText: 'Titre',
-                  hintText: 'Sujet de votre demande',
-                  prefixIcon: Icon(Ionicons.pricetag_outline),
-                  border: OutlineInputBorder(),
+                decoration: InputDecoration(
+                  labelText: context.l10n.contactSubjectLabel,
+                  hintText: context.l10n.contactSubjectHint,
+                  prefixIcon: const Icon(Ionicons.pricetag_outline),
+                  border: const OutlineInputBorder(),
                 ),
-                validator: (v) => _required(v, 'Titre'),
+                validator: (v) =>
+                    _required(v, context.l10n.contactSubjectLabel),
               ),
               const SizedBox(height: 12),
 
@@ -234,17 +230,18 @@ class _ContactPageState extends State<ContactPage> {
                 minLines: 6,
                 maxLines: 12,
                 textInputAction: TextInputAction.newline,
-                decoration: const InputDecoration(
-                  labelText: 'Message',
-                  hintText: 'Décrivez votre demande…',
+                decoration: InputDecoration(
+                  labelText: context.l10n.contactMessageLabel,
+                  hintText: context.l10n.contactMessageHint,
                   alignLabelWithHint: true,
-                  prefixIcon: Icon(Ionicons.chatbox_ellipses_outline),
+                  prefixIcon: const Icon(Ionicons.chatbox_ellipses_outline),
                 ),
-                validator: (v) => _required(v, 'Message'),
+                validator: (v) =>
+                    _required(v, context.l10n.contactMessageLabel),
               ),
               const SizedBox(height: 16),
 
-              // Captcha simple
+              // Captcha
               Row(
                 children: [
                   Icon(
@@ -253,38 +250,38 @@ class _ContactPageState extends State<ContactPage> {
                   ),
                   const SizedBox(width: 8),
                   Text(
-                    'Vérification anti-spam',
+                    context.l10n.contactAntiSpamTitle,
                     style: theme.textTheme.titleSmall,
                   ),
                   const Spacer(),
                   IconButton(
-                    tooltip: "Rafraîchir",
+                    tooltip: context.l10n.contactRefresh,
                     icon: const Icon(Ionicons.refresh_outline),
                     onPressed: _sending ? null : _regenCaptcha,
                   ),
                 ],
               ),
               const SizedBox(height: 8),
-              Text('Combien font $_a + $_b ?'),
+              Text(context.l10n.contactCaptchaQuestion(_a, _b)),
               const SizedBox(height: 8),
               TextFormField(
                 controller: _captchaCtrl,
                 keyboardType: TextInputType.number,
-                decoration: const InputDecoration(
-                  labelText: 'Réponse',
-                  prefixIcon: Icon(Ionicons.calculator_outline),
-                  border: OutlineInputBorder(),
+                decoration: InputDecoration(
+                  labelText: context.l10n.contactCaptchaAnswerLabel,
+                  prefixIcon: const Icon(Ionicons.calculator_outline),
+                  border: const OutlineInputBorder(),
                 ),
                 validator: (v) {
-                  if ((v ?? '').trim().isEmpty) return 'Captcha requis';
-                  if (!_captchaOK) return 'Captcha incorrect';
+                  if ((v ?? '').trim().isEmpty)
+                    return context.l10n.contactCaptchaRequired;
+                  if (!_captchaOK) return context.l10n.contactCaptchaIncorrect;
                   return null;
                 },
               ),
 
               const SizedBox(height: 20),
 
-              // Actions
               Row(
                 children: [
                   Expanded(
@@ -296,7 +293,11 @@ class _ContactPageState extends State<ContactPage> {
                               child: CircularProgressIndicator(strokeWidth: 2),
                             )
                           : const Icon(Ionicons.send_outline),
-                      label: Text(_sending ? 'Envoi…' : 'Envoyer'),
+                      label: Text(
+                        _sending
+                            ? context.l10n.contactSending
+                            : context.l10n.contactSend,
+                      ),
                       onPressed: _sending ? null : _sendMessage,
                     ),
                   ),
@@ -304,7 +305,7 @@ class _ContactPageState extends State<ContactPage> {
                   Expanded(
                     child: OutlinedButton.icon(
                       icon: const Icon(Ionicons.close_circle_outline),
-                      label: const Text('Annuler'),
+                      label: Text(context.l10n.contactCancel),
                       onPressed: _cancelAndGoHome,
                     ),
                   ),
@@ -313,7 +314,7 @@ class _ContactPageState extends State<ContactPage> {
 
               const SizedBox(height: 8),
               Text(
-                "Votre message est envoyé via notre API publique sécurisée. Merci !",
+                context.l10n.contactFooterNote,
                 textAlign: TextAlign.center,
                 style: theme.textTheme.bodySmall?.copyWith(
                   color: theme.textTheme.bodySmall?.color?.withOpacity(0.7),
@@ -322,8 +323,9 @@ class _ContactPageState extends State<ContactPage> {
               if (_publicAppKey.isEmpty) ...[
                 const SizedBox(height: 8),
                 Text(
-                  "⚠️ Clé d'application absente. Lance l'app avec "
-                  "--dart-define=PUBLIC_APP_KEY=ta_cle_publique",
+                  context.l10n.contactMissingAppKey(
+                    '--dart-define=PUBLIC_APP_KEY=ta_cle_publique',
+                  ),
                   textAlign: TextAlign.center,
                   style: theme.textTheme.bodySmall?.copyWith(color: Colors.red),
                 ),

@@ -317,5 +317,47 @@
 
   "timeoutRetry": "Request timed out. Please try again.",
 
-  "consentText": "Privacy policy – ASConnect app\n\n1) Data controller\nThe data collected in the ASConnect app is processed by FAST France as the data controller.\nIf you have any questions about your data or how to exercise your rights, contact us at: contact@fastfrance.org.\n\n2) Purposes of processing\nData processing carried out through the app serves the following purposes:\n• Creating and managing your user account to access the ASConnect app;\n• Using geolocation features to display:\n  o points of interest related to Angelman syndrome,\n  o and/or profiles of concerned people, according to various criteria (geographic distance, genotype, age range);\n• Improving the service and personalizing the user experience, including allowing users to choose whether to display a photo, their first name, or last name.\n\n3) Categories of data collected\nThe following data may be collected:\n• Identification data:\n  o last name, first name, email address, password, photo,\n  o secret question and answer (in case of forgotten password);\n• Sensitive data:\n  o genotype, phone location (geolocation).\nThe legal basis for this processing is the user’s explicit and informed consent.\n\n4) Data retention period\nData is kept for the duration of account use, then deleted within a maximum of 12 months after the last activity.\nUsers can exercise their right to be forgotten at any time directly in the app via:\nPrivacy policy → Right to be forgotten.\n\n5) Recipients and data hosting\nData is securely hosted on PythonAnywhere servers.\nData is stored in the European Union.\n(For more information about the host’s privacy policy, see https://www.pythonanywhere.com/privacy/.)\n\n6) Users’ rights\nIn accordance with Regulation (EU) 2016/679 (GDPR), users have the following rights:\n• Right of access, rectification and deletion (“right to be forgotten”) — directly via their profile or via Privacy policy → Right to be forgotten;\n• Right to object, data portability and restriction of processing;\n• Right to withdraw consent at any time.\nTo exercise these rights (other than the in-app right to be forgotten), email: contact@fastfrance.org.\n\n7) Security and confidentiality\nAll data is encrypted during storage and transmission.\nPasswords are hashed according to security best practices, and all communications with the service use HTTPS.\n\n8) Explicit consent\nRegistering for the ASConnect app requires the user’s explicit and informed consent for the processing described in section 2.\nUsers may withdraw consent at any time via account settings or by contacting contact@fastfrance.org."
+  "consentText": "Privacy policy – ASConnect app\n\n1) Data controller\nThe data collected in the ASConnect app is processed by FAST France as the data controller.\nIf you have any questions about your data or how to exercise your rights, contact us at: contact@fastfrance.org.\n\n2) Purposes of processing\nData processing carried out through the app serves the following purposes:\n• Creating and managing your user account to access the ASConnect app;\n• Using geolocation features to display:\n  o points of interest related to Angelman syndrome,\n  o and/or profiles of concerned people, according to various criteria (geographic distance, genotype, age range);\n• Improving the service and personalizing the user experience, including allowing users to choose whether to display a photo, their first name, or last name.\n\n3) Categories of data collected\nThe following data may be collected:\n• Identification data:\n  o last name, first name, email address, password, photo,\n  o secret question and answer (in case of forgotten password);\n• Sensitive data:\n  o genotype, phone location (geolocation).\nThe legal basis for this processing is the user’s explicit and informed consent.\n\n4) Data retention period\nData is kept for the duration of account use, then deleted within a maximum of 12 months after the last activity.\nUsers can exercise their right to be forgotten at any time directly in the app via:\nPrivacy policy → Right to be forgotten.\n\n5) Recipients and data hosting\nData is securely hosted on PythonAnywhere servers.\nData is stored in the European Union.\n(For more information about the host’s privacy policy, see https://www.pythonanywhere.com/privacy/.)\n\n6) Users’ rights\nIn accordance with Regulation (EU) 2016/679 (GDPR), users have the following rights:\n• Right of access, rectification and deletion (“right to be forgotten”) — directly via their profile or via Privacy policy → Right to be forgotten;\n• Right to object, data portability and restriction of processing;\n• Right to withdraw consent at any time.\nTo exercise these rights (other than the in-app right to be forgotten), email: contact@fastfrance.org.\n\n7) Security and confidentiality\nAll data is encrypted during storage and transmission.\nPasswords are hashed according to security best practices, and all communications with the service use HTTPS.\n\n8) Explicit consent\nRegistering for the ASConnect app requires the user’s explicit and informed consent for the processing described in section 2.\nUsers may withdraw consent at any time via account settings or by contacting contact@fastfrance.org.",
+  
+  "contactPageTitle": "Contact us",
+  "contactSendMessageTitle": "Send a message",
+  "contactSubjectLabel": "Title",
+  "contactSubjectHint": "Subject of your request",
+  "contactMessageLabel": "Message",
+  "contactMessageHint": "Describe your request…",
+  "contactAntiSpamTitle": "Anti-spam check",
+  "contactRefresh": "Refresh",
+  "contactCaptchaQuestion": "How much is {a} + {b}?",
+  "@contactCaptchaQuestion": {
+    "placeholders": { "a": { "type": "int" }, "b": { "type": "int" } }
+  },
+  "contactCaptchaAnswerLabel": "Answer",
+  "contactCaptchaRequired": "Captcha required",
+  "contactCaptchaIncorrect": "Incorrect captcha.",
+  "contactSend": "Send",
+  "contactSending": "Sending…",
+  "contactCancel": "Cancel",
+  "contactMessageSent": "Message sent ✅",
+  "contactSendFailedWithCode": "Failed to send ({code})",
+  "@contactSendFailedWithCode": {
+    "placeholders": { "code": { "type": "int" } }
+  },
+  "contactAccessDenied": "Access denied (missing or invalid app key).",
+  "contactTooManyRequests": "Too many requests. Try again in a few seconds.",
+  "contactServiceUnavailable": "Service temporarily unavailable. Try again later.",
+  "contactCheckInternet": "Check your internet connection.",
+  "contactTimeout": "Timeout. Please try again later.",
+  "contactFooterNote": "Your message is sent via our secure public API. Thank you!",
+  "contactMissingAppKey": "⚠️ App key missing. Run the app with {command}",
+  "@contactMissingAppKey": {
+    "placeholders": { "command": { "type": "String" } }
+  },
+  "fieldRequired": "{field} is required",
+  "@fieldRequired": {
+    "placeholders": { "field": { "type": "String" } }
+  },
+  "unexpectedError": "Unexpected error: {message}",
+  "@unexpectedError": {
+    "placeholders": { "message": { "type": "String" } }
+  }
 }

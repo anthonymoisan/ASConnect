@@ -56,8 +56,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get logoutTitle => 'Cerrar sesión';
 
   @override
-  String get logoutConfirm =>
-      '¿Seguro(a) que deseas cerrar sesión en la aplicación?';
+  String get logoutConfirm => '¿Seguro(a) que deseas cerrar sesión en la aplicación?';
 
   @override
   String get tabCommunity => 'Conectarse con la comunidad';
@@ -75,20 +74,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get loginTitle => 'Iniciar sesión';
 
   @override
-  String get loginIntro =>
-      'La aplicación ASConnect está destinada únicamente a cuidadores que tienen un hijo con el síndrome de Angelman, una enfermedad genética rara.';
-
-  @override
-  String get loginButton => 'Iniciar sesión';
-
-  @override
-  String get loginLoading => 'Conectando…';
-
-  @override
-  String get createAccount => 'Crear una cuenta';
-
-  @override
-  String get forgotPassword => '¿Olvidaste tu contraseña?';
+  String get loginIntro => 'La aplicación ASConnect está destinada únicamente a cuidadores que tienen un hijo con el síndrome de Angelman, una enfermedad genética rara.';
 
   @override
   String get emailLabel => 'Correo electrónico';
@@ -103,31 +89,40 @@ class AppLocalizationsEs extends AppLocalizations {
   String get passwordLabel => 'Contraseña';
 
   @override
-  String get passwordRequired => 'Introduce tu contraseña';
-
-  @override
   String get show => 'Mostrar';
 
   @override
   String get hide => 'Ocultar';
 
   @override
+  String get passwordRequired => 'Introduce tu contraseña';
+
+  @override
+  String get loginButton => 'Iniciar sesión';
+
+  @override
+  String get loginLoading => 'Conectando…';
+
+  @override
+  String get createAccount => 'Crear una cuenta';
+
+  @override
+  String get forgotPassword => '¿Olvidaste tu contraseña?';
+
+  @override
   String get invalidCredentials => 'Credenciales inválidas.';
 
   @override
-  String get accessDeniedKey =>
-      'Acceso denegado: clave de la aplicación ausente o inválida.';
+  String get accessDeniedKey => 'Acceso denegado: clave de la aplicación ausente o inválida.';
 
   @override
   String get badRequest => 'Solicitud no válida (400).';
 
   @override
-  String get tooManyAttempts =>
-      'Demasiados intentos. Inténtalo de nuevo en un momento.';
+  String get tooManyAttempts => 'Demasiados intentos. Inténtalo de nuevo en un momento.';
 
   @override
-  String get serviceUnavailable =>
-      'Servicio no disponible. Inténtalo más tarde.';
+  String get serviceUnavailable => 'Servicio no disponible. Inténtalo más tarde.';
 
   @override
   String serverErrorWithCode(Object code) {
@@ -141,8 +136,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get cannotConnectServer => 'No se puede conectar con el servidor.';
 
   @override
-  String get timeoutCheckConnection =>
-      'Tiempo de espera agotado. Verifica tu conexión.';
+  String get timeoutCheckConnection => 'Tiempo de espera agotado. Verifica tu conexión.';
 
   @override
   String errorWithMessage(Object message) {
@@ -150,8 +144,7 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
-  String get missingAppKeyWarning =>
-      '⚠️ Falta la clave de la app. Ejecuta la app con --dart-define=PUBLIC_APP_KEY=tu_clave_publica';
+  String get missingAppKeyWarning => '⚠️ Falta la clave de la app. Ejecuta la app con --dart-define=PUBLIC_APP_KEY=tu_clave_publica';
 
   @override
   String get signupTitle => 'Crear una cuenta';
@@ -278,8 +271,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get secretAnswerRequired => 'La respuesta es obligatoria';
 
   @override
-  String get consentCheckbox =>
-      'Acepto las condiciones de uso de mis datos y doy mi consentimiento.';
+  String get consentCheckbox => 'Acepto las condiciones de uso de mis datos y doy mi consentimiento.';
 
   @override
   String get signupConsentNotGiven => 'No has dado tu consentimiento';
@@ -294,8 +286,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get signupSuccess => 'Cuenta creada con éxito.';
 
   @override
-  String get signupEmailAlreadyExistsRedirect =>
-      'Tu correo ya está en nuestra base de datos. Serás redirigido/a a la página de inicio de sesión.';
+  String get signupEmailAlreadyExistsRedirect => 'Tu correo ya está en nuestra base de datos. Serás redirigido/a a la página de inicio de sesión.';
 
   @override
   String get signupSelectBirthdate => 'Selecciona una fecha de nacimiento';
@@ -374,8 +365,7 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
-  String get forgotAnswerOkHint =>
-      '✅ Respuesta correcta, puedes establecer una nueva contraseña.';
+  String get forgotAnswerOkHint => '✅ Respuesta correcta, puedes establecer una nueva contraseña.';
 
   @override
   String get forgotNewPasswordLabel => 'Nueva contraseña';
@@ -399,8 +389,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get forgotConfirmPasswordLabel => 'Confirmar contraseña';
 
   @override
-  String get forgotEnterNewPasswordFirst =>
-      'Introduce primero la nueva contraseña';
+  String get forgotEnterNewPasswordFirst => 'Introduce primero la nueva contraseña';
 
   @override
   String get forgotPasswordsDoNotMatch => 'Las contraseñas no coinciden';
@@ -420,8 +409,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get tooManyAttemptsTitle => 'Demasiados intentos';
 
   @override
-  String get tooManyAttemptsMessage =>
-      'Has superado el número de intentos.\n\nEscribe a contact@fastfrance.org para explicar tu problema de inicio de sesión.';
+  String get tooManyAttemptsMessage => 'Has superado el número de intentos.\n\nEscribe a contact@fastfrance.org para explicar tu problema de inicio de sesión.';
 
   @override
   String get forgotValidating => 'Enviando…';
@@ -466,8 +454,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get photoRequiredAddToSave => 'Añade una foto para guardar';
 
   @override
-  String get photoRequiredAfterDelete =>
-      'Foto obligatoria: importa o toma una nueva foto.';
+  String get photoRequiredAfterDelete => 'Foto obligatoria: importa o toma una nueva foto.';
 
   @override
   String get photoDeleted => 'Foto eliminada ✅';
@@ -508,8 +495,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get geolocation => 'Geolocalización';
 
   @override
-  String get geolocationHint =>
-      'Recuerda actualizar tu geolocalización si cambió desde tu registro.';
+  String get geolocationHint => 'Recuerda actualizar tu geolocalización si cambió desde tu registro.';
 
   @override
   String get secretQuestionSection => 'Pregunta secreta';
@@ -574,8 +560,7 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
-  String get versionMadeByFastFrance =>
-      'Esta aplicación ha sido desarrollada por FAST France';
+  String get versionMadeByFastFrance => 'Esta aplicación ha sido desarrollada por FAST France';
 
   @override
   String versionNumber(String version) {
@@ -592,15 +577,13 @@ class AppLocalizationsEs extends AppLocalizations {
   String get privacyDeleteTitle => 'Atención';
 
   @override
-  String get privacyDeleteConfirmBody =>
-      'Esta acción es irreversible.\n\nTu perfil y los datos asociados se eliminarán definitivamente.\n\n¿Quieres continuar?';
+  String get privacyDeleteConfirmBody => 'Esta acción es irreversible.\n\nTu perfil y los datos asociados se eliminarán definitivamente.\n\n¿Quieres continuar?';
 
   @override
   String get privacyDeletedOkTitle => 'Cuenta eliminada';
 
   @override
-  String get privacyDeletedOkBody =>
-      'Tu cuenta ha sido eliminada.\nSerás redirigido a la página de inicio de sesión.';
+  String get privacyDeletedOkBody => 'Tu cuenta ha sido eliminada.\nSerás redirigido a la página de inicio de sesión.';
 
   @override
   String privacyDeleteFailedWithCode(int code) {
@@ -611,6 +594,93 @@ class AppLocalizationsEs extends AppLocalizations {
   String get timeoutRetry => 'Tiempo de espera agotado. Inténtalo de nuevo.';
 
   @override
-  String get consentText =>
-      'Política de privacidad – Aplicación ASConnect\n\n1) Responsable del tratamiento\nLos datos recopilados en la aplicación ASConnect son tratados por FAST France como responsable del tratamiento.\nPara cualquier pregunta relativa a sus datos o al ejercicio de sus derechos, puede contactarnos en: contact@fastfrance.org.\n\n2) Finalidades del tratamiento\nLos tratamientos de datos realizados a través de la aplicación persiguen las siguientes finalidades:\n• Crear y gestionar su cuenta de usuario para acceder a la aplicación ASConnect;\n• Utilizar funciones de geolocalización para visualizar:\n  o puntos de interés relacionados con el síndrome de Angelman,\n  o y/o perfiles de personas afectadas, según distintos criterios (distancia geográfica, genotipo, rango de edad);\n• Mejorar el servicio y personalizar la experiencia del usuario, incluyendo la posibilidad de elegir si desea mostrar una foto, su nombre o su apellido.\n\n3) Categorías de datos recopilados\nSe pueden recopilar los siguientes datos:\n• Datos de identificación:\n  o apellido, nombre, correo electrónico, contraseña, foto,\n  o pregunta y respuesta secretas (en caso de olvido de la contraseña);\n• Datos sensibles:\n  o genotipo, ubicación del teléfono (geolocalización).\nLa base legal de estos tratamientos se basa en el consentimiento explícito e informado del usuario.\n\n4) Plazo de conservación\nLos datos se conservan durante todo el tiempo de uso de la cuenta y luego se eliminan en un plazo máximo de 12 meses tras la última actividad.\nEl usuario puede ejercer su derecho al olvido en cualquier momento directamente en la aplicación, a través de:\nPolítica de privacidad → Derecho al olvido.\n\n5) Destinatarios y alojamiento\nLos datos se alojan de forma segura en los servidores de PythonAnywhere.\nLos datos se almacenan en la Unión Europea.\n(Para más información sobre la política de privacidad del proveedor, consulte https://www.pythonanywhere.com/privacy/.)\n\n6) Derechos de los usuarios\nDe conformidad con el Reglamento (UE) 2016/679 (RGPD), los usuarios disponen de los siguientes derechos:\n• Derecho de acceso, rectificación y supresión (“derecho al olvido”) — directamente desde su perfil o desde Política de privacidad → Derecho al olvido;\n• Derecho de oposición, portabilidad y limitación del tratamiento;\n• Derecho a retirar el consentimiento en cualquier momento.\nPara ejercer estos derechos (distintos del derecho al olvido dentro de la aplicación), puede enviar un correo a: contact@fastfrance.org.\n\n7) Seguridad y confidencialidad\nTodos los datos se cifran durante el almacenamiento y la transmisión.\nLas contraseñas se almacenan mediante hash siguiendo buenas prácticas de seguridad y toda la comunicación con el servicio se realiza mediante HTTPS.\n\n8) Consentimiento explícito\nEl registro en la aplicación ASConnect requiere el consentimiento explícito e informado del usuario para los tratamientos descritos en la sección 2.\nEl usuario puede retirar su consentimiento en cualquier momento desde la configuración de su cuenta o contactando con contact@fastfrance.org.';
+  String get consentText => 'Política de privacidad – Aplicación ASConnect\n\n1) Responsable del tratamiento\nLos datos recopilados en la aplicación ASConnect son tratados por FAST France como responsable del tratamiento.\nPara cualquier pregunta relativa a sus datos o al ejercicio de sus derechos, puede contactarnos en: contact@fastfrance.org.\n\n2) Finalidades del tratamiento\nLos tratamientos de datos realizados a través de la aplicación persiguen las siguientes finalidades:\n• Crear y gestionar su cuenta de usuario para acceder a la aplicación ASConnect;\n• Utilizar funciones de geolocalización para visualizar:\n  o puntos de interés relacionados con el síndrome de Angelman,\n  o y/o perfiles de personas afectadas, según distintos criterios (distancia geográfica, genotipo, rango de edad);\n• Mejorar el servicio y personalizar la experiencia del usuario, incluyendo la posibilidad de elegir si desea mostrar una foto, su nombre o su apellido.\n\n3) Categorías de datos recopilados\nSe pueden recopilar los siguientes datos:\n• Datos de identificación:\n  o apellido, nombre, correo electrónico, contraseña, foto,\n  o pregunta y respuesta secretas (en caso de olvido de la contraseña);\n• Datos sensibles:\n  o genotipo, ubicación del teléfono (geolocalización).\nLa base legal de estos tratamientos se basa en el consentimiento explícito e informado del usuario.\n\n4) Plazo de conservación\nLos datos se conservan durante todo el tiempo de uso de la cuenta y luego se eliminan en un plazo máximo de 12 meses tras la última actividad.\nEl usuario puede ejercer su derecho al olvido en cualquier momento directamente en la aplicación, a través de:\nPolítica de privacidad → Derecho al olvido.\n\n5) Destinatarios y alojamiento\nLos datos se alojan de forma segura en los servidores de PythonAnywhere.\nLos datos se almacenan en la Unión Europea.\n(Para más información sobre la política de privacidad del proveedor, consulte https://www.pythonanywhere.com/privacy/.)\n\n6) Derechos de los usuarios\nDe conformidad con el Reglamento (UE) 2016/679 (RGPD), los usuarios disponen de los siguientes derechos:\n• Derecho de acceso, rectificación y supresión (“derecho al olvido”) — directamente desde su perfil o desde Política de privacidad → Derecho al olvido;\n• Derecho de oposición, portabilidad y limitación del tratamiento;\n• Derecho a retirar el consentimiento en cualquier momento.\nPara ejercer estos derechos (distintos del derecho al olvido dentro de la aplicación), puede enviar un correo a: contact@fastfrance.org.\n\n7) Seguridad y confidencialidad\nTodos los datos se cifran durante el almacenamiento y la transmisión.\nLas contraseñas se almacenan mediante hash siguiendo buenas prácticas de seguridad y toda la comunicación con el servicio se realiza mediante HTTPS.\n\n8) Consentimiento explícito\nEl registro en la aplicación ASConnect requiere el consentimiento explícito e informado del usuario para los tratamientos descritos en la sección 2.\nEl usuario puede retirar su consentimiento en cualquier momento desde la configuración de su cuenta o contactando con contact@fastfrance.org.';
+
+  @override
+  String get contactPageTitle => 'Contactar';
+
+  @override
+  String get contactSendMessageTitle => 'Enviar un mensaje';
+
+  @override
+  String get contactSubjectLabel => 'Título';
+
+  @override
+  String get contactSubjectHint => 'Asunto de tu solicitud';
+
+  @override
+  String get contactMessageLabel => 'Mensaje';
+
+  @override
+  String get contactMessageHint => 'Describe tu solicitud…';
+
+  @override
+  String get contactAntiSpamTitle => 'Verificación anti-spam';
+
+  @override
+  String get contactRefresh => 'Actualizar';
+
+  @override
+  String contactCaptchaQuestion(int a, int b) {
+    return '¿Cuánto es $a + $b?';
+  }
+
+  @override
+  String get contactCaptchaAnswerLabel => 'Respuesta';
+
+  @override
+  String get contactCaptchaRequired => 'Captcha obligatorio';
+
+  @override
+  String get contactCaptchaIncorrect => 'Captcha incorrecto.';
+
+  @override
+  String get contactSend => 'Enviar';
+
+  @override
+  String get contactSending => 'Enviando…';
+
+  @override
+  String get contactCancel => 'Cancelar';
+
+  @override
+  String get contactMessageSent => 'Mensaje enviado ✅';
+
+  @override
+  String contactSendFailedWithCode(int code) {
+    return 'Error al enviar ($code)';
+  }
+
+  @override
+  String get contactAccessDenied => 'Acceso denegado (clave de la aplicación ausente o inválida).';
+
+  @override
+  String get contactTooManyRequests => 'Demasiadas solicitudes. Inténtalo de nuevo en unos segundos.';
+
+  @override
+  String get contactServiceUnavailable => 'Servicio temporalmente no disponible. Inténtalo más tarde.';
+
+  @override
+  String get contactCheckInternet => 'Verifica tu conexión a internet.';
+
+  @override
+  String get contactTimeout => 'Tiempo de espera agotado. Inténtalo más tarde.';
+
+  @override
+  String get contactFooterNote => 'Tu mensaje se envía a través de nuestra API pública segura. ¡Gracias!';
+
+  @override
+  String contactMissingAppKey(String command) {
+    return '⚠️ Falta la clave de la aplicación. Ejecuta la app con $command';
+  }
+
+  @override
+  String fieldRequired(String field) {
+    return '$field obligatorio';
+  }
+
+  @override
+  String unexpectedError(String message) {
+    return 'Error inesperado: $message';
+  }
 }

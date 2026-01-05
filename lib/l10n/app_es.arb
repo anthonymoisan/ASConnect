@@ -317,5 +317,47 @@
 
   "timeoutRetry": "Tiempo de espera agotado. Inténtalo de nuevo.",
 
-  "consentText": "Política de privacidad – Aplicación ASConnect\n\n1) Responsable del tratamiento\nLos datos recopilados en la aplicación ASConnect son tratados por FAST France como responsable del tratamiento.\nPara cualquier pregunta relativa a sus datos o al ejercicio de sus derechos, puede contactarnos en: contact@fastfrance.org.\n\n2) Finalidades del tratamiento\nLos tratamientos de datos realizados a través de la aplicación persiguen las siguientes finalidades:\n• Crear y gestionar su cuenta de usuario para acceder a la aplicación ASConnect;\n• Utilizar funciones de geolocalización para visualizar:\n  o puntos de interés relacionados con el síndrome de Angelman,\n  o y/o perfiles de personas afectadas, según distintos criterios (distancia geográfica, genotipo, rango de edad);\n• Mejorar el servicio y personalizar la experiencia del usuario, incluyendo la posibilidad de elegir si desea mostrar una foto, su nombre o su apellido.\n\n3) Categorías de datos recopilados\nSe pueden recopilar los siguientes datos:\n• Datos de identificación:\n  o apellido, nombre, correo electrónico, contraseña, foto,\n  o pregunta y respuesta secretas (en caso de olvido de la contraseña);\n• Datos sensibles:\n  o genotipo, ubicación del teléfono (geolocalización).\nLa base legal de estos tratamientos se basa en el consentimiento explícito e informado del usuario.\n\n4) Plazo de conservación\nLos datos se conservan durante todo el tiempo de uso de la cuenta y luego se eliminan en un plazo máximo de 12 meses tras la última actividad.\nEl usuario puede ejercer su derecho al olvido en cualquier momento directamente en la aplicación, a través de:\nPolítica de privacidad → Derecho al olvido.\n\n5) Destinatarios y alojamiento\nLos datos se alojan de forma segura en los servidores de PythonAnywhere.\nLos datos se almacenan en la Unión Europea.\n(Para más información sobre la política de privacidad del proveedor, consulte https://www.pythonanywhere.com/privacy/.)\n\n6) Derechos de los usuarios\nDe conformidad con el Reglamento (UE) 2016/679 (RGPD), los usuarios disponen de los siguientes derechos:\n• Derecho de acceso, rectificación y supresión (“derecho al olvido”) — directamente desde su perfil o desde Política de privacidad → Derecho al olvido;\n• Derecho de oposición, portabilidad y limitación del tratamiento;\n• Derecho a retirar el consentimiento en cualquier momento.\nPara ejercer estos derechos (distintos del derecho al olvido dentro de la aplicación), puede enviar un correo a: contact@fastfrance.org.\n\n7) Seguridad y confidencialidad\nTodos los datos se cifran durante el almacenamiento y la transmisión.\nLas contraseñas se almacenan mediante hash siguiendo buenas prácticas de seguridad y toda la comunicación con el servicio se realiza mediante HTTPS.\n\n8) Consentimiento explícito\nEl registro en la aplicación ASConnect requiere el consentimiento explícito e informado del usuario para los tratamientos descritos en la sección 2.\nEl usuario puede retirar su consentimiento en cualquier momento desde la configuración de su cuenta o contactando con contact@fastfrance.org."
+  "consentText": "Política de privacidad – Aplicación ASConnect\n\n1) Responsable del tratamiento\nLos datos recopilados en la aplicación ASConnect son tratados por FAST France como responsable del tratamiento.\nPara cualquier pregunta relativa a sus datos o al ejercicio de sus derechos, puede contactarnos en: contact@fastfrance.org.\n\n2) Finalidades del tratamiento\nLos tratamientos de datos realizados a través de la aplicación persiguen las siguientes finalidades:\n• Crear y gestionar su cuenta de usuario para acceder a la aplicación ASConnect;\n• Utilizar funciones de geolocalización para visualizar:\n  o puntos de interés relacionados con el síndrome de Angelman,\n  o y/o perfiles de personas afectadas, según distintos criterios (distancia geográfica, genotipo, rango de edad);\n• Mejorar el servicio y personalizar la experiencia del usuario, incluyendo la posibilidad de elegir si desea mostrar una foto, su nombre o su apellido.\n\n3) Categorías de datos recopilados\nSe pueden recopilar los siguientes datos:\n• Datos de identificación:\n  o apellido, nombre, correo electrónico, contraseña, foto,\n  o pregunta y respuesta secretas (en caso de olvido de la contraseña);\n• Datos sensibles:\n  o genotipo, ubicación del teléfono (geolocalización).\nLa base legal de estos tratamientos se basa en el consentimiento explícito e informado del usuario.\n\n4) Plazo de conservación\nLos datos se conservan durante todo el tiempo de uso de la cuenta y luego se eliminan en un plazo máximo de 12 meses tras la última actividad.\nEl usuario puede ejercer su derecho al olvido en cualquier momento directamente en la aplicación, a través de:\nPolítica de privacidad → Derecho al olvido.\n\n5) Destinatarios y alojamiento\nLos datos se alojan de forma segura en los servidores de PythonAnywhere.\nLos datos se almacenan en la Unión Europea.\n(Para más información sobre la política de privacidad del proveedor, consulte https://www.pythonanywhere.com/privacy/.)\n\n6) Derechos de los usuarios\nDe conformidad con el Reglamento (UE) 2016/679 (RGPD), los usuarios disponen de los siguientes derechos:\n• Derecho de acceso, rectificación y supresión (“derecho al olvido”) — directamente desde su perfil o desde Política de privacidad → Derecho al olvido;\n• Derecho de oposición, portabilidad y limitación del tratamiento;\n• Derecho a retirar el consentimiento en cualquier momento.\nPara ejercer estos derechos (distintos del derecho al olvido dentro de la aplicación), puede enviar un correo a: contact@fastfrance.org.\n\n7) Seguridad y confidencialidad\nTodos los datos se cifran durante el almacenamiento y la transmisión.\nLas contraseñas se almacenan mediante hash siguiendo buenas prácticas de seguridad y toda la comunicación con el servicio se realiza mediante HTTPS.\n\n8) Consentimiento explícito\nEl registro en la aplicación ASConnect requiere el consentimiento explícito e informado del usuario para los tratamientos descritos en la sección 2.\nEl usuario puede retirar su consentimiento en cualquier momento desde la configuración de su cuenta o contactando con contact@fastfrance.org.",
+  
+  "contactPageTitle": "Contactar",
+  "contactSendMessageTitle": "Enviar un mensaje",
+  "contactSubjectLabel": "Título",
+  "contactSubjectHint": "Asunto de tu solicitud",
+  "contactMessageLabel": "Mensaje",
+  "contactMessageHint": "Describe tu solicitud…",
+  "contactAntiSpamTitle": "Verificación anti-spam",
+  "contactRefresh": "Actualizar",
+  "contactCaptchaQuestion": "¿Cuánto es {a} + {b}?",
+  "@contactCaptchaQuestion": {
+    "placeholders": { "a": { "type": "int" }, "b": { "type": "int" } }
+  },
+  "contactCaptchaAnswerLabel": "Respuesta",
+  "contactCaptchaRequired": "Captcha obligatorio",
+  "contactCaptchaIncorrect": "Captcha incorrecto.",
+  "contactSend": "Enviar",
+  "contactSending": "Enviando…",
+  "contactCancel": "Cancelar",
+  "contactMessageSent": "Mensaje enviado ✅",
+  "contactSendFailedWithCode": "Error al enviar ({code})",
+  "@contactSendFailedWithCode": {
+    "placeholders": { "code": { "type": "int" } }
+  },
+  "contactAccessDenied": "Acceso denegado (clave de la aplicación ausente o inválida).",
+  "contactTooManyRequests": "Demasiadas solicitudes. Inténtalo de nuevo en unos segundos.",
+  "contactServiceUnavailable": "Servicio temporalmente no disponible. Inténtalo más tarde.",
+  "contactCheckInternet": "Verifica tu conexión a internet.",
+  "contactTimeout": "Tiempo de espera agotado. Inténtalo más tarde.",
+  "contactFooterNote": "Tu mensaje se envía a través de nuestra API pública segura. ¡Gracias!",
+  "contactMissingAppKey": "⚠️ Falta la clave de la aplicación. Ejecuta la app con {command}",
+  "@contactMissingAppKey": {
+    "placeholders": { "command": { "type": "String" } }
+  },
+  "fieldRequired": "{field} obligatorio",
+  "@fieldRequired": {
+    "placeholders": { "field": { "type": "String" } }
+  },
+  "unexpectedError": "Error inesperado: {message}",
+  "@unexpectedError": {
+    "placeholders": { "message": { "type": "String" } }
+  }
 }
