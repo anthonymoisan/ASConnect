@@ -23,7 +23,6 @@ import 'component/contact_page.dart';
 import 'profil/edit_profile_page.dart';
 import 'component/version.dart';
 import 'whatsApp/screens/conversations_page.dart';
-import 'mapCarto/map_carto.dart';
 
 // ✅ AppLocalizations (généré via ARB)
 import 'l10n/app_localizations.dart';
@@ -228,6 +227,9 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   final _scaffoldKey = GlobalKey<ScaffoldState>();
+
+  /// 0 = Community (MapPeopleByCity)
+  /// 1 = Chats
   int _currentIndex = 0;
 
   int _unreadMessagesTotal = 0;
@@ -248,11 +250,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       osmUserAgent: 'ASConnexion/1.0 (mobile; contact: contact@fastfrance.org)',
     ),
     ConversationsPage(personId: widget.personId),
-    MapCarto(
-      mapTilerApiKey: kMapTilerKey,
-      allowOsmInRelease: kAllowOsmInRelease,
-      osmUserAgent: 'ASConnexion/1.0 (mobile; contact: contact@fastfrance.org)',
-    ),
   ];
 
   void _setIndex(int i) => setState(() => _currentIndex = i);
@@ -381,7 +378,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   List<String> _titles(BuildContext context) {
     final t = AppLocalizations.of(context)!;
-    return <String>[t.tabCommunity, t.tabChats, t.tabPoi];
+    return <String>[t.tabCommunity, t.tabChats];
   }
 
   @override
@@ -454,7 +451,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         backgroundColor: Theme.of(context).colorScheme.surface,
         centerTitle: true,
         leading: IconButton(
-          tooltip: t.menu, // ✅ plus de "Menu" en dur
+          tooltip: t.menu,
           icon: const Icon(Ionicons.menu),
           onPressed: () => _scaffoldKey.currentState?.openDrawer(),
         ),
@@ -469,58 +466,66 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
       body: IndexedStack(index: _currentIndex, children: _tabs),
 
+      // ✅ Barre du bas : plus petite + toujours centrée + 2 icônes uniquement
       bottomNavigationBar: SafeArea(
         child: BottomAppBar(
           color: Colors.transparent,
           elevation: 0,
-          child: Container(
-            margin: const EdgeInsets.only(right: 10, left: 10, bottom: 8),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(40),
-              border: Border.all(
-                width: 0.05,
-                color: const Color.fromARGB(255, 24, 83, 79),
-              ),
-              color: Colors.white.withOpacity(0.9),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.2),
-                  spreadRadius: 2,
-                  blurRadius: 5,
-                  offset: const Offset(0, 5),
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 150),
+              child: Container(
+                margin: const EdgeInsets.only(bottom: 6),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(999),
+                  border: Border.all(
+                    width: 0.05,
+                    color: const Color.fromARGB(255, 24, 83, 79),
+                  ),
+                  color: Colors.white.withOpacity(0.92),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.18),
+                      spreadRadius: 1,
+                      blurRadius: 4,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: [
-                  _NavIcon(
-                    icon: Ionicons.people,
-                    selected: _currentIndex == 0,
-                    onTap: () => _setIndex(0),
+                child: SizedBox(
+                  height: 50, // ✅ plus petit
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 2,
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center, // ✅ centré
+                      children: [
+                        _NavIcon(
+                          icon: Ionicons.people,
+                          selected: _currentIndex == 0,
+                          onTap: () => _setIndex(0),
+                        ),
+                        const SizedBox(width: 32),
+                        Stack(
+                          clipBehavior: Clip.none,
+                          children: [
+                            _NavIcon(
+                              icon: Ionicons.chatbubble,
+                              selected: _currentIndex == 1,
+                              onTap: () {
+                                _setIndex(1);
+                                _refreshUnreadMessagesTotal();
+                              },
+                            ),
+                            _Badge(count: _unreadMessagesTotal),
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
-                  Stack(
-                    clipBehavior: Clip.none,
-                    children: [
-                      _NavIcon(
-                        icon: Ionicons.chatbubble,
-                        selected: _currentIndex == 1,
-                        onTap: () {
-                          _setIndex(1);
-                          _refreshUnreadMessagesTotal();
-                        },
-                      ),
-                      _Badge(count: _unreadMessagesTotal),
-                    ],
-                  ),
-                  _NavIcon(
-                    icon: Ionicons.map,
-                    selected: _currentIndex == 2,
-                    onTap: () => _setIndex(2),
-                  ),
-                ],
+                ),
               ),
             ),
           ),
@@ -552,10 +557,10 @@ class _NavIcon extends StatelessWidget {
 
     return InkResponse(
       onTap: onTap,
-      radius: 28,
+      radius: 22,
       child: Padding(
         padding: const EdgeInsets.all(6.0),
-        child: Icon(icon, size: 27, color: selected ? selColor : baseColor),
+        child: Icon(icon, size: 24, color: selected ? selColor : baseColor),
       ),
     );
   }
