@@ -846,4 +846,177 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get secretQ3 => 'What is your favorite pet\'s name?';
+
+  @override
+  String get mapPersonTileIsMeHint => 'This is your profile';
+
+  @override
+  String get mapPersonTileSendHint => 'Send a message…';
+
+  @override
+  String get mapPersonTileCannotWriteTooltip => 'You can\'t message yourself';
+
+  @override
+  String get mapPersonTileSendTooltip => 'Send';
+
+  @override
+  String mapPersonTileSendFailed(Object error) {
+    return 'Send failed: $error';
+  }
+
+  @override
+  String mapPersonTileAge(int age) {
+    return '$age years old';
+  }
+
+  @override
+  String get mapFiltersButtonTooltip => 'Filters';
+
+  @override
+  String get mapNoFilters => 'No filters';
+
+  @override
+  String mapGenotypeCount(num count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count genotypes',
+      one: '$count genotype',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String mapAgeRangeYears(Object max, Object min) {
+    return '$min–$max yrs';
+  }
+
+  @override
+  String mapDistanceMaxKm(Object km) {
+    return '≤ $km km';
+  }
+
+  @override
+  String mapPeopleCountBanner(num count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count people',
+      one: '$count person',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get mapReloadFromNetworkTooltip => 'Reload (network, ignores filters, updates cache)';
+
+  @override
+  String get mapTilesBlockedInReleaseMessage => 'OSM tiles are disabled in production.\nConfigure a MapTiler key (or set allowOsmInRelease=true).';
+
+  @override
+  String get mapInitializingDataMessage => 'We’re initializing all data…';
+
+  @override
+  String mapNetworkUnavailableCacheUsed(Object error) {
+    return 'Network unavailable — cache used: $error';
+  }
+
+  @override
+  String mapLoadGenericError(Object error) {
+    return 'Loading error: $error';
+  }
+
+  @override
+  String mapFilterError(Object error) {
+    return 'Filter error: $error';
+  }
+
+  @override
+  String get mapLocationServiceDisabled => 'Location service disabled';
+
+  @override
+  String get mapLocationPermissionDenied => 'Location permission denied';
+
+  @override
+  String mapLocationUnavailable(Object error) {
+    return 'Location unavailable: $error';
+  }
+
+  @override
+  String get mapPhotoViewerBarrierLabel => 'Photo';
+
+  @override
+  String get mapClose => 'Close';
+
+  @override
+  String mapCityPeopleCount(Object city, num count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count people',
+      one: '$count person',
+    );
+    return '$city • $_temp0';
+  }
+
+  @override
+  String mapResultsCount(num count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count results',
+      one: '$count result',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get mapNoResultsWithTheseFilters => 'No results with these filters (genotype/distance).';
+
+  @override
+  String get mapDistanceTitle => 'Distance (from my location)';
+
+  @override
+  String get mapEnableDistanceFilter => 'Enable distance filter';
+
+  @override
+  String mapOriginDefined(Object lat, Object lon) {
+    return 'Origin: $lat, $lon';
+  }
+
+  @override
+  String get mapOriginUndefined => 'Origin: not set';
+
+  @override
+  String get mapMyPosition => 'My location';
+
+  @override
+  String mapKmLabel(Object km) {
+    return '$km km';
+  }
+
+  @override
+  String get mapGenotypeTitle => 'Genotype';
+
+  @override
+  String get mapAgeTitle => 'Age (years)';
+
+  @override
+  String mapMinValue(Object value) {
+    return 'Min: $value';
+  }
+
+  @override
+  String mapMaxValue(Object value) {
+    return 'Max: $value';
+  }
+
+  @override
+  String get mapReset => 'Reset';
+
+  @override
+  String get mapCancel => 'Cancel';
+
+  @override
+  String get mapApply => 'Apply';
 }

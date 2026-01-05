@@ -1,8 +1,4 @@
-import '../whatsApp/services/conversation_events.dart';
-
 part of map_carto_people;
-
-
 
 // ---------- Widgets ----------
 class _Bubble extends StatelessWidget {
@@ -63,6 +59,44 @@ class _PersonTile extends StatefulWidget {
   State<_PersonTile> createState() => _PersonTileState();
 }
 
+String _normalizeGenotype(String raw) {
+  final s = raw.trim().toLowerCase();
+
+  // Normalisation simple (inclut variantes possibles)
+  if (s.startsWith('dél') || s.startsWith('del')) return 'deletion';
+  if (s.startsWith('mut')) return 'mutation';
+  if (s == 'upd') return 'upd';
+  if (s == 'icd') return 'icd';
+  if (s.startsWith('cli')) return 'clinical';
+  if (s.startsWith('mos')) return 'mosaic';
+
+  // fallback : renvoyer brut (ou "unknown")
+  return 'unknown';
+}
+
+String localizedGenotype(BuildContext context, String? raw) {
+  final l10n = AppLocalizations.of(context)!;
+  if (raw == null || raw.trim().isEmpty) return '';
+
+  switch (_normalizeGenotype(raw)) {
+    case 'deletion':
+      return l10n.genotypeDeletion;
+    case 'mutation':
+      return l10n.genotypeMutation;
+    case 'upd':
+      return l10n.genotypeUpd;
+    case 'icd':
+      return l10n.genotypeIcd;
+    case 'clinical':
+      return l10n.genotypeClinical;
+    case 'mosaic':
+      return l10n.genotypeMosaic;
+    default:
+      // soit tu affiches raw, soit une string traduite "Inconnu"
+      return raw.trim();
+  }
+}
+
 class _PersonTileState extends State<_PersonTile> {
   final _controller = TextEditingController();
   bool _sending = false;
@@ -98,9 +132,8 @@ class _PersonTileState extends State<_PersonTile> {
     );
 
     if (resp.statusCode < 200 || resp.statusCode >= 300) {
-      throw Exception(
-        'Erreur conversations/private (${resp.statusCode}) : ${resp.body}',
-      );
+      // (message technique; pas forcément affiché à l'utilisateur)
+      throw Exception('conversations/private (${resp.statusCode})');
     }
 
     final Map<String, dynamic> data = jsonDecode(resp.body);
@@ -111,7 +144,7 @@ class _PersonTileState extends State<_PersonTile> {
     if (rawId is int) return rawId;
     if (rawId is String) return int.parse(rawId);
 
-    throw Exception('ID conversation introuvable');
+    throw Exception('conversation_id_not_found');
   }
 
   Future<void> _sendMessageToConversation({
@@ -140,7 +173,7 @@ class _PersonTileState extends State<_PersonTile> {
     );
 
     if (resp.statusCode < 200 || resp.statusCode >= 300) {
-      throw Exception('Erreur envoi message (${resp.statusCode})');
+      throw Exception('send_message_failed (${resp.statusCode})');
     }
   }
 
@@ -185,9 +218,13 @@ class _PersonTileState extends State<_PersonTile> {
       });
     } catch (e) {
       if (!mounted) return;
+      final l10n = AppLocalizations.of(context)!;
+
       ScaffoldMessenger.of(
         Navigator.of(context, rootNavigator: true).context,
-      ).showSnackBar(SnackBar(content: Text('Échec de l’envoi : $e')));
+      ).showSnackBar(
+        SnackBar(content: Text(l10n.mapPersonTileSendFailed(e.toString()))),
+      );
     } finally {
       if (mounted) setState(() => _sending = false);
     }
@@ -195,15 +232,20 @@ class _PersonTileState extends State<_PersonTile> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final p = widget.person;
 
     final subtitleParts = <String>[];
-    if (p.genotype != null && p.genotype!.trim().isNotEmpty) {
-      subtitleParts.add(p.genotype!.trim());
+
+    final geno = localizedGenotype(context, p.genotype);
+    if (geno.isNotEmpty) {
+      subtitleParts.add(geno);
     }
+
     if (p.ageInt != null) {
-      subtitleParts.add('${p.ageInt} ans');
+      subtitleParts.add(l10n.mapPersonTileAge(p.ageInt!));
     }
+
     final subtitle = subtitleParts.isEmpty
         ? (p.city ?? '')
         : subtitleParts.join(' • ');
@@ -232,7 +274,6 @@ class _PersonTileState extends State<_PersonTile> {
           ),
           subtitle: Text(subtitle),
         ),
-
         Padding(
           padding: const EdgeInsets.only(left: 8, right: 0, bottom: 8),
           child: Row(
@@ -243,8 +284,8 @@ class _PersonTileState extends State<_PersonTile> {
                   enabled: !_isMe,
                   decoration: InputDecoration(
                     hintText: _isMe
-                        ? 'C’est votre profil'
-                        : 'Envoyer un message…',
+                        ? l10n.mapPersonTileIsMeHint
+                        : l10n.mapPersonTileSendHint,
                     isDense: true,
                     border: const OutlineInputBorder(),
                   ),
@@ -260,7 +301,9 @@ class _PersonTileState extends State<_PersonTile> {
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
                   : IconButton(
-                      tooltip: _isMe ? 'Impossible de vous écrire' : 'Envoyer',
+                      tooltip: _isMe
+                          ? l10n.mapPersonTileCannotWriteTooltip
+                          : l10n.mapPersonTileSendTooltip,
                       icon: Icon(
                         Ionicons.send,
                         color: _isMe

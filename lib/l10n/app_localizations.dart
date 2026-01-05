@@ -1662,6 +1662,240 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'What is your favorite pet\'s name?'**
   String get secretQ3;
+
+  /// No description provided for @mapPersonTileIsMeHint.
+  ///
+  /// In en, this message translates to:
+  /// **'This is your profile'**
+  String get mapPersonTileIsMeHint;
+
+  /// No description provided for @mapPersonTileSendHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Send a message…'**
+  String get mapPersonTileSendHint;
+
+  /// No description provided for @mapPersonTileCannotWriteTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'You can\'t message yourself'**
+  String get mapPersonTileCannotWriteTooltip;
+
+  /// No description provided for @mapPersonTileSendTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Send'**
+  String get mapPersonTileSendTooltip;
+
+  /// No description provided for @mapPersonTileSendFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Send failed: {error}'**
+  String mapPersonTileSendFailed(Object error);
+
+  /// No description provided for @mapPersonTileAge.
+  ///
+  /// In en, this message translates to:
+  /// **'{age} years old'**
+  String mapPersonTileAge(int age);
+
+  /// No description provided for @mapFiltersButtonTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Filters'**
+  String get mapFiltersButtonTooltip;
+
+  /// No description provided for @mapNoFilters.
+  ///
+  /// In en, this message translates to:
+  /// **'No filters'**
+  String get mapNoFilters;
+
+  /// No description provided for @mapGenotypeCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, one{{count} genotype} other{{count} genotypes}}'**
+  String mapGenotypeCount(num count);
+
+  /// No description provided for @mapAgeRangeYears.
+  ///
+  /// In en, this message translates to:
+  /// **'{min}–{max} yrs'**
+  String mapAgeRangeYears(Object max, Object min);
+
+  /// No description provided for @mapDistanceMaxKm.
+  ///
+  /// In en, this message translates to:
+  /// **'≤ {km} km'**
+  String mapDistanceMaxKm(Object km);
+
+  /// No description provided for @mapPeopleCountBanner.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, one{{count} person} other{{count} people}}'**
+  String mapPeopleCountBanner(num count);
+
+  /// No description provided for @mapReloadFromNetworkTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Reload (network, ignores filters, updates cache)'**
+  String get mapReloadFromNetworkTooltip;
+
+  /// No description provided for @mapTilesBlockedInReleaseMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'OSM tiles are disabled in production.\nConfigure a MapTiler key (or set allowOsmInRelease=true).'**
+  String get mapTilesBlockedInReleaseMessage;
+
+  /// No description provided for @mapInitializingDataMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'We’re initializing all data…'**
+  String get mapInitializingDataMessage;
+
+  /// No description provided for @mapNetworkUnavailableCacheUsed.
+  ///
+  /// In en, this message translates to:
+  /// **'Network unavailable — cache used: {error}'**
+  String mapNetworkUnavailableCacheUsed(Object error);
+
+  /// No description provided for @mapLoadGenericError.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading error: {error}'**
+  String mapLoadGenericError(Object error);
+
+  /// No description provided for @mapFilterError.
+  ///
+  /// In en, this message translates to:
+  /// **'Filter error: {error}'**
+  String mapFilterError(Object error);
+
+  /// No description provided for @mapLocationServiceDisabled.
+  ///
+  /// In en, this message translates to:
+  /// **'Location service disabled'**
+  String get mapLocationServiceDisabled;
+
+  /// No description provided for @mapLocationPermissionDenied.
+  ///
+  /// In en, this message translates to:
+  /// **'Location permission denied'**
+  String get mapLocationPermissionDenied;
+
+  /// No description provided for @mapLocationUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Location unavailable: {error}'**
+  String mapLocationUnavailable(Object error);
+
+  /// No description provided for @mapPhotoViewerBarrierLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Photo'**
+  String get mapPhotoViewerBarrierLabel;
+
+  /// No description provided for @mapClose.
+  ///
+  /// In en, this message translates to:
+  /// **'Close'**
+  String get mapClose;
+
+  /// No description provided for @mapCityPeopleCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{city} • {count, plural, one{{count} person} other{{count} people}}'**
+  String mapCityPeopleCount(Object city, num count);
+
+  /// No description provided for @mapResultsCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, one{{count} result} other{{count} results}}'**
+  String mapResultsCount(num count);
+
+  /// No description provided for @mapNoResultsWithTheseFilters.
+  ///
+  /// In en, this message translates to:
+  /// **'No results with these filters (genotype/distance).'**
+  String get mapNoResultsWithTheseFilters;
+
+  /// No description provided for @mapDistanceTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Distance (from my location)'**
+  String get mapDistanceTitle;
+
+  /// No description provided for @mapEnableDistanceFilter.
+  ///
+  /// In en, this message translates to:
+  /// **'Enable distance filter'**
+  String get mapEnableDistanceFilter;
+
+  /// No description provided for @mapOriginDefined.
+  ///
+  /// In en, this message translates to:
+  /// **'Origin: {lat}, {lon}'**
+  String mapOriginDefined(Object lat, Object lon);
+
+  /// No description provided for @mapOriginUndefined.
+  ///
+  /// In en, this message translates to:
+  /// **'Origin: not set'**
+  String get mapOriginUndefined;
+
+  /// No description provided for @mapMyPosition.
+  ///
+  /// In en, this message translates to:
+  /// **'My location'**
+  String get mapMyPosition;
+
+  /// No description provided for @mapKmLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'{km} km'**
+  String mapKmLabel(Object km);
+
+  /// No description provided for @mapGenotypeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Genotype'**
+  String get mapGenotypeTitle;
+
+  /// No description provided for @mapAgeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Age (years)'**
+  String get mapAgeTitle;
+
+  /// No description provided for @mapMinValue.
+  ///
+  /// In en, this message translates to:
+  /// **'Min: {value}'**
+  String mapMinValue(Object value);
+
+  /// No description provided for @mapMaxValue.
+  ///
+  /// In en, this message translates to:
+  /// **'Max: {value}'**
+  String mapMaxValue(Object value);
+
+  /// No description provided for @mapReset.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset'**
+  String get mapReset;
+
+  /// No description provided for @mapCancel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get mapCancel;
+
+  /// No description provided for @mapApply.
+  ///
+  /// In en, this message translates to:
+  /// **'Apply'**
+  String get mapApply;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

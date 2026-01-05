@@ -40,7 +40,7 @@ class _MapPeopleByCityState extends State<MapPeopleByCity>
   // Marqueurs pour clustering
   final List<Marker> _cityMarkers = [];
 
-  // Filtres
+  // Filtres (valeurs attendues côté API)
   static const List<String> _genotypeOptions = <String>[
     'Délétion',
     'Mutation',
@@ -77,6 +77,30 @@ class _MapPeopleByCityState extends State<MapPeopleByCity>
 
   // Compteur de personnes (après filtres)
   int get _peopleCount => _clusters.fold<int>(0, (sum, c) => sum + c.count);
+
+  String _genotypeLabel(BuildContext context, String raw) {
+    final l10n = AppLocalizations.of(context)!;
+    switch (raw.trim().toLowerCase()) {
+      case 'délétion':
+      case 'deletion':
+        return l10n.genotypeDeletion;
+      case 'mutation':
+        return l10n.genotypeMutation;
+      case 'upd':
+        return l10n.genotypeUPD;
+      case 'icd':
+        return l10n.genotypeICD;
+      case 'clinique':
+      case 'clinical':
+        return l10n.genotypeClinical;
+      case 'mosaïque':
+      case 'mosaique':
+      case 'mosaic':
+        return l10n.genotypeMosaic;
+      default:
+        return raw;
+    }
+  }
 
   @override
   void initState() {
@@ -317,16 +341,20 @@ class _MapPeopleByCityState extends State<MapPeopleByCity>
         _clusters = _allClusters;
         _rebuildMarkers();
         if (mounted) {
+          final l10n = AppLocalizations.of(context)!;
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Réseau indisponible — cache utilisé: $e')),
+            SnackBar(
+              content: Text(l10n.mapNetworkUnavailableCacheUsed(e.toString())),
+            ),
           );
         }
       } else {
         if (mounted) {
+          final l10n = AppLocalizations.of(context)!;
           setState(() => _error = e.toString());
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text('Erreur chargement : $e')));
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(l10n.mapLoadGenericError(e.toString()))),
+          );
         }
       }
     } finally {
@@ -350,9 +378,10 @@ class _MapPeopleByCityState extends State<MapPeopleByCity>
     try {
       final serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (!serviceEnabled) {
-        if (showSnackOnError) {
+        if (showSnackOnError && mounted) {
+          final l10n = AppLocalizations.of(context)!;
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Service de localisation désactivé')),
+            SnackBar(content: Text(l10n.mapLocationServiceDisabled)),
           );
         }
         return false;
@@ -363,9 +392,10 @@ class _MapPeopleByCityState extends State<MapPeopleByCity>
       }
       if (permission == LocationPermission.denied ||
           permission == LocationPermission.deniedForever) {
-        if (showSnackOnError) {
+        if (showSnackOnError && mounted) {
+          final l10n = AppLocalizations.of(context)!;
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Permission localisation refusée')),
+            SnackBar(content: Text(l10n.mapLocationPermissionDenied)),
           );
         }
         return false;
@@ -376,9 +406,10 @@ class _MapPeopleByCityState extends State<MapPeopleByCity>
       _distanceOrigin = LatLng(pos.latitude, pos.longitude);
       return true;
     } catch (e) {
-      if (showSnackOnError) {
+      if (showSnackOnError && mounted) {
+        final l10n = AppLocalizations.of(context)!;
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Localisation indisponible : $e')),
+          SnackBar(content: Text(l10n.mapLocationUnavailable(e.toString()))),
         );
       }
       return false;
@@ -510,10 +541,11 @@ class _MapPeopleByCityState extends State<MapPeopleByCity>
       _rebuildMarkers();
     } catch (e) {
       if (mounted) {
+        final l10n = AppLocalizations.of(context)!;
         _error = e.toString();
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Erreur filtre : $e')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n.mapFilterError(e.toString()))),
+        );
         setState(() {});
       }
     }
@@ -550,13 +582,16 @@ class _MapPeopleByCityState extends State<MapPeopleByCity>
 
   // --- Visionneuse photo plein écran (modale) ---
   Future<void> _showPhotoViewer(String url) async {
+    final l10n = AppLocalizations.of(context)!;
+
     await showGeneralDialog(
       context: context,
-      barrierLabel: 'Photo',
+      barrierLabel: l10n.mapPhotoViewerBarrierLabel,
       barrierDismissible: true,
       barrierColor: Colors.black.withOpacity(0.9),
       transitionDuration: const Duration(milliseconds: 200),
       pageBuilder: (ctx, a1, a2) {
+        final l10n2 = AppLocalizations.of(ctx)!;
         return SafeArea(
           child: Stack(
             children: [
@@ -586,7 +621,7 @@ class _MapPeopleByCityState extends State<MapPeopleByCity>
                 right: 12,
                 top: 12,
                 child: IconButton(
-                  tooltip: 'Fermer',
+                  tooltip: l10n2.mapClose,
                   icon: const Icon(Icons.close, color: Colors.white, size: 28),
                   onPressed: () => Navigator.of(ctx).pop(),
                 ),
@@ -604,6 +639,7 @@ class _MapPeopleByCityState extends State<MapPeopleByCity>
   @override
   Widget build(BuildContext context) {
     super.build(context); // IMPORTANT pour keep-alive
+    final l10n = AppLocalizations.of(context)!;
 
     final tilesBlockedInRelease =
         kReleaseMode &&
@@ -699,12 +735,12 @@ class _MapPeopleByCityState extends State<MapPeopleByCity>
           top: 12,
           child: SafeArea(
             child: Tooltip(
-              message: _filtersTooltipText(),
+              message: _filtersTooltipText(context),
               preferBelow: false,
               child: FloatingActionButton.small(
                 heroTag: 'settingsPeopleCity',
                 onPressed: _openSettingsSheet,
-                tooltip: 'Filtres',
+                tooltip: l10n.mapFiltersButtonTooltip,
                 child: const Icon(Ionicons.options),
               ),
             ),
@@ -739,7 +775,7 @@ class _MapPeopleByCityState extends State<MapPeopleByCity>
                     ],
                   ),
                   child: Text(
-                    '$_peopleCount personne${_peopleCount > 1 ? "s" : ""}',
+                    l10n.mapPeopleCountBanner(_peopleCount),
                     style: const TextStyle(
                       color: Colors.white,
                       fontWeight: FontWeight.w700,
@@ -759,8 +795,7 @@ class _MapPeopleByCityState extends State<MapPeopleByCity>
             child: FloatingActionButton.small(
               heroTag: 'refreshPeopleCity',
               onPressed: _reloadFromNetworkIgnoringFilters,
-              tooltip:
-                  'Recharger (réseau, ignore filtres, met à jour le cache)',
+              tooltip: l10n.mapReloadFromNetworkTooltip,
               child: const Icon(Ionicons.refresh),
             ),
           ),
@@ -776,8 +811,7 @@ class _MapPeopleByCityState extends State<MapPeopleByCity>
               child: Padding(
                 padding: const EdgeInsets.all(12),
                 child: Text(
-                  'Tuiles OSM désactivées en production.\n'
-                  'Configure une clé MapTiler (ou passe allowOsmInRelease=true).',
+                  l10n.mapTilesBlockedInReleaseMessage,
                   style: TextStyle(color: Colors.amber.shade900),
                 ),
               ),
@@ -787,9 +821,7 @@ class _MapPeopleByCityState extends State<MapPeopleByCity>
         if (_loading) const _PositionedFillLoader(),
 
         if (_initializing)
-          const _InitOverlay(
-            message: 'Nous initialisons l’ensemble des données…',
-          ),
+          _InitOverlay(message: l10n.mapInitializingDataMessage),
 
         if (_error != null)
           Positioned(
@@ -814,11 +846,11 @@ class _MapPeopleByCityState extends State<MapPeopleByCity>
   }
 
   // Helpers UI
-  String _filtersTooltipText() {
+  String _filtersTooltipText(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+
     final genoCount = _selectedGenotypes.length;
-    final genoPart = genoCount > 0
-        ? '$genoCount génotype${genoCount > 1 ? "s" : ""}'
-        : null;
+    final genoPart = genoCount > 0 ? l10n.mapGenotypeCount(genoCount) : null;
 
     final ageActive =
         _selectedMinAge != null &&
@@ -828,7 +860,10 @@ class _MapPeopleByCityState extends State<MapPeopleByCity>
         (_selectedMinAge != _datasetMinAge ||
             _selectedMaxAge != _datasetMaxAge);
     final agePart = ageActive
-        ? '${_selectedMinAge ?? "?"}–${_selectedMaxAge ?? "?"} ans'
+        ? l10n.mapAgeRangeYears(
+            (_selectedMinAge ?? '?').toString(),
+            (_selectedMaxAge ?? '?').toString(),
+          )
         : null;
 
     final distActive =
@@ -836,11 +871,11 @@ class _MapPeopleByCityState extends State<MapPeopleByCity>
         _distanceOrigin != null &&
         _maxDistanceKm != null;
     final distPart = distActive
-        ? '≤ ${_maxDistanceKm!.toStringAsFixed(0)} km'
+        ? l10n.mapDistanceMaxKm(_maxDistanceKm!.toStringAsFixed(0))
         : null;
 
     final parts = [genoPart, agePart, distPart].whereType<String>().toList();
-    return parts.isEmpty ? 'Aucun filtre' : parts.join(' • ');
+    return parts.isEmpty ? l10n.mapNoFilters : parts.join(' • ');
   }
 
   Widget _buildTileLayer() {
@@ -889,10 +924,13 @@ class _MapPeopleByCityState extends State<MapPeopleByCity>
 
   // BottomSheet Ville
   Future<void> _openCitySheet(_CityCluster cluster) async {
+    final l10n = AppLocalizations.of(context)!;
+
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       builder: (ctx) {
+        final l10n2 = AppLocalizations.of(ctx)!;
         return Padding(
           padding: EdgeInsets.only(
             left: 16,
@@ -913,7 +951,7 @@ class _MapPeopleByCityState extends State<MapPeopleByCity>
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
-                          '${cluster.city} • ${cluster.count} personne${cluster.count > 1 ? "s" : ""}',
+                          l10n2.mapCityPeopleCount(cluster.city, cluster.count),
                           style: const TextStyle(
                             fontWeight: FontWeight.w700,
                             fontSize: 16,
@@ -932,8 +970,7 @@ class _MapPeopleByCityState extends State<MapPeopleByCity>
                         final p = cluster.people[i];
                         return _PersonTile(
                           person: p,
-                          currentPersonId:
-                              widget.currentPersonId, // ou ton id courant réel
+                          currentPersonId: widget.currentPersonId,
                           buildPhotoUrl: () => _personPhotoUrl(p.id ?? -1),
                           onOpenPhoto: (url) => _showPhotoViewer(url),
                         );
@@ -964,7 +1001,7 @@ class _MapPeopleByCityState extends State<MapPeopleByCity>
     List<_Person> _peopleModalFilteredByGenoDist() {
       bool genotypeOk(String? g) {
         if (tempGenos.isEmpty) return false;
-        if (g == null || g.trim().isEmpty) return false;
+        if (g == null || g.trim().isNotEmpty == false) return false;
         final norm = g.trim().toLowerCase();
         for (final sel in tempGenos) {
           if (norm == sel.trim().toLowerCase()) return true;
@@ -1029,7 +1066,7 @@ class _MapPeopleByCityState extends State<MapPeopleByCity>
           if (dKm > localMaxKm) continue;
         }
         for (final p in c.people) {
-          // geno
+          // geno (compare values as stored from API)
           if (!tempGenos.contains((p.genotype ?? '').trim())) continue;
           // age
           final a = p.ageInt;
@@ -1045,6 +1082,8 @@ class _MapPeopleByCityState extends State<MapPeopleByCity>
       builder: (ctx) {
         return StatefulBuilder(
           builder: (ctx, setModalState) {
+            final l10n = AppLocalizations.of(ctx)!;
+
             final dom = _currentAgeDomainForModal();
             final bool hasAges = dom.hasAges;
             final int minAge = hasAges ? dom.minAge : 0;
@@ -1082,12 +1121,12 @@ class _MapPeopleByCityState extends State<MapPeopleByCity>
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Row(
-                      children: const [
-                        Icon(Ionicons.options),
-                        SizedBox(width: 8),
+                      children: [
+                        const Icon(Ionicons.options),
+                        const SizedBox(width: 8),
                         Text(
-                          'Filtres',
-                          style: TextStyle(
+                          l10n.mapFiltersButtonTooltip,
+                          style: const TextStyle(
                             fontWeight: FontWeight.w800,
                             fontSize: 16,
                           ),
@@ -1111,8 +1150,8 @@ class _MapPeopleByCityState extends State<MapPeopleByCity>
                           Expanded(
                             child: Text(
                               hasAges
-                                  ? '$resultsCount résultat${resultsCount > 1 ? "s" : ""}'
-                                  : 'Aucun résultat avec ces filtres (génotype/distance).',
+                                  ? l10n.mapResultsCount(resultsCount)
+                                  : l10n.mapNoResultsWithTheseFilters,
                               style: TextStyle(
                                 fontWeight: FontWeight.w600,
                                 color: hasAges ? Colors.black87 : Colors.orange,
@@ -1124,15 +1163,15 @@ class _MapPeopleByCityState extends State<MapPeopleByCity>
                     ),
 
                     // Distance
-                    const Align(
+                    Align(
                       alignment: Alignment.centerLeft,
                       child: Text(
-                        'Distance (depuis ma position)',
-                        style: TextStyle(fontWeight: FontWeight.w700),
+                        l10n.mapDistanceTitle,
+                        style: const TextStyle(fontWeight: FontWeight.w700),
                       ),
                     ),
                     SwitchListTile(
-                      title: const Text('Activer le filtre de distance'),
+                      title: Text(l10n.mapEnableDistanceFilter),
                       value: localDistanceEnabled,
                       onChanged: (v) async {
                         if (v) {
@@ -1157,12 +1196,15 @@ class _MapPeopleByCityState extends State<MapPeopleByCity>
                       contentPadding: EdgeInsets.zero,
                       title: Text(
                         localOrigin != null
-                            ? 'Origine : ${localOrigin!.latitude.toStringAsFixed(4)}, ${localOrigin!.longitude.toStringAsFixed(4)}'
-                            : 'Origine : non définie',
+                            ? l10n.mapOriginDefined(
+                                localOrigin!.latitude.toStringAsFixed(4),
+                                localOrigin!.longitude.toStringAsFixed(4),
+                              )
+                            : l10n.mapOriginUndefined,
                       ),
                       trailing: TextButton.icon(
                         icon: const Icon(Ionicons.locate),
-                        label: const Text('Ma position'),
+                        label: Text(l10n.mapMyPosition),
                         onPressed: () async {
                           final ok = await _ensureLocation();
                           if (ok && _distanceOrigin != null) {
@@ -1184,7 +1226,9 @@ class _MapPeopleByCityState extends State<MapPeopleByCity>
                               min: 1,
                               max: 1000,
                               divisions: 999,
-                              label: '${localMaxKm.toStringAsFixed(0)} km',
+                              label: l10n.mapKmLabel(
+                                localMaxKm.toStringAsFixed(0),
+                              ),
                               onChanged: (v) {
                                 setModalState(() => localMaxKm = v);
                                 _clampAgeSelectionToDomain(setModalState);
@@ -1194,7 +1238,7 @@ class _MapPeopleByCityState extends State<MapPeopleByCity>
                           SizedBox(
                             width: 72,
                             child: Text(
-                              '${localMaxKm.toStringAsFixed(0)} km',
+                              l10n.mapKmLabel(localMaxKm.toStringAsFixed(0)),
                               textAlign: TextAlign.right,
                             ),
                           ),
@@ -1205,11 +1249,11 @@ class _MapPeopleByCityState extends State<MapPeopleByCity>
                     const SizedBox(height: 16),
 
                     // Génotypes
-                    const Align(
+                    Align(
                       alignment: Alignment.centerLeft,
                       child: Text(
-                        'Génotype',
-                        style: TextStyle(fontWeight: FontWeight.w700),
+                        l10n.mapGenotypeTitle,
+                        style: const TextStyle(fontWeight: FontWeight.w700),
                       ),
                     ),
                     const SizedBox(height: 6),
@@ -1217,7 +1261,7 @@ class _MapPeopleByCityState extends State<MapPeopleByCity>
                       final checked = tempGenos.contains(g);
                       return CheckboxListTile(
                         value: checked,
-                        title: Text(g),
+                        title: Text(_genotypeLabel(ctx, g)),
                         dense: true,
                         controlAffinity: ListTileControlAffinity.leading,
                         onChanged: (v) {
@@ -1236,11 +1280,11 @@ class _MapPeopleByCityState extends State<MapPeopleByCity>
                     const SizedBox(height: 16),
 
                     // Âge (dynamique + clamp)
-                    const Align(
+                    Align(
                       alignment: Alignment.centerLeft,
                       child: Text(
-                        'Âge (années)',
-                        style: TextStyle(fontWeight: FontWeight.w700),
+                        l10n.mapAgeTitle,
+                        style: const TextStyle(fontWeight: FontWeight.w700),
                       ),
                     ),
                     const SizedBox(height: 6),
@@ -1252,7 +1296,10 @@ class _MapPeopleByCityState extends State<MapPeopleByCity>
                     else ...[
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [Text('Min : $startI'), Text('Max : $endI')],
+                        children: [
+                          Text(l10n.mapMinValue(startI)),
+                          Text(l10n.mapMaxValue(endI)),
+                        ],
                       ),
                       RangeSlider(
                         values: RangeValues(startI.toDouble(), endI.toDouble()),
@@ -1276,7 +1323,7 @@ class _MapPeopleByCityState extends State<MapPeopleByCity>
                       mainAxisAlignment: MainAxisAlignment.end,
                       children: [
                         TextButton(
-                          child: const Text('Réinitialiser'),
+                          child: Text(l10n.mapReset),
                           onPressed: () {
                             setModalState(() {
                               // 1) Filtres par défaut
@@ -1303,13 +1350,13 @@ class _MapPeopleByCityState extends State<MapPeopleByCity>
                         ),
                         const SizedBox(width: 8),
                         TextButton(
-                          child: const Text('Annuler'),
+                          child: Text(l10n.mapCancel),
                           onPressed: () => Navigator.of(ctx).pop(),
                         ),
                         const SizedBox(width: 8),
                         ElevatedButton.icon(
                           icon: const Icon(Ionicons.checkmark),
-                          label: const Text('Appliquer'),
+                          label: Text(l10n.mapApply),
                           onPressed: () async {
                             _selectedGenotypes
                               ..clear()

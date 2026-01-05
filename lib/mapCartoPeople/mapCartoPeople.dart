@@ -22,6 +22,8 @@ import 'package:ionicons/ionicons.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../whatsApp/services/conversation_api.dart';
+import '../whatsApp/services/conversation_events.dart';
+import '../l10n/app_localizations.dart';
 
 // --- Décommente ces imports si tu actives le cache disque des tuiles ---
 // import 'package:flutter_map_tile_caching/flutter_map_tile_caching.dart';

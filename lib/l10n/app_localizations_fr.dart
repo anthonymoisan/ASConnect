@@ -846,4 +846,177 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get secretQ3 => 'Nom de votre animal de compagnie favori ?';
+
+  @override
+  String get mapPersonTileIsMeHint => 'C’est votre profil';
+
+  @override
+  String get mapPersonTileSendHint => 'Envoyer un message…';
+
+  @override
+  String get mapPersonTileCannotWriteTooltip => 'Impossible de vous écrire';
+
+  @override
+  String get mapPersonTileSendTooltip => 'Envoyer';
+
+  @override
+  String mapPersonTileSendFailed(Object error) {
+    return 'Échec de l’envoi : $error';
+  }
+
+  @override
+  String mapPersonTileAge(int age) {
+    return '$age ans';
+  }
+
+  @override
+  String get mapFiltersButtonTooltip => 'Filtres';
+
+  @override
+  String get mapNoFilters => 'Aucun filtre';
+
+  @override
+  String mapGenotypeCount(num count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count génotypes',
+      one: '$count génotype',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String mapAgeRangeYears(Object max, Object min) {
+    return '$min–$max ans';
+  }
+
+  @override
+  String mapDistanceMaxKm(Object km) {
+    return '≤ $km km';
+  }
+
+  @override
+  String mapPeopleCountBanner(num count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count personnes',
+      one: '$count personne',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get mapReloadFromNetworkTooltip => 'Recharger (réseau, ignore filtres, met à jour le cache)';
+
+  @override
+  String get mapTilesBlockedInReleaseMessage => 'Tuiles OSM désactivées en production.\nConfigure une clé MapTiler (ou passe allowOsmInRelease=true).';
+
+  @override
+  String get mapInitializingDataMessage => 'Nous initialisons l’ensemble des données…';
+
+  @override
+  String mapNetworkUnavailableCacheUsed(Object error) {
+    return 'Réseau indisponible — cache utilisé : $error';
+  }
+
+  @override
+  String mapLoadGenericError(Object error) {
+    return 'Erreur chargement : $error';
+  }
+
+  @override
+  String mapFilterError(Object error) {
+    return 'Erreur filtre : $error';
+  }
+
+  @override
+  String get mapLocationServiceDisabled => 'Service de localisation désactivé';
+
+  @override
+  String get mapLocationPermissionDenied => 'Permission localisation refusée';
+
+  @override
+  String mapLocationUnavailable(Object error) {
+    return 'Localisation indisponible : $error';
+  }
+
+  @override
+  String get mapPhotoViewerBarrierLabel => 'Photo';
+
+  @override
+  String get mapClose => 'Fermer';
+
+  @override
+  String mapCityPeopleCount(Object city, num count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count personnes',
+      one: '$count personne',
+    );
+    return '$city • $_temp0';
+  }
+
+  @override
+  String mapResultsCount(num count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count résultats',
+      one: '$count résultat',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get mapNoResultsWithTheseFilters => 'Aucun résultat avec ces filtres (génotype/distance).';
+
+  @override
+  String get mapDistanceTitle => 'Distance (depuis ma position)';
+
+  @override
+  String get mapEnableDistanceFilter => 'Activer le filtre de distance';
+
+  @override
+  String mapOriginDefined(Object lat, Object lon) {
+    return 'Origine : $lat, $lon';
+  }
+
+  @override
+  String get mapOriginUndefined => 'Origine : non définie';
+
+  @override
+  String get mapMyPosition => 'Ma position';
+
+  @override
+  String mapKmLabel(Object km) {
+    return '$km km';
+  }
+
+  @override
+  String get mapGenotypeTitle => 'Génotype';
+
+  @override
+  String get mapAgeTitle => 'Âge (années)';
+
+  @override
+  String mapMinValue(Object value) {
+    return 'Min : $value';
+  }
+
+  @override
+  String mapMaxValue(Object value) {
+    return 'Max : $value';
+  }
+
+  @override
+  String get mapReset => 'Réinitialiser';
+
+  @override
+  String get mapCancel => 'Annuler';
+
+  @override
+  String get mapApply => 'Appliquer';
 }
