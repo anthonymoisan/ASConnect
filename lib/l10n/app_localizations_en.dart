@@ -125,7 +125,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get serviceUnavailable => 'Service unavailable. Please try again later.';
 
   @override
-  String serverErrorWithCode(Object code) {
+  String serverErrorWithCode(int code) {
     return 'Server error ($code).';
   }
 
@@ -139,7 +139,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get timeoutCheckConnection => 'Request timed out. Check your connection.';
 
   @override
-  String errorWithMessage(Object message) {
+  String errorWithMessage(String message) {
     return 'Error: $message';
   }
 
@@ -683,4 +683,167 @@ class AppLocalizationsEn extends AppLocalizations {
   String unexpectedError(String message) {
     return 'Unexpected error: $message';
   }
+
+  @override
+  String get commonOk => 'OK';
+
+  @override
+  String get commonCancel => 'Cancel';
+
+  @override
+  String get commonConfirm => 'Confirm';
+
+  @override
+  String get emailRequired => 'Email is required';
+
+  @override
+  String get emailInvalid => 'Invalid email';
+
+  @override
+  String get editProfileImport => 'Import';
+
+  @override
+  String get editProfileTakePhoto => 'Take a photo';
+
+  @override
+  String get editProfileDeletePhoto => 'Delete my photo';
+
+  @override
+  String get editProfileCancelSelection => 'Cancel selection';
+
+  @override
+  String get editProfilePhotoRequired => 'Photo required';
+
+  @override
+  String get editProfilePhotoRequiredHint => 'Photo required: import or take a new photo.';
+
+  @override
+  String get editProfileAddPhotoToSave => 'Add a photo to save';
+
+  @override
+  String get editProfilePhotoDeleted => 'Photo deleted ✅';
+
+  @override
+  String editProfilePhotoTooLarge(String size) {
+    return 'Photo exceeds 4 MB ($size MB).';
+  }
+
+  @override
+  String editProfilePhotoPickError(String message) {
+    return 'Unable to get the photo: $message';
+  }
+
+  @override
+  String get editProfileProfileInfoTitle => 'Profile information';
+
+  @override
+  String get editProfileFirstNameLabel => 'First name';
+
+  @override
+  String get editProfileLastNameLabel => 'Last name';
+
+  @override
+  String get editProfileEmailLabel => 'Email address';
+
+  @override
+  String get editProfileBirthDateLabel => 'Date of birth (dd/mm/yyyy)';
+
+  @override
+  String get editProfileBirthDateHelp => 'Date of birth';
+
+  @override
+  String get editProfileBirthDatePickTooltip => 'Pick a date';
+
+  @override
+  String get editProfileBirthDateRequired => 'Date of birth is required';
+
+  @override
+  String get editProfileGenotypeLabel => 'Genotype';
+
+  @override
+  String get editProfileGenotypeRequired => 'Genotype is required';
+
+  @override
+  String get editProfileCityLabel => 'City';
+
+  @override
+  String get editProfileGeolocate => 'Locate me';
+
+  @override
+  String get editProfileGeoTooltip => 'Please update your location if it has changed since you registered.';
+
+  @override
+  String get geoTitle => 'Geolocation';
+
+  @override
+  String get geoInfoText => 'Please update your location if it has changed since you registered.';
+
+  @override
+  String editProfileLocationUpdated(String cityPart) {
+    return 'Location updated$cityPart';
+  }
+
+  @override
+  String get editProfileSecretSectionTitle => 'Secret question';
+
+  @override
+  String get editProfileSecretQuestionLabel => 'Question';
+
+  @override
+  String get editProfileSecretAnswerLabel => 'Secret answer';
+
+  @override
+  String get editProfileChangePassword => 'Change my password';
+
+  @override
+  String get passwordEnterFirst => 'Enter a password first';
+
+  @override
+  String get passwordMismatch => 'Passwords do not match';
+
+  @override
+  String get passwordMatch => 'Passwords match';
+
+  @override
+  String get editProfilePasswordChanged => 'Password changed ✅';
+
+  @override
+  String get editProfileSave => 'Save';
+
+  @override
+  String get editProfileSaving => 'Saving…';
+
+  @override
+  String get editProfileChangesSaved => 'Changes saved ✅';
+
+  @override
+  String get editProfileTimeoutLoading => 'Timeout while loading the profile.';
+
+  @override
+  String editProfileLoadError(String message) {
+    return 'Load error: $message';
+  }
+
+  @override
+  String get editProfileTimeoutGeneric => 'Timeout. Please try again.';
+
+  @override
+  String editProfileErrorGeneric(String message) {
+    return 'Error: $message';
+  }
+
+  @override
+  String get genotypeUPD => 'UPD';
+
+  @override
+  String get genotypeICD => 'ICD';
+
+  @override
+  String get secretQ1 => 'What is your mother\'s birth name?';
+
+  @override
+  String get secretQ2 => 'What is your favorite movie actor\'s name?';
+
+  @override
+  String get secretQ3 => 'What is your favorite pet\'s name?';
 }

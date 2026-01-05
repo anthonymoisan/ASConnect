@@ -1,4 +1,3 @@
-// lib/edit_profile_page.dart
 import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
@@ -6,6 +5,7 @@ import 'dart:io' show File, HttpDate; // HttpDate pour parser RFC1123
 
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import '../l10n/app_localizations.dart';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart' as http_parser;
 import 'package:image_picker/image_picker.dart';
@@ -33,6 +33,10 @@ String _peopleInfoUrl(int id) => '$kPublicApiBase/people/$id/info';
 String _peoplePhotoUrl(int id, int bust) =>
     '$kPublicApiBase/people/$id/photo?b=$bust';
 String _peopleUpdateUrl() => '$kPublicApiBase/people/update';
+
+extension L10nX on BuildContext {
+  AppLocalizations get l10n => AppLocalizations.of(this)!;
+}
 
 class EditProfilePage extends StatefulWidget {
   const EditProfilePage({super.key, required this.personId});
@@ -89,7 +93,8 @@ class _EditProfilePageState extends State<EditProfilePage> {
 
   late Map<String, dynamic> _original;
 
-  static const _genotypes = <String>[
+  // Valeurs envoyées au serveur (inchangées)
+  static const _genotypeServerValues = <String>[
     'Délétion',
     'Mutation',
     'UPD',
@@ -98,11 +103,40 @@ class _EditProfilePageState extends State<EditProfilePage> {
     'Mosaïque',
   ];
 
-  static const _secretQuestions = <int, String>{
-    1: 'Nom de naissance de votre maman ?',
-    2: 'Nom de votre acteur de cinéma favori ?',
-    3: 'Nom de votre animal de compagnie favori ?',
-  };
+  // Codes envoyés au serveur
+  static const _secretQuestionCodes = <int>[1, 2, 3];
+
+  String _genotypeLabel(String serverValue) {
+    switch (serverValue) {
+      case 'Délétion':
+        return context.l10n.genotypeDeletion;
+      case 'Mutation':
+        return context.l10n.genotypeMutation;
+      case 'UPD':
+        return context.l10n.genotypeUPD;
+      case 'ICD':
+        return context.l10n.genotypeICD;
+      case 'Clinique':
+        return context.l10n.genotypeClinical;
+      case 'Mosaïque':
+        return context.l10n.genotypeMosaic;
+      default:
+        return serverValue;
+    }
+  }
+
+  String _secretQuestionLabel(int code) {
+    switch (code) {
+      case 1:
+        return context.l10n.secretQ1;
+      case 2:
+        return context.l10n.secretQ2;
+      case 3:
+        return context.l10n.secretQ3;
+      default:
+        return context.l10n.secretQ1;
+    }
+  }
 
   @override
   void initState() {
@@ -122,7 +156,15 @@ class _EditProfilePageState extends State<EditProfilePage> {
     super.dispose();
   }
 
-  String _formatDate(DateTime d) => DateFormat('dd/MM/yyyy', 'fr_FR').format(d);
+  void _snack(String msg) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+  }
+
+  String _formatDate(DateTime d) {
+    final localeTag = Localizations.localeOf(context).toLanguageTag();
+    return DateFormat('dd/MM/yyyy', localeTag).format(d);
+  }
 
   DateTime? _parseServerDate(String? s) {
     if ((s ?? '').isEmpty) return null;
@@ -164,11 +206,11 @@ class _EditProfilePageState extends State<EditProfilePage> {
       }
 
       if (size > _maxPhotoBytes) {
+        final sizeMb = (size / (1024 * 1024)).toStringAsFixed(2);
         setState(() {
           _newPickedFile = null;
           _newPhotoBytes = null;
-          _photoError =
-              'La photo dépasse 4 Mo (${(size / (1024 * 1024)).toStringAsFixed(2)} Mo).';
+          _photoError = context.l10n.editProfilePhotoTooLarge(sizeMb);
         });
         return;
       }
@@ -179,7 +221,10 @@ class _EditProfilePageState extends State<EditProfilePage> {
         _newPhotoMime = _inferMime(file.name) ?? 'image/jpeg';
       });
     } catch (e) {
-      setState(() => _photoError = 'Impossible de récupérer la photo : $e');
+      setState(
+        () =>
+            _photoError = context.l10n.editProfilePhotoPickError(e.toString()),
+      );
     }
   }
 
@@ -192,16 +237,16 @@ class _EditProfilePageState extends State<EditProfilePage> {
     });
   }
 
-  String? _requiredText(String? v, String label) {
+  String? _requiredText(String? v, String fieldLabel) {
     final s = (v ?? '').trim();
-    return s.isEmpty ? '$label requis' : null;
+    return s.isEmpty ? context.l10n.fieldRequired(fieldLabel) : null;
   }
 
   String? _emailError(String? v) {
     final s = (v ?? '').trim();
-    if (s.isEmpty) return 'Email requis';
+    if (s.isEmpty) return context.l10n.emailRequired;
     final ok = RegExp(r'^[^@]+@[^@]+\.[^@]+$').hasMatch(s);
-    return ok ? null : 'Email invalide';
+    return ok ? null : context.l10n.emailInvalid;
   }
 
   Map<String, String> get _jsonHeaders => {
@@ -288,7 +333,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
         _lastCtrl.text = last;
         _emailCtrl.text = email;
         _originalEmail = email;
-        _genotype = _genotypes.contains(genotype) ? genotype : null;
+        _genotype = _genotypeServerValues.contains(genotype) ? genotype : null;
         _birthDate = dob;
         _birthCtrl.text = dob != null ? _formatDate(dob) : '';
         _cityCtrl.text = city;
@@ -318,15 +363,9 @@ class _EditProfilePageState extends State<EditProfilePage> {
       final hasPhoto = await _checkServerPhotoExists();
       if (mounted) setState(() => _serverHasPhoto = hasPhoto);
     } on TimeoutException {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Timeout en chargeant le profil.')),
-      );
+      _snack(context.l10n.editProfileTimeoutLoading);
     } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Erreur chargement: $e')));
+      _snack(context.l10n.editProfileLoadError(e.toString()));
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -390,14 +429,10 @@ class _EditProfilePageState extends State<EditProfilePage> {
       }
     });
 
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          'Localisation mise à jour${newCity != null ? ' ($newCity)' : ''}',
-        ),
-      ),
-    );
+    final cityPart = (newCity != null && newCity.isNotEmpty)
+        ? ' ($newCity)'
+        : '';
+    _snack(context.l10n.editProfileLocationUpdated(cityPart));
   }
 
   Future<void> _pickBirthDate() async {
@@ -408,13 +443,13 @@ class _EditProfilePageState extends State<EditProfilePage> {
 
     final picked = await showDatePicker(
       context: context,
-      locale: const Locale('fr'),
+      locale: Localizations.localeOf(context),
       initialDate: initial.isAfter(last) ? last : initial,
       firstDate: first,
       lastDate: last,
-      helpText: 'Date de naissance',
-      cancelText: 'Annuler',
-      confirmText: 'Valider',
+      helpText: context.l10n.editProfileBirthDateHelp,
+      cancelText: context.l10n.commonCancel,
+      confirmText: context.l10n.commonConfirm,
     );
 
     if (picked != null) {
@@ -429,15 +464,12 @@ class _EditProfilePageState extends State<EditProfilePage> {
     showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Géolocalisation'),
-        content: const Text(
-          "Pensez à changer votre géolocalisation si celle-ci a changé "
-          "par rapport à votre inscription.",
-        ),
+        title: Text(context.l10n.geoTitle),
+        content: Text(context.l10n.geoInfoText),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('OK'),
+            child: Text(context.l10n.commonOk),
           ),
         ],
       ),
@@ -482,7 +514,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
           builder: (ctx, setDlg) {
             same = ctrl1.text == ctrl2.text;
             return AlertDialog(
-              title: const Text('Changer mon mot de passe'),
+              title: Text(context.l10n.changePasswordTitle),
               content: Form(
                 key: formKey,
                 child: SingleChildScrollView(
@@ -492,16 +524,16 @@ class _EditProfilePageState extends State<EditProfilePage> {
                       TextFormField(
                         controller: ctrl1,
                         obscureText: true,
-                        decoration: const InputDecoration(
-                          labelText: 'Nouveau mot de passe',
-                          border: OutlineInputBorder(),
+                        decoration: InputDecoration(
+                          labelText: context.l10n.newPasswordLabel,
+                          border: const OutlineInputBorder(),
                         ),
                         onChanged: (_) => setDlg(() {}),
                         validator: (v) {
                           final s = (v ?? '').trim();
-                          if (s.isEmpty) return 'Mot de passe requis';
+                          if (s.isEmpty) return context.l10n.passwordRequired;
                           if (!okMin() || !okUp() || !okSp()) {
-                            return 'Mot de passe trop faible';
+                            return context.l10n.passwordTooWeak;
                           }
                           return null;
                         },
@@ -514,14 +546,17 @@ class _EditProfilePageState extends State<EditProfilePage> {
                           children: [
                             _pwdRule(
                               ok: okMin(),
-                              text: 'Au moins 8 caractères',
+                              text: context.l10n.pwdRuleMin8,
                             ),
                             const SizedBox(height: 4),
-                            _pwdRule(ok: okUp(), text: 'Au moins 1 majuscule'),
+                            _pwdRule(
+                              ok: okUp(),
+                              text: context.l10n.pwdRuleUpper,
+                            ),
                             const SizedBox(height: 4),
                             _pwdRule(
                               ok: okSp(),
-                              text: 'Au moins 1 caractère spécial',
+                              text: context.l10n.pwdRuleSpecial,
                             ),
                           ],
                         ),
@@ -530,17 +565,17 @@ class _EditProfilePageState extends State<EditProfilePage> {
                       TextFormField(
                         controller: ctrl2,
                         obscureText: true,
-                        decoration: const InputDecoration(
-                          labelText: 'Confirmer le mot de passe',
-                          border: OutlineInputBorder(),
+                        decoration: InputDecoration(
+                          labelText: context.l10n.confirmPasswordLabel,
+                          border: const OutlineInputBorder(),
                         ),
                         onChanged: (_) => setDlg(() {}),
                         validator: (v) {
                           if (ctrl1.text.trim().isEmpty) {
-                            return 'Saisis un mot de passe';
+                            return context.l10n.passwordEnterFirst;
                           }
                           if (ctrl1.text != ctrl2.text) {
-                            return 'Les mots de passe ne correspondent pas';
+                            return context.l10n.passwordMismatch;
                           }
                           return null;
                         },
@@ -556,8 +591,8 @@ class _EditProfilePageState extends State<EditProfilePage> {
                           const SizedBox(width: 8),
                           Text(
                             same
-                                ? 'Les mots de passe correspondent'
-                                : 'Les mots de passe ne correspondent pas',
+                                ? context.l10n.passwordMatch
+                                : context.l10n.passwordMismatch,
                             style: TextStyle(
                               color: same ? Colors.green : Colors.red,
                             ),
@@ -571,7 +606,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
               actions: [
                 TextButton(
                   onPressed: () => Navigator.of(ctx).pop(),
-                  child: const Text('Annuler'),
+                  child: Text(context.l10n.commonCancel),
                 ),
                 FilledButton(
                   onPressed:
@@ -593,26 +628,24 @@ class _EditProfilePageState extends State<EditProfilePage> {
                                 .timeout(const Duration(seconds: 15));
                             if (!(resp.statusCode >= 200 &&
                                 resp.statusCode < 300)) {
-                              throw Exception('Erreur (${resp.statusCode})');
+                              throw Exception('(${resp.statusCode})');
                             }
                             if (mounted) {
                               Navigator.of(ctx).pop();
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Mot de passe changé ✅'),
-                                ),
-                              );
+                              _snack(context.l10n.editProfilePasswordChanged);
                             }
                           } catch (e) {
                             if (mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text('Erreur: $e')),
+                              _snack(
+                                context.l10n.editProfileErrorGeneric(
+                                  e.toString(),
+                                ),
                               );
                             }
                           }
                         }
                       : null,
-                  child: const Text('OK'),
+                  child: Text(context.l10n.commonOk),
                 ),
               ],
             );
@@ -635,10 +668,10 @@ class _EditProfilePageState extends State<EditProfilePage> {
           .timeout(const Duration(seconds: 15));
 
       if (!(resp.statusCode >= 200 && resp.statusCode < 300)) {
-        throw Exception('Erreur (${resp.statusCode})');
+        throw Exception('(${resp.statusCode})');
       }
 
-      // ✅ Photo supprimée : elle devient obligatoire (il faut en reprendre/importer une)
+      // ✅ Photo supprimée : elle devient obligatoire
       setState(() {
         _newPickedFile = null;
         _newPhotoBytes = null;
@@ -646,24 +679,14 @@ class _EditProfilePageState extends State<EditProfilePage> {
         _photoBust = DateTime.now().millisecondsSinceEpoch; // cache-bust
 
         _serverHasPhoto = false;
-        _photoError =
-            'Photo obligatoire : importez ou prenez une nouvelle photo.';
+        _photoError = context.l10n.editProfilePhotoRequiredHint;
       });
 
-      if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Photo supprimée ✅')));
+      _snack(context.l10n.editProfilePhotoDeleted);
     } on TimeoutException {
-      if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Délai dépassé. Réessaie.')));
+      _snack(context.l10n.editProfileTimeoutGeneric);
     } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Erreur: $e')));
+      _snack(context.l10n.editProfileErrorGeneric(e.toString()));
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -677,10 +700,8 @@ class _EditProfilePageState extends State<EditProfilePage> {
         _serverHasPhoto;
 
     if (!hasAnyPhoto) {
-      setState(() => _photoError = 'Photo obligatoire');
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Ajoutez une photo pour enregistrer')),
-      );
+      setState(() => _photoError = context.l10n.editProfilePhotoRequired);
+      _snack(context.l10n.editProfileAddPhotoToSave);
       return;
     }
 
@@ -736,7 +757,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
         final streamed = await req.send().timeout(const Duration(seconds: 20));
         final resp = await http.Response.fromStream(streamed);
         if (!(resp.statusCode >= 200 && resp.statusCode < 300)) {
-          String err = 'Échec (${resp.statusCode})';
+          String err = '(${resp.statusCode})';
           try {
             final p = jsonDecode(utf8.decode(resp.bodyBytes));
             if (p is Map && p['error'] is String) err = p['error'] as String;
@@ -750,8 +771,8 @@ class _EditProfilePageState extends State<EditProfilePage> {
           _newPhotoMime = null;
           _photoBust = DateTime.now().millisecondsSinceEpoch;
 
-          _serverHasPhoto = true; // ✅ photo à nouveau présente côté serveur
-          _photoError = null; // ✅ enlève l’erreur si elle existait
+          _serverHasPhoto = true;
+          _photoError = null;
         });
       }
 
@@ -768,14 +789,13 @@ class _EditProfilePageState extends State<EditProfilePage> {
             .patch(uri, headers: _jsonHeaders, body: body)
             .timeout(const Duration(seconds: 15));
         if (!(resp.statusCode >= 200 && resp.statusCode < 300)) {
-          String err = 'Échec (${resp.statusCode})';
+          String err = '(${resp.statusCode})';
           try {
             final p = jsonDecode(utf8.decode(resp.bodyBytes));
             if (p is Map && p['error'] is String) err = p['error'] as String;
           } catch (_) {}
           throw Exception(err);
         }
-        // maj email d'origine
         _originalEmail = email;
         _original['emailAddress'] = email;
         changed.remove('emailAddress');
@@ -828,7 +848,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
             .timeout(const Duration(seconds: 15));
 
         if (!(resp.statusCode >= 200 && resp.statusCode < 300)) {
-          String err = 'Échec (${resp.statusCode})';
+          String err = '(${resp.statusCode})';
           try {
             final p = jsonDecode(utf8.decode(resp.bodyBytes));
             if (p is Map && p['error'] is String) err = p['error'] as String;
@@ -837,21 +857,12 @@ class _EditProfilePageState extends State<EditProfilePage> {
         }
       }
 
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Modifications enregistrées ✅')),
-      );
-      Navigator.of(context).pop(true);
+      _snack(context.l10n.editProfileChangesSaved);
+      if (mounted) Navigator.of(context).pop(true);
     } on TimeoutException {
-      if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Délai dépassé. Réessaie.')));
+      _snack(context.l10n.editProfileTimeoutGeneric);
     } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Erreur: $e')));
+      _snack(context.l10n.editProfileErrorGeneric(e.toString()));
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -859,7 +870,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
 
   void _cancel() {
     if (Navigator.of(context).canPop()) {
-      Navigator.of(context).pop(false); // false = annulé (optionnel)
+      Navigator.of(context).pop(false);
     } else {
       Navigator.of(context).pushReplacementNamed('/home');
     }
@@ -873,7 +884,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Modifier le profil'),
+        title: Text(context.l10n.editProfileTitle),
         centerTitle: true,
       ),
       body: _loading
@@ -927,21 +938,23 @@ class _EditProfilePageState extends State<EditProfilePage> {
                             children: [
                               OutlinedButton.icon(
                                 icon: const Icon(Ionicons.folder_open_outline),
-                                label: const Text('Importer'),
+                                label: Text(context.l10n.editProfileImport),
                                 onPressed: _saving
                                     ? null
                                     : () => _selectPhoto(ImageSource.gallery),
                               ),
                               OutlinedButton.icon(
                                 icon: const Icon(Ionicons.camera_outline),
-                                label: const Text('Prendre une photo'),
+                                label: Text(context.l10n.editProfileTakePhoto),
                                 onPressed: _saving
                                     ? null
                                     : () => _selectPhoto(ImageSource.camera),
                               ),
                               OutlinedButton.icon(
                                 icon: const Icon(Ionicons.trash_outline),
-                                label: const Text('Supprimer ma photo'),
+                                label: Text(
+                                  context.l10n.editProfileDeletePhoto,
+                                ),
                                 onPressed: _saving ? null : _deletePhoto,
                                 style: OutlinedButton.styleFrom(
                                   foregroundColor: theme.colorScheme.error,
@@ -955,7 +968,9 @@ class _EditProfilePageState extends State<EditProfilePage> {
                                   icon: const Icon(
                                     Ionicons.close_circle_outline,
                                   ),
-                                  label: const Text('Annuler la sélection'),
+                                  label: Text(
+                                    context.l10n.editProfileCancelSelection,
+                                  ),
                                   onPressed: _saving ? null : _clearNewPhoto,
                                 ),
                             ],
@@ -973,14 +988,13 @@ class _EditProfilePageState extends State<EditProfilePage> {
                       ),
                     ],
 
-                    // Optionnel : si tu veux forcer l'affichage après tentative d'enregistrement
                     if (_triedSave &&
                         (_newPhotoBytes == null || _newPhotoBytes!.isEmpty) &&
                         !_serverHasPhoto &&
                         _photoError == null) ...[
                       const SizedBox(height: 8),
                       Text(
-                        'Photo obligatoire',
+                        context.l10n.editProfilePhotoRequired,
                         style: TextStyle(color: theme.colorScheme.error),
                         textAlign: TextAlign.center,
                       ),
@@ -996,7 +1010,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                         ),
                         const SizedBox(width: 8),
                         Text(
-                          'Informations du profil',
+                          context.l10n.editProfileProfileInfoTitle,
                           style: theme.textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.w800,
                           ),
@@ -1009,12 +1023,15 @@ class _EditProfilePageState extends State<EditProfilePage> {
                     TextFormField(
                       controller: _firstCtrl,
                       textCapitalization: TextCapitalization.words,
-                      decoration: const InputDecoration(
-                        labelText: 'Prénom',
-                        prefixIcon: Icon(Ionicons.person),
-                        border: OutlineInputBorder(),
+                      decoration: InputDecoration(
+                        labelText: context.l10n.editProfileFirstNameLabel,
+                        prefixIcon: const Icon(Ionicons.person),
+                        border: const OutlineInputBorder(),
                       ),
-                      validator: (v) => _requiredText(v, 'Prénom'),
+                      validator: (v) => _requiredText(
+                        v,
+                        context.l10n.editProfileFirstNameLabel,
+                      ),
                     ),
                     const SizedBox(height: 12),
 
@@ -1022,12 +1039,15 @@ class _EditProfilePageState extends State<EditProfilePage> {
                     TextFormField(
                       controller: _lastCtrl,
                       textCapitalization: TextCapitalization.words,
-                      decoration: const InputDecoration(
-                        labelText: 'Nom',
-                        prefixIcon: Icon(Ionicons.person_outline),
-                        border: OutlineInputBorder(),
+                      decoration: InputDecoration(
+                        labelText: context.l10n.editProfileLastNameLabel,
+                        prefixIcon: const Icon(Ionicons.person_outline),
+                        border: const OutlineInputBorder(),
                       ),
-                      validator: (v) => _requiredText(v, 'Nom'),
+                      validator: (v) => _requiredText(
+                        v,
+                        context.l10n.editProfileLastNameLabel,
+                      ),
                     ),
                     const SizedBox(height: 12),
 
@@ -1036,10 +1056,10 @@ class _EditProfilePageState extends State<EditProfilePage> {
                       controller: _emailCtrl,
                       keyboardType: TextInputType.emailAddress,
                       autofillHints: const [AutofillHints.email],
-                      decoration: const InputDecoration(
-                        labelText: 'Adresse e-mail',
-                        prefixIcon: Icon(Ionicons.mail),
-                        border: OutlineInputBorder(),
+                      decoration: InputDecoration(
+                        labelText: context.l10n.editProfileEmailLabel,
+                        prefixIcon: const Icon(Ionicons.mail),
+                        border: const OutlineInputBorder(),
                       ),
                       validator: _emailError,
                     ),
@@ -1050,18 +1070,18 @@ class _EditProfilePageState extends State<EditProfilePage> {
                       controller: _birthCtrl,
                       readOnly: true,
                       decoration: InputDecoration(
-                        labelText: 'Date de naissance (jj/mm/aaaa)',
+                        labelText: context.l10n.editProfileBirthDateLabel,
                         prefixIcon: const Icon(Ionicons.calendar),
                         border: const OutlineInputBorder(),
                         suffixIcon: IconButton(
-                          tooltip: 'Choisir une date',
+                          tooltip: context.l10n.editProfileBirthDatePickTooltip,
                           icon: const Icon(Ionicons.calendar_clear),
                           onPressed: _pickBirthDate,
                         ),
                       ),
                       onTap: _pickBirthDate,
                       validator: (_) => _birthDate == null
-                          ? 'Date de naissance requise'
+                          ? context.l10n.editProfileBirthDateRequired
                           : null,
                     ),
                     const SizedBox(height: 12),
@@ -1071,19 +1091,23 @@ class _EditProfilePageState extends State<EditProfilePage> {
                       value: _genotype,
                       isExpanded: true,
                       borderRadius: BorderRadius.circular(12),
-                      decoration: const InputDecoration(
-                        labelText: 'Génotype',
-                        prefixIcon: Icon(Ionicons.git_branch),
-                        border: OutlineInputBorder(),
+                      decoration: InputDecoration(
+                        labelText: context.l10n.editProfileGenotypeLabel,
+                        prefixIcon: const Icon(Ionicons.git_branch),
+                        border: const OutlineInputBorder(),
                       ),
-                      items: _genotypes
+                      items: _genotypeServerValues
                           .map(
-                            (g) => DropdownMenuItem(value: g, child: Text(g)),
+                            (g) => DropdownMenuItem(
+                              value: g,
+                              child: Text(_genotypeLabel(g)),
+                            ),
                           )
                           .toList(),
                       onChanged: (v) => setState(() => _genotype = v),
-                      validator: (v) =>
-                          (v == null || v.isEmpty) ? 'Génotype requis' : null,
+                      validator: (v) => (v == null || v.isEmpty)
+                          ? context.l10n.editProfileGenotypeRequired
+                          : null,
                     ),
                     const SizedBox(height: 12),
 
@@ -1091,10 +1115,10 @@ class _EditProfilePageState extends State<EditProfilePage> {
                     TextFormField(
                       controller: _cityCtrl,
                       enabled: false,
-                      decoration: const InputDecoration(
-                        labelText: 'Ville',
-                        prefixIcon: Icon(Ionicons.business_outline),
-                        border: OutlineInputBorder(),
+                      decoration: InputDecoration(
+                        labelText: context.l10n.editProfileCityLabel,
+                        prefixIcon: const Icon(Ionicons.business_outline),
+                        border: const OutlineInputBorder(),
                       ),
                     ),
                     const SizedBox(height: 8),
@@ -1103,20 +1127,18 @@ class _EditProfilePageState extends State<EditProfilePage> {
                       children: [
                         OutlinedButton.icon(
                           icon: const Icon(Ionicons.locate_outline),
-                          label: const Text('Me géolocaliser'),
+                          label: Text(context.l10n.editProfileGeolocate),
                           onPressed: _saving ? null : _geolocateAndFillCity,
                         ),
                         const SizedBox(width: 8),
                         Tooltip(
-                          message:
-                              "Pensez à changer votre géolocalisation si celle-ci a changé par rapport à votre inscription.",
+                          message: context.l10n.editProfileGeoTooltip,
                           child: IconButton(
                             onPressed: _showGeoInfo,
                             icon: const Icon(
                               Ionicons.information_circle_outline,
                             ),
-                            tooltip:
-                                "Pensez à changer votre géolocalisation si celle-ci a changé par rapport à votre inscription.",
+                            tooltip: context.l10n.editProfileGeoTooltip,
                           ),
                         ),
                       ],
@@ -1133,7 +1155,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                         ),
                         const SizedBox(width: 8),
                         Text(
-                          'Question secrète',
+                          context.l10n.editProfileSecretSectionTitle,
                           style: theme.textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.w800,
                           ),
@@ -1146,16 +1168,16 @@ class _EditProfilePageState extends State<EditProfilePage> {
                       value: _secretQuestionCode ?? 1,
                       isExpanded: true,
                       borderRadius: BorderRadius.circular(12),
-                      decoration: const InputDecoration(
-                        labelText: 'Question',
-                        prefixIcon: Icon(Ionicons.help_circle_outline),
-                        border: OutlineInputBorder(),
+                      decoration: InputDecoration(
+                        labelText: context.l10n.editProfileSecretQuestionLabel,
+                        prefixIcon: const Icon(Ionicons.help_circle_outline),
+                        border: const OutlineInputBorder(),
                       ),
-                      items: _secretQuestions.entries
+                      items: _secretQuestionCodes
                           .map(
-                            (e) => DropdownMenuItem<int>(
-                              value: e.key,
-                              child: Text(e.value),
+                            (c) => DropdownMenuItem<int>(
+                              value: c,
+                              child: Text(_secretQuestionLabel(c)),
                             ),
                           )
                           .toList(),
@@ -1168,12 +1190,17 @@ class _EditProfilePageState extends State<EditProfilePage> {
 
                     TextFormField(
                       controller: _secretAnswerCtrl,
-                      decoration: const InputDecoration(
-                        labelText: 'Réponse secrète',
-                        prefixIcon: Icon(Ionicons.chatbox_ellipses_outline),
-                        border: OutlineInputBorder(),
+                      decoration: InputDecoration(
+                        labelText: context.l10n.editProfileSecretAnswerLabel,
+                        prefixIcon: const Icon(
+                          Ionicons.chatbox_ellipses_outline,
+                        ),
+                        border: const OutlineInputBorder(),
                       ),
-                      validator: (v) => _requiredText(v, 'Réponse'),
+                      validator: (v) => _requiredText(
+                        v,
+                        context.l10n.editProfileSecretAnswerLabel,
+                      ),
                     ),
 
                     const SizedBox(height: 12),
@@ -1183,7 +1210,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                       alignment: Alignment.centerLeft,
                       child: OutlinedButton.icon(
                         icon: const Icon(Ionicons.key_outline),
-                        label: const Text('Changer mon mot de passe'),
+                        label: Text(context.l10n.editProfileChangePassword),
                         onPressed: _saving ? null : _changePasswordDialog,
                       ),
                     ),
@@ -1196,7 +1223,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                         Expanded(
                           child: OutlinedButton.icon(
                             icon: const Icon(Ionicons.close_circle_outline),
-                            label: const Text('Annuler'),
+                            label: Text(context.l10n.commonCancel),
                             onPressed: _saving ? null : _cancel,
                           ),
                         ),
@@ -1213,7 +1240,9 @@ class _EditProfilePageState extends State<EditProfilePage> {
                                   )
                                 : const Icon(Ionicons.save_outline),
                             label: Text(
-                              _saving ? 'Enregistrement…' : 'Enregistrer',
+                              _saving
+                                  ? context.l10n.editProfileSaving
+                                  : context.l10n.editProfileSave,
                             ),
                             onPressed: _saving ? null : _save,
                           ),

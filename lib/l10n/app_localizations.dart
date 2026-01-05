@@ -325,11 +325,11 @@ abstract class AppLocalizations {
   /// **'Service unavailable. Please try again later.'**
   String get serviceUnavailable;
 
-  /// No description provided for @serverErrorWithCode.
+  /// Server error with HTTP/status code
   ///
   /// In en, this message translates to:
   /// **'Server error ({code}).'**
-  String serverErrorWithCode(Object code);
+  String serverErrorWithCode(int code);
 
   /// No description provided for @unexpectedServerResponse.
   ///
@@ -349,11 +349,11 @@ abstract class AppLocalizations {
   /// **'Request timed out. Check your connection.'**
   String get timeoutCheckConnection;
 
-  /// No description provided for @errorWithMessage.
+  /// Generic error message with details
   ///
   /// In en, this message translates to:
   /// **'Error: {message}'**
-  String errorWithMessage(Object message);
+  String errorWithMessage(String message);
 
   /// No description provided for @missingAppKeyWarning.
   ///
@@ -1356,6 +1356,312 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Unexpected error: {message}'**
   String unexpectedError(String message);
+
+  /// No description provided for @commonOk.
+  ///
+  /// In en, this message translates to:
+  /// **'OK'**
+  String get commonOk;
+
+  /// No description provided for @commonCancel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get commonCancel;
+
+  /// No description provided for @commonConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm'**
+  String get commonConfirm;
+
+  /// No description provided for @emailRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Email is required'**
+  String get emailRequired;
+
+  /// No description provided for @emailInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'Invalid email'**
+  String get emailInvalid;
+
+  /// No description provided for @editProfileImport.
+  ///
+  /// In en, this message translates to:
+  /// **'Import'**
+  String get editProfileImport;
+
+  /// No description provided for @editProfileTakePhoto.
+  ///
+  /// In en, this message translates to:
+  /// **'Take a photo'**
+  String get editProfileTakePhoto;
+
+  /// No description provided for @editProfileDeletePhoto.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete my photo'**
+  String get editProfileDeletePhoto;
+
+  /// No description provided for @editProfileCancelSelection.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel selection'**
+  String get editProfileCancelSelection;
+
+  /// No description provided for @editProfilePhotoRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Photo required'**
+  String get editProfilePhotoRequired;
+
+  /// No description provided for @editProfilePhotoRequiredHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Photo required: import or take a new photo.'**
+  String get editProfilePhotoRequiredHint;
+
+  /// No description provided for @editProfileAddPhotoToSave.
+  ///
+  /// In en, this message translates to:
+  /// **'Add a photo to save'**
+  String get editProfileAddPhotoToSave;
+
+  /// No description provided for @editProfilePhotoDeleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Photo deleted ✅'**
+  String get editProfilePhotoDeleted;
+
+  /// No description provided for @editProfilePhotoTooLarge.
+  ///
+  /// In en, this message translates to:
+  /// **'Photo exceeds 4 MB ({size} MB).'**
+  String editProfilePhotoTooLarge(String size);
+
+  /// No description provided for @editProfilePhotoPickError.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to get the photo: {message}'**
+  String editProfilePhotoPickError(String message);
+
+  /// No description provided for @editProfileProfileInfoTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Profile information'**
+  String get editProfileProfileInfoTitle;
+
+  /// No description provided for @editProfileFirstNameLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'First name'**
+  String get editProfileFirstNameLabel;
+
+  /// No description provided for @editProfileLastNameLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Last name'**
+  String get editProfileLastNameLabel;
+
+  /// No description provided for @editProfileEmailLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Email address'**
+  String get editProfileEmailLabel;
+
+  /// No description provided for @editProfileBirthDateLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Date of birth (dd/mm/yyyy)'**
+  String get editProfileBirthDateLabel;
+
+  /// No description provided for @editProfileBirthDateHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Date of birth'**
+  String get editProfileBirthDateHelp;
+
+  /// No description provided for @editProfileBirthDatePickTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick a date'**
+  String get editProfileBirthDatePickTooltip;
+
+  /// No description provided for @editProfileBirthDateRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Date of birth is required'**
+  String get editProfileBirthDateRequired;
+
+  /// No description provided for @editProfileGenotypeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Genotype'**
+  String get editProfileGenotypeLabel;
+
+  /// No description provided for @editProfileGenotypeRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Genotype is required'**
+  String get editProfileGenotypeRequired;
+
+  /// No description provided for @editProfileCityLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'City'**
+  String get editProfileCityLabel;
+
+  /// No description provided for @editProfileGeolocate.
+  ///
+  /// In en, this message translates to:
+  /// **'Locate me'**
+  String get editProfileGeolocate;
+
+  /// No description provided for @editProfileGeoTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Please update your location if it has changed since you registered.'**
+  String get editProfileGeoTooltip;
+
+  /// No description provided for @geoTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Geolocation'**
+  String get geoTitle;
+
+  /// No description provided for @geoInfoText.
+  ///
+  /// In en, this message translates to:
+  /// **'Please update your location if it has changed since you registered.'**
+  String get geoInfoText;
+
+  /// No description provided for @editProfileLocationUpdated.
+  ///
+  /// In en, this message translates to:
+  /// **'Location updated{cityPart}'**
+  String editProfileLocationUpdated(String cityPart);
+
+  /// No description provided for @editProfileSecretSectionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Secret question'**
+  String get editProfileSecretSectionTitle;
+
+  /// No description provided for @editProfileSecretQuestionLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Question'**
+  String get editProfileSecretQuestionLabel;
+
+  /// No description provided for @editProfileSecretAnswerLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Secret answer'**
+  String get editProfileSecretAnswerLabel;
+
+  /// No description provided for @editProfileChangePassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Change my password'**
+  String get editProfileChangePassword;
+
+  /// No description provided for @passwordEnterFirst.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a password first'**
+  String get passwordEnterFirst;
+
+  /// No description provided for @passwordMismatch.
+  ///
+  /// In en, this message translates to:
+  /// **'Passwords do not match'**
+  String get passwordMismatch;
+
+  /// No description provided for @passwordMatch.
+  ///
+  /// In en, this message translates to:
+  /// **'Passwords match'**
+  String get passwordMatch;
+
+  /// No description provided for @editProfilePasswordChanged.
+  ///
+  /// In en, this message translates to:
+  /// **'Password changed ✅'**
+  String get editProfilePasswordChanged;
+
+  /// No description provided for @editProfileSave.
+  ///
+  /// In en, this message translates to:
+  /// **'Save'**
+  String get editProfileSave;
+
+  /// No description provided for @editProfileSaving.
+  ///
+  /// In en, this message translates to:
+  /// **'Saving…'**
+  String get editProfileSaving;
+
+  /// No description provided for @editProfileChangesSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'Changes saved ✅'**
+  String get editProfileChangesSaved;
+
+  /// No description provided for @editProfileTimeoutLoading.
+  ///
+  /// In en, this message translates to:
+  /// **'Timeout while loading the profile.'**
+  String get editProfileTimeoutLoading;
+
+  /// No description provided for @editProfileLoadError.
+  ///
+  /// In en, this message translates to:
+  /// **'Load error: {message}'**
+  String editProfileLoadError(String message);
+
+  /// No description provided for @editProfileTimeoutGeneric.
+  ///
+  /// In en, this message translates to:
+  /// **'Timeout. Please try again.'**
+  String get editProfileTimeoutGeneric;
+
+  /// No description provided for @editProfileErrorGeneric.
+  ///
+  /// In en, this message translates to:
+  /// **'Error: {message}'**
+  String editProfileErrorGeneric(String message);
+
+  /// No description provided for @genotypeUPD.
+  ///
+  /// In en, this message translates to:
+  /// **'UPD'**
+  String get genotypeUPD;
+
+  /// No description provided for @genotypeICD.
+  ///
+  /// In en, this message translates to:
+  /// **'ICD'**
+  String get genotypeICD;
+
+  /// No description provided for @secretQ1.
+  ///
+  /// In en, this message translates to:
+  /// **'What is your mother\'s birth name?'**
+  String get secretQ1;
+
+  /// No description provided for @secretQ2.
+  ///
+  /// In en, this message translates to:
+  /// **'What is your favorite movie actor\'s name?'**
+  String get secretQ2;
+
+  /// No description provided for @secretQ3.
+  ///
+  /// In en, this message translates to:
+  /// **'What is your favorite pet\'s name?'**
+  String get secretQ3;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

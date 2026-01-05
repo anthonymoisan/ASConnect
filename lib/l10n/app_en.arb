@@ -359,5 +359,107 @@
   "unexpectedError": "Unexpected error: {message}",
   "@unexpectedError": {
     "placeholders": { "message": { "type": "String" } }
-  }
+  },
+  "@errorWithMessage": {
+    "description": "Generic error message with details",
+    "placeholders": {
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "@serverErrorWithCode": {
+    "description": "Server error with HTTP/status code",
+    "placeholders": {
+      "code": {
+        "type": "int"
+      }
+    }
+  },
+  "commonOk": "OK",
+  "commonCancel": "Cancel",
+  "commonConfirm": "Confirm",
+  "emailRequired": "Email is required",
+  "emailInvalid": "Invalid email",
+  "editProfileImport": "Import",
+  "editProfileTakePhoto": "Take a photo",
+  "editProfileDeletePhoto": "Delete my photo",
+  "editProfileCancelSelection": "Cancel selection",
+  "editProfilePhotoRequired": "Photo required",
+  "editProfilePhotoRequiredHint": "Photo required: import or take a new photo.",
+  "editProfileAddPhotoToSave": "Add a photo to save",
+  "editProfilePhotoDeleted": "Photo deleted ✅",
+  "editProfilePhotoTooLarge": "Photo exceeds 4 MB ({size} MB).",
+  "@editProfilePhotoTooLarge": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "editProfilePhotoPickError": "Unable to get the photo: {message}",
+  "@editProfilePhotoPickError": {
+    "placeholders": {
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "editProfileProfileInfoTitle": "Profile information",
+  "editProfileFirstNameLabel": "First name",
+  "editProfileLastNameLabel": "Last name",
+  "editProfileEmailLabel": "Email address",
+  "editProfileBirthDateLabel": "Date of birth (dd/mm/yyyy)",
+  "editProfileBirthDateHelp": "Date of birth",
+  "editProfileBirthDatePickTooltip": "Pick a date",
+  "editProfileBirthDateRequired": "Date of birth is required",
+  "editProfileGenotypeLabel": "Genotype",
+  "editProfileGenotypeRequired": "Genotype is required",
+  "editProfileCityLabel": "City",
+  "editProfileGeolocate": "Locate me",
+  "editProfileGeoTooltip": "Please update your location if it has changed since you registered.",
+  "geoTitle": "Geolocation",
+  "geoInfoText": "Please update your location if it has changed since you registered.",
+  "editProfileLocationUpdated": "Location updated{cityPart}",
+  "@editProfileLocationUpdated": {
+    "placeholders": {
+      "cityPart": {
+        "type": "String"
+      }
+    }
+  },
+  "editProfileSecretSectionTitle": "Secret question",
+  "editProfileSecretQuestionLabel": "Question",
+  "editProfileSecretAnswerLabel": "Secret answer",
+  "editProfileChangePassword": "Change my password",
+  "passwordEnterFirst": "Enter a password first",
+  "passwordMismatch": "Passwords do not match",
+  "passwordMatch": "Passwords match",
+  "editProfilePasswordChanged": "Password changed ✅",
+  "editProfileSave": "Save",
+  "editProfileSaving": "Saving…",
+  "editProfileChangesSaved": "Changes saved ✅",
+  "editProfileTimeoutLoading": "Timeout while loading the profile.",
+  "editProfileLoadError": "Load error: {message}",
+  "@editProfileLoadError": {
+    "placeholders": {
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "editProfileTimeoutGeneric": "Timeout. Please try again.",
+  "editProfileErrorGeneric": "Error: {message}",
+  "@editProfileErrorGeneric": {
+    "placeholders": {
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "genotypeUPD": "UPD",
+  "genotypeICD": "ICD",
+  "secretQ1": "What is your mother's birth name?",
+  "secretQ2": "What is your favorite movie actor's name?",
+  "secretQ3": "What is your favorite pet's name?"
 }
