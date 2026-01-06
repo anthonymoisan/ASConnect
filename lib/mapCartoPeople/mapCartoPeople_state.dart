@@ -8,6 +8,8 @@ class _MapPeopleByCityState extends State<MapPeopleByCity>
 
   final _map = MapController();
 
+  bool _didInitialFit = false;
+
   // Vue initiale (France / Europe)
   final _initialCenter = const LatLng(48.8566, 2.3522);
   final double _initialZoom = 5.5;
@@ -102,5 +104,17 @@ class _MapPeopleByCityState extends State<MapPeopleByCity>
   Widget build(BuildContext context) {
     super.build(context); // IMPORTANT pour keep-alive
     return buildMapPeopleUI(context); // ✅ dans state_ui.dart
+  }
+
+  void _fitOnNextFrameOnce(List<_CityCluster> clusters) {
+    if (_didInitialFit) return;
+    if (clusters.isEmpty) return;
+
+    _didInitialFit = true;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _fitMapToClusters(clusters); // ta fonction déjà créée
+    });
   }
 }

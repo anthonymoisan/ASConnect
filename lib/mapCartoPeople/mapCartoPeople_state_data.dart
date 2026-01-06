@@ -54,7 +54,7 @@ extension _MapPeopleData on _MapPeopleByCityState {
     debugPrint(
       "[MAP_PEOPLE] 🔄 _reloadFromNetworkIgnoringFilters (force network)",
     );
-
+    _didInitialFit = false;
     // 1) Recharge depuis l'API (force=true => ignore cache)
     await _loadAndBuild(force: true);
 
@@ -131,6 +131,7 @@ extension _MapPeopleData on _MapPeopleByCityState {
 
         _clusters = _allClusters;
         _rebuildMarkers();
+        _fitOnNextFrameOnce(_clusters);
 
         setState(() {
           _loading = false;
@@ -261,6 +262,7 @@ extension _MapPeopleData on _MapPeopleByCityState {
 
       _clusters = _allClusters;
       _rebuildMarkers();
+      _fitOnNextFrameOnce(_clusters);
     } catch (e, st) {
       debugPrint("[MAP_PEOPLE] ❌ Exception dans _loadAndBuild: $e");
       debugPrint("[MAP_PEOPLE] Stack: $st");
