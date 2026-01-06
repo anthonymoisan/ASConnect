@@ -34,6 +34,15 @@ part 'mapCartoPeople_widgets.dart';
 part 'mapCartoPeople_overlays.dart';
 part 'mapCartoPeople_state.dart';
 
+part 'mapCartoPeople_state_data.dart';
+part 'mapCartoPeople_state_filters.dart';
+part 'mapCartoPeople_state_geo.dart';
+part 'mapCartoPeople_state_markers.dart';
+part 'mapCartoPeople_state_ui.dart';
+part 'mapCartoPeople_state_city_sheet.dart';
+part 'mapCartoPeople_state_photo.dart';
+part 'mapCartoPeople_state_fields.dart';
+
 // 🔑 Clé d'application publique — valable pour tous les endpoints /api/public/*
 const String _publicAppKey = String.fromEnvironment(
   'PUBLIC_APP_KEY',
