@@ -340,6 +340,9 @@ extension _MapPeopleFilters on _MapPeopleByCityState {
     LatLng? localOrigin = _distanceOrigin;
     double localMaxKm = _maxDistanceKm ?? 100.0;
 
+    bool ageTouched =
+        false; // ✅ devient true dès que l’utilisateur touche le slider
+
     // Helpers internes
     bool genotypeOk(String? g) {
       if (tempGenos.isEmpty) return false;
@@ -392,7 +395,7 @@ extension _MapPeopleFilters on _MapPeopleByCityState {
       return (hasAges: true, minAge: ages.first, maxAge: ages.last);
     }
 
-    void _clampAgeSelectionToDomain(StateSetter setModalState) {
+    void _syncAgeSelectionToDomain(StateSetter setModalState) {
       final dom = _currentAgeDomainForModal();
       if (!dom.hasAges) {
         setModalState(() {
@@ -401,12 +404,20 @@ extension _MapPeopleFilters on _MapPeopleByCityState {
         });
         return;
       }
+
       setModalState(() {
-        localMin = (localMin ?? dom.minAge).clamp(dom.minAge, dom.maxAge);
-        localMax = (localMax ?? dom.maxAge).clamp(dom.minAge, dom.maxAge);
-        if (localMin! > localMax!) {
+        if (!ageTouched) {
+          // ✅ tant que l’utilisateur n’a pas touché, on “reset” sur tout le domaine
           localMin = dom.minAge;
           localMax = dom.maxAge;
+        } else {
+          // ✅ sinon on respecte sa sélection, mais on clamp
+          localMin = (localMin ?? dom.minAge).clamp(dom.minAge, dom.maxAge);
+          localMax = (localMax ?? dom.maxAge).clamp(dom.minAge, dom.maxAge);
+          if (localMin! > localMax!) {
+            localMin = dom.minAge;
+            localMax = dom.maxAge;
+          }
         }
       });
     }
@@ -544,13 +555,13 @@ extension _MapPeopleFilters on _MapPeopleByCityState {
                               setModalState(() {
                                 localOrigin = _distanceOrigin;
                               });
-                              _clampAgeSelectionToDomain(setModalState);
+                              _syncAgeSelectionToDomain(setModalState);
                             } else {
                               setModalState(() => localDistanceEnabled = false);
                             }
                           } else {
                             setModalState(() => localDistanceEnabled = false);
-                            _clampAgeSelectionToDomain(setModalState);
+                            _syncAgeSelectionToDomain(setModalState);
                           }
                         },
                       ),
@@ -575,7 +586,7 @@ extension _MapPeopleFilters on _MapPeopleByCityState {
                                 localDistanceEnabled = true;
                                 localOrigin = _distanceOrigin;
                               });
-                              _clampAgeSelectionToDomain(setModalState);
+                              _syncAgeSelectionToDomain(setModalState);
                             }
                           },
                         ),
@@ -594,7 +605,7 @@ extension _MapPeopleFilters on _MapPeopleByCityState {
                                 ),
                                 onChanged: (v) {
                                   setModalState(() => localMaxKm = v);
-                                  _clampAgeSelectionToDomain(setModalState);
+                                  _syncAgeSelectionToDomain(setModalState);
                                 },
                               ),
                             ),
@@ -644,14 +655,14 @@ extension _MapPeopleFilters on _MapPeopleByCityState {
                                         ..clear()
                                         ..addAll(_countryOptions);
                                     });
-                                    _clampAgeSelectionToDomain(setModalState);
+                                    _syncAgeSelectionToDomain(setModalState);
                                   },
                                   child: Text(l10n.mapSelectAll),
                                 ),
                                 TextButton(
                                   onPressed: () {
                                     setModalState(() => tempCountries.clear());
-                                    _clampAgeSelectionToDomain(setModalState);
+                                    _syncAgeSelectionToDomain(setModalState);
                                   },
                                   child: Text(l10n.mapClear),
                                 ),
@@ -674,7 +685,7 @@ extension _MapPeopleFilters on _MapPeopleByCityState {
                                       tempCountries.remove(iso2);
                                     }
                                   });
-                                  _clampAgeSelectionToDomain(setModalState);
+                                  _syncAgeSelectionToDomain(setModalState);
                                 },
                               );
                             }).toList(),
@@ -708,7 +719,7 @@ extension _MapPeopleFilters on _MapPeopleByCityState {
                                 tempGenos.remove(g);
                               }
                             });
-                            _clampAgeSelectionToDomain(setModalState);
+                            _syncAgeSelectionToDomain(setModalState);
                           },
                         );
                       }).toList(),
@@ -753,6 +764,7 @@ extension _MapPeopleFilters on _MapPeopleByCityState {
                           ),
                           onChanged: (rng) {
                             setModalState(() {
+                              ageTouched = true;
                               localMin = rng.start.round();
                               localMax = rng.end.round();
                             });
@@ -769,6 +781,7 @@ extension _MapPeopleFilters on _MapPeopleByCityState {
                             child: Text(l10n.mapReset),
                             onPressed: () {
                               setModalState(() {
+                                ageTouched = false;
                                 tempCountries
                                   ..clear()
                                   ..addAll(_countryOptions);
