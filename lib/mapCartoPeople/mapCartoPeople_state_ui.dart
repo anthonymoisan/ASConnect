@@ -12,6 +12,14 @@ extension _MapPeopleUI on _MapPeopleByCityState {
         !widget.allowOsmInRelease &&
         (widget.mapTilerApiKey == null || widget.mapTilerApiKey!.isEmpty);
 
+    final bool isCityLevel = _level == _MapLevel.city;
+
+    // Badge texte central : "FR • 123" ou juste "123"
+    final String bannerText =
+        isCityLevel && (_activeCountry?.isNotEmpty ?? false)
+        ? '${_activeCountry!.toUpperCase()} • ${l10n.mapPeopleCountBanner(_peopleCount)}'
+        : l10n.mapPeopleCountBanner(_peopleCount);
+
     return Stack(
       children: [
         FlutterMap(
@@ -91,13 +99,30 @@ extension _MapPeopleUI on _MapPeopleByCityState {
               ),
             ),
 
+            // (tu l'avais déjà : je ne change pas)
             MarkerLayer(markers: _cityMarkers),
             _buildAttribution(),
           ],
         ),
 
+        // ✅ Bouton retour (uniquement au niveau ville)
+        if (isCityLevel)
+          Positioned(
+            left: 12,
+            top: 12,
+            child: SafeArea(
+              child: FloatingActionButton.small(
+                heroTag: 'backPeopleCountry',
+                onPressed: () => _backToCountries(fit: true),
+                tooltip: l10n.mapBack ?? 'Retour',
+                child: const Icon(Ionicons.arrow_back),
+              ),
+            ),
+          ),
+
+        // ✅ Filtres (décalé si bouton retour affiché)
         Positioned(
-          left: 12,
+          left: isCityLevel ? 64 : 12,
           top: 12,
           child: SafeArea(
             child: Tooltip(
@@ -113,6 +138,7 @@ extension _MapPeopleUI on _MapPeopleByCityState {
           ),
         ),
 
+        // ✅ Badge central (avec pays si niveau ville)
         Positioned(
           left: 84,
           right: 84,
@@ -124,7 +150,9 @@ extension _MapPeopleUI on _MapPeopleByCityState {
                 transitionBuilder: (child, anim) =>
                     FadeTransition(opacity: anim, child: child),
                 child: Container(
-                  key: ValueKey(_peopleCount),
+                  key: ValueKey(
+                    '${_peopleCount}_${_activeCountry ?? ''}_${_level.name}',
+                  ),
                   padding: const EdgeInsets.symmetric(
                     horizontal: 12,
                     vertical: 8,
@@ -141,12 +169,14 @@ extension _MapPeopleUI on _MapPeopleByCityState {
                     ],
                   ),
                   child: Text(
-                    l10n.mapPeopleCountBanner(_peopleCount),
+                    bannerText,
                     style: const TextStyle(
                       color: Colors.white,
                       fontWeight: FontWeight.w700,
                       letterSpacing: 0.2,
                     ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ),

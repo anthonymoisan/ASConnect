@@ -528,5 +528,6 @@
         "type": "int"
       }
     }
-  }
+  },
+  "mapBack":"Retroceso"
 }

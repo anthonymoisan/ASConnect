@@ -1036,4 +1036,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get mapClear => 'Clear selection';
+
+  @override
+  String get mapBack => 'Back';
 }

@@ -77,6 +77,20 @@ class _CityCluster {
   int get count => people.length;
 }
 
+class _CountryCluster {
+  final String countryCode; // ISO2
+  final LatLng latLng; // centre (centroïde)
+  final List<_CityCluster> cities; // clusters ville du pays
+
+  _CountryCluster({
+    required this.countryCode,
+    required this.latLng,
+    required this.cities,
+  });
+
+  int get count => cities.fold<int>(0, (sum, c) => sum + c.count);
+}
+
 int? _parseAgeInt(dynamic value) {
   if (value == null) return null;
   final s = value.toString().trim().replaceAll(',', '.');

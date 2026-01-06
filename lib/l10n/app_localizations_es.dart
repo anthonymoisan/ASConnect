@@ -1036,4 +1036,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get mapClear => 'Deseleccionar todo';
+
+  @override
+  String get mapBack => 'Retroceso';
 }

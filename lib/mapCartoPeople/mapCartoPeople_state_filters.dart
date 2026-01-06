@@ -3,6 +3,9 @@
 part of map_carto_people;
 
 extension _MapPeopleFilters on _MapPeopleByCityState {
+  // ----------------------------
+  // Labels
+  // ----------------------------
   String _genotypeLabel(BuildContext context, String raw) {
     final l10n = AppLocalizations.of(context)!;
     switch (raw.trim().toLowerCase()) {
@@ -27,25 +30,78 @@ extension _MapPeopleFilters on _MapPeopleByCityState {
     }
   }
 
+  // (Pour éviter les traductions bancales / mélange de langues,
+  // on affiche le ISO2. Tu pourras brancher une vraie table ARB plus tard.)
+  String _countryLabel(BuildContext context, String iso2) =>
+      iso2.trim().toUpperCase();
+
+  // ----------------------------
+  // Drill-down navigation
+  // ----------------------------
+  void _backToCountries({bool fit = true}) {
+    setState(() {
+      _level = _MapLevel.country;
+      _activeCountry = null;
+    });
+
+    _rebuildMarkers(); // doit maintenant gérer pays OU villes
+    if (fit) _fitMapToCountryClusters(_countryClusters);
+  }
+
+  void _openCountry(String iso2, {bool fit = true}) {
+    final code = iso2.trim().toUpperCase();
+    _level = _MapLevel.city;
+    _activeCountry = code;
+
+    // villes du pays dans la vue filtrée actuelle
+    final cc = _countryClusters.where((c) => c.countryCode == code).toList();
+    if (cc.isEmpty) {
+      _backToCountries(fit: fit);
+      return;
+    }
+
+    _clusters = cc.first.cities;
+    _rebuildMarkers();
+    if (fit) _fitMapToClusters(_clusters);
+  }
+
+  // ----------------------------
+  // Reset (global state)
+  // ----------------------------
   void _resetFiltersToDefault({bool rebuild = true}) {
     _selectedGenotypes
       ..clear()
       ..addAll(kGenotypeOptions);
+
+    // ✅ ISO2
     _selectedCountries
       ..clear()
       ..addAll(_countryOptions);
+
     _selectedMinAge = _datasetMinAge;
     _selectedMaxAge = _datasetMaxAge;
+
     _distanceFilterEnabled = false;
     _distanceOrigin = null;
     _maxDistanceKm = null;
+
     if (rebuild) {
+      // Après reset => dataset complet => niveau pays
+      _level = _MapLevel.country;
+      _activeCountry = null;
+
+      // Source = all clusters
       _clusters = _allClusters;
-      _fitMapToClusters(_clusters);
+      _countryClusters = _buildCountryClustersFromCityClusters(_allClusters);
+
       _rebuildMarkers();
+      _fitMapToCountryClusters(_countryClusters);
     }
   }
 
+  // ----------------------------
+  // Distance match
+  // ----------------------------
   bool _matchesDistance(LatLng cityPos) {
     if (!_distanceFilterEnabled ||
         _distanceOrigin == null ||
@@ -56,6 +112,9 @@ extension _MapPeopleFilters on _MapPeopleByCityState {
     return dKm <= _maxDistanceKm!;
   }
 
+  // ----------------------------
+  // Apply filters (global state)
+  // ----------------------------
   Future<void> _applyFilters({bool rebuildOnly = false}) async {
     try {
       List<_CityCluster> source = _allClusters;
@@ -70,11 +129,12 @@ extension _MapPeopleFilters on _MapPeopleByCityState {
         return false;
       }
 
-      bool matchesCountry(String? c) {
-        if (_selectedCountries.isEmpty) return true; // si vide => pas de filtre
-        if (c == null) return false;
-        final v = c.trim();
-        if (v.isEmpty) return false;
+      // ✅ ISO2 (countryCode)
+      bool matchesCountry(String? iso2) {
+        if (_selectedCountries.isEmpty) return true; // vide => pas de filtre
+        if (iso2 == null) return false;
+        final v = iso2.trim().toUpperCase();
+        if (v.length != 2) return false;
         return _selectedCountries.contains(v);
       }
 
@@ -93,10 +153,11 @@ extension _MapPeopleFilters on _MapPeopleByCityState {
           for (final p in c.people) {
             if (matchesGenotype(p.genotype) &&
                 matchesAge(p.ageInt) &&
-                matchesCountry(p.country)) {
+                matchesCountry(p.countryCode)) {
               filteredPeople.add(p);
             }
           }
+
           if (filteredPeople.isNotEmpty) {
             filtered.add(
               _CityCluster(
@@ -110,8 +171,31 @@ extension _MapPeopleFilters on _MapPeopleByCityState {
         source = filtered;
       }
 
-      _clusters = source;
-      _rebuildMarkers();
+      // ✅ on met à jour la base filtrée (villes) + les clusters pays
+      final filteredCities = source;
+      _countryClusters = _buildCountryClustersFromCityClusters(filteredCities);
+
+      // Si on est dans un pays, on y reste si possible
+      if (_level == _MapLevel.city && _activeCountry != null) {
+        final cc = _countryClusters
+            .where((c) => c.countryCode == _activeCountry)
+            .toList();
+
+        if (cc.isEmpty) {
+          // le pays n’existe plus avec ces filtres => retour au niveau pays
+          _backToCountries(fit: true);
+        } else {
+          _clusters = cc.first.cities;
+          _rebuildMarkers();
+          _fitMapToClusters(_clusters);
+        }
+      } else {
+        // niveau pays
+        _level = _MapLevel.country;
+        _activeCountry = null;
+        _rebuildMarkers();
+        _fitMapToCountryClusters(_countryClusters);
+      }
     } catch (e) {
       if (mounted) {
         final l10n = AppLocalizations.of(context)!;
@@ -124,11 +208,22 @@ extension _MapPeopleFilters on _MapPeopleByCityState {
     }
   }
 
+  // ----------------------------
+  // Tooltip résumé filtres
+  // ----------------------------
   String _filtersTooltipText(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
 
     final genoCount = _selectedGenotypes.length;
     final genoPart = genoCount > 0 ? l10n.mapGenotypeCount(genoCount) : null;
+
+    final countryActive =
+        _countryOptions.isNotEmpty &&
+        _selectedCountries.isNotEmpty &&
+        _selectedCountries.length != _countryOptions.length;
+    final countryPart = countryActive
+        ? l10n.mapCountriesSelectedCount(_selectedCountries.length)
+        : null;
 
     final ageActive =
         _selectedMinAge != null &&
@@ -152,10 +247,19 @@ extension _MapPeopleFilters on _MapPeopleByCityState {
         ? l10n.mapDistanceMaxKm(_maxDistanceKm!.toStringAsFixed(0))
         : null;
 
-    final parts = [genoPart, agePart, distPart].whereType<String>().toList();
+    final parts = [
+      genoPart,
+      countryPart,
+      agePart,
+      distPart,
+    ].whereType<String>().toList();
+
     return parts.isEmpty ? l10n.mapNoFilters : parts.join(' • ');
   }
 
+  // ----------------------------
+  // Fit map : villes
+  // ----------------------------
   void _fitMapToClusters(List<_CityCluster> clusters, {double padding = 36}) {
     if (!mounted) return;
     if (clusters.isEmpty) return;
@@ -163,7 +267,6 @@ extension _MapPeopleFilters on _MapPeopleByCityState {
     final points = clusters.map((c) => c.latLng).toList();
     if (points.length == 1) {
       final p = points.first;
-      // zoom “ville” raisonnable
       _map.move(p, (_currentZoom < 9 ? 9.5 : _currentZoom).clamp(3.0, 18.0));
       return;
     }
@@ -174,10 +277,61 @@ extension _MapPeopleFilters on _MapPeopleByCityState {
     );
   }
 
-  // Feuille de Filtres (avec compteur live + âges dynamiques et clamp)
+  // ----------------------------
+  // Fit map : pays
+  // ----------------------------
+  void _fitMapToCountryClusters(
+    List<_CountryCluster> clusters, {
+    double padding = 36,
+  }) {
+    if (!mounted) return;
+    if (clusters.isEmpty) return;
+
+    final points = clusters.map((c) => c.latLng).toList();
+    if (points.length == 1) {
+      final p = points.first;
+      _map.move(p, (_currentZoom < 5 ? 5.5 : _currentZoom).clamp(3.0, 18.0));
+      return;
+    }
+
+    final bounds = LatLngBounds.fromPoints(points);
+    _map.fitCamera(
+      CameraFit.bounds(bounds: bounds, padding: EdgeInsets.all(padding)),
+    );
+  }
+
+  void _enterCountry(_CountryCluster country) {
+    setState(() {
+      _level = _MapLevel.city;
+      _activeCountry = country.countryCode;
+    });
+
+    // Met à jour la liste de clusters ville à afficher
+    _clusters = _allClusters
+        .map((cl) {
+          final people = cl.people
+              .where(
+                (p) =>
+                    (p.countryCode ?? '').trim().toUpperCase() ==
+                    country.countryCode,
+              )
+              .toList();
+          if (people.isEmpty) return null;
+          return _CityCluster(city: cl.city, latLng: cl.latLng, people: people);
+        })
+        .whereType<_CityCluster>()
+        .toList();
+
+    _rebuildMarkers();
+    _fitMapToClusters(_clusters);
+  }
+
+  // ----------------------------
+  // BottomSheet filtres
+  // ----------------------------
   Future<void> _openSettingsSheet() async {
     // Copie locale
-    final tempCountries = Set<String>.from(_selectedCountries);
+    final tempCountries = Set<String>.from(_selectedCountries); // ISO2
     final tempGenos = Set<String>.from(_selectedGenotypes);
     int? localMin = _selectedMinAge ?? _datasetMinAge;
     int? localMax = _selectedMaxAge ?? _datasetMaxAge;
@@ -186,38 +340,40 @@ extension _MapPeopleFilters on _MapPeopleByCityState {
     LatLng? localOrigin = _distanceOrigin;
     double localMaxKm = _maxDistanceKm ?? 100.0;
 
-    // Helpers internes (calcul domaine & clamp)
-    List<_Person> _peopleModalFilteredByGenoDist() {
-      bool genotypeOk(String? g) {
-        if (tempGenos.isEmpty) return false;
-        if (g == null || g.trim().isEmpty) return false;
-        final norm = g.trim().toLowerCase();
-        for (final sel in tempGenos) {
-          if (norm == sel.trim().toLowerCase()) return true;
-        }
-        return false;
+    // Helpers internes
+    bool genotypeOk(String? g) {
+      if (tempGenos.isEmpty) return false;
+      if (g == null || g.trim().isEmpty) return false;
+      final norm = g.trim().toLowerCase();
+      for (final sel in tempGenos) {
+        if (norm == sel.trim().toLowerCase()) return true;
       }
+      return false;
+    }
 
-      bool countryOk(String? c) {
-        // si vide => on considère "pas de filtre pays"
-        if (tempCountries.isEmpty) return true;
-        if (c == null || c.trim().isEmpty) return false;
-        return tempCountries.contains(c.trim());
+    bool countryOk(String? iso2) {
+      if (tempCountries.isEmpty) return true;
+      if (iso2 == null) return false;
+      final v = iso2.trim().toUpperCase();
+      if (v.length != 2) return false;
+      return tempCountries.contains(v);
+    }
+
+    bool distanceOk(LatLng cityPos) {
+      if (!localDistanceEnabled || localOrigin == null || localMaxKm <= 0) {
+        return true;
       }
+      final dKm = _geo.as(LengthUnit.Kilometer, localOrigin!, cityPos);
+      return dKm <= localMaxKm;
+    }
 
-      bool distanceOk(LatLng cityPos) {
-        if (!localDistanceEnabled || localOrigin == null || localMaxKm <= 0) {
-          return true;
-        }
-        final dKm = _geo.as(LengthUnit.Kilometer, localOrigin!, cityPos);
-        return dKm <= localMaxKm;
-      }
-
+    // ✅ Domaine âge basé sur geno + pays + distance
+    List<_Person> _peopleModalFilteredByGenoCountryDist() {
       final out = <_Person>[];
       for (final c in _allClusters) {
         if (!distanceOk(c.latLng)) continue;
         for (final p in c.people) {
-          if (genotypeOk(p.genotype) && countryOk(p.country)) {
+          if (genotypeOk(p.genotype) && countryOk(p.countryCode)) {
             out.add(p);
           }
         }
@@ -227,7 +383,7 @@ extension _MapPeopleFilters on _MapPeopleByCityState {
 
     ({bool hasAges, int minAge, int maxAge}) _currentAgeDomainForModal() {
       final ages =
-          _peopleModalFilteredByGenoDist()
+          _peopleModalFilteredByGenoCountryDist()
               .map((p) => p.ageInt)
               .whereType<int>()
               .toList()
@@ -258,27 +414,13 @@ extension _MapPeopleFilters on _MapPeopleByCityState {
     int _countModalWithAgeBounds(int minA, int maxA) {
       int count = 0;
 
-      bool countryOk(String? c) {
-        if (tempCountries.isEmpty) return true;
-        if (c == null || c.trim().isEmpty) return false;
-        return tempCountries.contains(c.trim());
-      }
-
       for (final c in _allClusters) {
-        // distance
-        if (localDistanceEnabled && localOrigin != null && localMaxKm > 0) {
-          final dKm = _geo.as(LengthUnit.Kilometer, localOrigin!, c.latLng);
-          if (dKm > localMaxKm) continue;
-        }
+        if (!distanceOk(c.latLng)) continue;
 
         for (final p in c.people) {
-          // geno
           if (!tempGenos.contains((p.genotype ?? '').trim())) continue;
+          if (!countryOk(p.countryCode)) continue;
 
-          // ✅ pays
-          if (!countryOk(p.country)) continue;
-
-          // age
           final a = p.ageInt;
           if (a != null && a >= minA && a <= maxA) count++;
         }
@@ -300,7 +442,6 @@ extension _MapPeopleFilters on _MapPeopleByCityState {
             final int maxAge = hasAges ? dom.maxAge : 0;
 
             if (hasAges) {
-              // Corrige localement pour l'affichage
               localMin = (localMin ?? minAge).clamp(minAge, maxAge);
               localMax = (localMax ?? maxAge).clamp(minAge, maxAge);
               if (localMin! > localMax!) {
@@ -318,6 +459,9 @@ extension _MapPeopleFilters on _MapPeopleByCityState {
                 ? _countModalWithAgeBounds(startI, endI)
                 : 0;
 
+            // ✅ tri ISO2 (stable)
+            final sortedCountryOptions = [..._countryOptions]..sort();
+
             return SafeArea(
               top: false,
               child: Padding(
@@ -329,11 +473,9 @@ extension _MapPeopleFilters on _MapPeopleByCityState {
                 ),
                 child: ConstrainedBox(
                   constraints: BoxConstraints(
-                    // empêche la sheet de vouloir tout prendre d'un coup
                     maxHeight: MediaQuery.of(ctx).size.height * 0.85,
                   ),
                   child: ListView(
-                    // ✅ rend tout scrollable
                     padding: EdgeInsets.zero,
                     shrinkWrap: true,
                     keyboardDismissBehavior:
@@ -516,20 +658,20 @@ extension _MapPeopleFilters on _MapPeopleByCityState {
                               ],
                             ),
                             const SizedBox(height: 6),
-                            ..._countryOptions.map((country) {
-                              final checked = tempCountries.contains(country);
+                            ...sortedCountryOptions.map((iso2) {
+                              final checked = tempCountries.contains(iso2);
                               return CheckboxListTile(
                                 value: checked,
-                                title: Text(country),
+                                title: Text(_countryLabel(ctx, iso2)),
                                 dense: true,
                                 controlAffinity:
                                     ListTileControlAffinity.leading,
                                 onChanged: (v) {
                                   setModalState(() {
                                     if (v == true) {
-                                      tempCountries.add(country);
+                                      tempCountries.add(iso2);
                                     } else {
-                                      tempCountries.remove(country);
+                                      tempCountries.remove(iso2);
                                     }
                                   });
                                   _clampAgeSelectionToDomain(setModalState);
@@ -627,13 +769,13 @@ extension _MapPeopleFilters on _MapPeopleByCityState {
                             child: Text(l10n.mapReset),
                             onPressed: () {
                               setModalState(() {
-                                // ✅ Pays : tout remettre
                                 tempCountries
                                   ..clear()
                                   ..addAll(_countryOptions);
                                 tempGenos
                                   ..clear()
                                   ..addAll(kGenotypeOptions);
+
                                 localDistanceEnabled = false;
                                 localOrigin = null;
                                 localMaxKm = 100.0;
@@ -678,15 +820,11 @@ extension _MapPeopleFilters on _MapPeopleByCityState {
 
                               Navigator.of(ctx).pop();
                               await _applyFilters();
-                              _fitMapToClusters(
-                                _clusters,
-                              ); // ✅ zoom après fermeture de la sheet
                             },
                           ),
                         ],
                       ),
 
-                      // ✅ petit "padding" final pour que les boutons ne soient jamais collés
                       const SizedBox(height: 16),
                     ],
                   ),

@@ -1,5 +1,4 @@
 //taille bulles + rebuild markers
-
 part of map_carto_people;
 
 extension _MapPeopleMarkers on _MapPeopleByCityState {
@@ -17,12 +16,43 @@ extension _MapPeopleMarkers on _MapPeopleByCityState {
     t = math.pow(t, kSizeCurveGamma).toDouble();
 
     final double size = kMinSize + t * (kMaxSize - kMinSize);
-    return size.clamp(kMinSize, kMaxSize).toDouble(); // ✅ clamp -> num
+    return size.clamp(kMinSize, kMaxSize).toDouble();
   }
 
   void _rebuildMarkers() {
     _cityMarkers.clear();
 
+    if (_level == _MapLevel.country) {
+      final maxCount = _countryClusters.isNotEmpty
+          ? _countryClusters.map((c) => c.count).reduce((a, b) => a > b ? a : b)
+          : 1;
+
+      for (final c in _countryClusters) {
+        final base = _sizeForCount(c.count, maxCount);
+        final scaled = (base * _zoomFactor)
+            .clamp(kMinSize, kMaxSize * 2)
+            .toDouble();
+
+        _cityMarkers.add(
+          Marker(
+            point: c.latLng,
+            width: scaled,
+            height: scaled,
+            alignment: Alignment.center,
+            child: GestureDetector(
+              onTap: () =>
+                  _enterCountry(c), // ✅ à toi: charge les city clusters du pays
+              child: _Bubble(count: c.count, size: scaled),
+            ),
+          ),
+        );
+      }
+
+      if (mounted) setState(() {});
+      return;
+    }
+
+    // --------- Niveau ville ----------
     final maxCount = _clusters.isNotEmpty
         ? _clusters.map((c) => c.count).reduce((a, b) => a > b ? a : b)
         : 1;
@@ -31,7 +61,7 @@ extension _MapPeopleMarkers on _MapPeopleByCityState {
       final base = _sizeForCount(c.count, maxCount);
       final scaled = (base * _zoomFactor)
           .clamp(kMinSize, kMaxSize * 2)
-          .toDouble(); // ✅
+          .toDouble();
 
       _cityMarkers.add(
         Marker(
@@ -40,7 +70,7 @@ extension _MapPeopleMarkers on _MapPeopleByCityState {
           height: scaled,
           alignment: Alignment.center,
           child: GestureDetector(
-            onTap: () => _openCitySheet(c),
+            onTap: () => _openCitySheet(c), // ✅ contact seulement ici
             child: _Bubble(count: c.count, size: scaled),
           ),
         ),

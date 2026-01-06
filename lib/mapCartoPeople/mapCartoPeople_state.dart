@@ -78,11 +78,22 @@ class _MapPeopleByCityState extends State<MapPeopleByCity>
   }
 
   // Compteur de personnes (après filtres)
-  int get _peopleCount => _clusters.fold<int>(0, (sum, c) => sum + c.count);
+  int get _peopleCount {
+    // Au niveau pays : on veut le total sur TOUS les pays filtrés (country clusters visibles)
+    if (_level == _MapLevel.country) {
+      return _countryClusters.fold<int>(0, (sum, c) => sum + c.count);
+    }
+    // Au niveau ville : total sur les villes visibles (clusters de villes)
+    return _clusters.fold<int>(0, (sum, c) => sum + c.count);
+  }
 
   // Pays (options dynamiques depuis le dataset)
   List<String> _countryOptions = [];
   final Set<String> _selectedCountries = {}; // tous cochés par défaut
+
+  _MapLevel _level = _MapLevel.country;
+  String? _activeCountry; // ISO2 du pays drill-down
+  List<_CountryCluster> _countryClusters = [];
 
   @override
   void initState() {
@@ -93,6 +104,9 @@ class _MapPeopleByCityState extends State<MapPeopleByCity>
       '⚠️ PUBLIC_APP_KEY manquante. Lance l’app avec '
       '--dart-define=PUBLIC_APP_KEY=... pour accéder à /api/public/*',
     );
+
+    _level = _MapLevel.country;
+    _activeCountry = null;
 
     // Par défaut : TOUS les génotypes cochés
     _selectedGenotypes.addAll(kGenotypeOptions);

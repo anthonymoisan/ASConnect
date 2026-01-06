@@ -1926,6 +1926,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Clear selection'**
   String get mapClear;
+
+  /// No description provided for @mapBack.
+  ///
+  /// In en, this message translates to:
+  /// **'Back'**
+  String get mapBack;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {
