@@ -518,5 +518,18 @@
   "genotypeUpd": "UPD",
   "genotypeIcd": "ICD",
   "genotypeClinical": "Clinique",
-  "genotypeMosaic": "Mosaïque"
+  "genotypeMosaic": "Mosaïque",
+  "mapCountryTitle": "Pays",
+  "mapAllCountriesSelected": "Tous les pays",
+  "mapCountriesSelectedCount": "{count} pays sélectionnés",
+  "mapSelectAll": "Tout sélectionner",
+  "mapClear": "Tout désélectionner",
+  "@mapCountriesSelectedCount": {
+    "description": "Nombre de pays sélectionnés dans le filtre carte",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  }
 }

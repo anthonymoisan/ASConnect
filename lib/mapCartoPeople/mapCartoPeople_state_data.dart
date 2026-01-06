@@ -10,19 +10,41 @@ extension _MapPeopleData on _MapPeopleByCityState {
     );
     if (cacheFreshNow) {
       _allClusters = List<_CityCluster>.from(_clustersCache!);
+
       final ages =
           _allClusters
               .expand((c) => c.people.map((p) => p.ageInt))
               .whereType<int>()
               .toList()
             ..sort();
+
       if (ages.isNotEmpty) {
         _datasetMinAge = ages.first;
         _datasetMaxAge = ages.last;
       }
+
+      final countries =
+          _allClusters
+              .expand((c) => c.people)
+              .map((p) => (p.country ?? '').trim())
+              .where((c) => c.isNotEmpty)
+              .toSet()
+              .toList()
+            ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+
+      _countryOptions = countries;
+
+      if (_selectedCountries.isEmpty ||
+          _selectedCountries.length != _countryOptions.length) {
+        _selectedCountries
+          ..clear()
+          ..addAll(_countryOptions);
+      }
+
       _resetFiltersToDefault(rebuild: true);
       return;
     }
+
     await _loadAndBuild(force: true);
     _resetFiltersToDefault(rebuild: true);
   }
@@ -67,23 +89,49 @@ extension _MapPeopleData on _MapPeopleByCityState {
       });
 
       // Utilisation du cache si dispo et pas de force
+      // Utilisation du cache si dispo et pas de force
       if (!force && _cacheIsFresh) {
         debugPrint("[MAP_PEOPLE] ✅ Utilisation du cache en mémoire");
         _allClusters = List<_CityCluster>.from(_clustersCache!);
+
+        // âges depuis _allClusters
         final ages =
             _allClusters
                 .expand((c) => c.people.map((p) => p.ageInt))
                 .whereType<int>()
                 .toList()
               ..sort();
+
+        // ✅ pays depuis _allClusters (pas de variable `people` ici)
+        final countries =
+            _allClusters
+                .expand((c) => c.people)
+                .map((p) => (p.country ?? '').trim())
+                .where((c) => c.isNotEmpty)
+                .toSet()
+                .toList()
+              ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+
+        _countryOptions = countries;
+
+        // ✅ Par défaut : tout sélectionné (ou si options changent)
+        if (_selectedCountries.isEmpty ||
+            _selectedCountries.length != _countryOptions.length) {
+          _selectedCountries
+            ..clear()
+            ..addAll(_countryOptions);
+        }
+
         if (ages.isNotEmpty) {
           _datasetMinAge = ages.first;
           _datasetMaxAge = ages.last;
           _selectedMinAge ??= _datasetMinAge;
           _selectedMaxAge ??= _datasetMaxAge;
         }
+
         _clusters = _allClusters;
         _rebuildMarkers();
+
         setState(() {
           _loading = false;
           _firstLoadTried = true;
@@ -158,6 +206,22 @@ extension _MapPeopleData on _MapPeopleByCityState {
       }
 
       _allClusters = clustersMap.values.toList();
+
+      final countries =
+          people
+              .map((p) => (p.country ?? '').trim())
+              .where((c) => c.isNotEmpty)
+              .toSet()
+              .toList()
+            ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+
+      _countryOptions = countries;
+
+      // ✅ Par défaut : tout sélectionné
+      if (_selectedCountries.isEmpty) {
+        _selectedCountries.addAll(_countryOptions);
+      }
+
       final clusterDur = DateTime.now().difference(clusterStart).inMilliseconds;
       debugPrint(
         "[MAP_PEOPLE] 🏙️ ${_allClusters.length} clusters ville construits en ${clusterDur} ms",

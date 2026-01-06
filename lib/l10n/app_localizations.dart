@@ -1896,6 +1896,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Apply'**
   String get mapApply;
+
+  /// No description provided for @mapCountryTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Countries'**
+  String get mapCountryTitle;
+
+  /// No description provided for @mapAllCountriesSelected.
+  ///
+  /// In en, this message translates to:
+  /// **'All countries'**
+  String get mapAllCountriesSelected;
+
+  /// Number of selected countries in map filter
+  ///
+  /// In en, this message translates to:
+  /// **'{count} countries selected'**
+  String mapCountriesSelectedCount(int count);
+
+  /// No description provided for @mapSelectAll.
+  ///
+  /// In en, this message translates to:
+  /// **'Select all'**
+  String get mapSelectAll;
+
+  /// No description provided for @mapClear.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear selection'**
+  String get mapClear;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

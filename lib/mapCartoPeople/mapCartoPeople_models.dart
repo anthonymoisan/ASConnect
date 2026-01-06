@@ -7,6 +7,8 @@ class _Person {
   final String? firstname;
   final String? lastname;
   final String? city;
+  final String? country;
+  final String? countryCode;
   final double? latitude;
   final double? longitude;
   final int? ageInt; // âge (années)
@@ -17,6 +19,8 @@ class _Person {
     this.firstname,
     this.lastname,
     this.city,
+    this.country,
+    this.countryCode,
     this.latitude,
     this.longitude,
     this.ageInt,
@@ -40,6 +44,8 @@ class _Person {
       firstname: json['firstname']?.toString(),
       lastname: json['lastname']?.toString(),
       city: json['city']?.toString(),
+      country: json['country']?.toString(),
+      countryCode: json['country_code']?.toString(),
       latitude: lat,
       longitude: lon,
       ageInt: _parseAgeInt(json['age']),

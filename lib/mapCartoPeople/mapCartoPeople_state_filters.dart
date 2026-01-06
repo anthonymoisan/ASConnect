@@ -31,6 +31,9 @@ extension _MapPeopleFilters on _MapPeopleByCityState {
     _selectedGenotypes
       ..clear()
       ..addAll(kGenotypeOptions);
+    _selectedCountries
+      ..clear()
+      ..addAll(_countryOptions);
     _selectedMinAge = _datasetMinAge;
     _selectedMaxAge = _datasetMaxAge;
     _distanceFilterEnabled = false;
@@ -38,6 +41,7 @@ extension _MapPeopleFilters on _MapPeopleByCityState {
     _maxDistanceKm = null;
     if (rebuild) {
       _clusters = _allClusters;
+      _fitMapToClusters(_clusters);
       _rebuildMarkers();
     }
   }
@@ -66,6 +70,14 @@ extension _MapPeopleFilters on _MapPeopleByCityState {
         return false;
       }
 
+      bool matchesCountry(String? c) {
+        if (_selectedCountries.isEmpty) return true; // si vide => pas de filtre
+        if (c == null) return false;
+        final v = c.trim();
+        if (v.isEmpty) return false;
+        return _selectedCountries.contains(v);
+      }
+
       bool matchesAge(int? age) {
         if (_selectedMinAge == null || _selectedMaxAge == null) return true;
         if (age == null) return false;
@@ -79,7 +91,9 @@ extension _MapPeopleFilters on _MapPeopleByCityState {
 
           final filteredPeople = <_Person>[];
           for (final p in c.people) {
-            if (matchesGenotype(p.genotype) && matchesAge(p.ageInt)) {
+            if (matchesGenotype(p.genotype) &&
+                matchesAge(p.ageInt) &&
+                matchesCountry(p.country)) {
               filteredPeople.add(p);
             }
           }
@@ -142,9 +156,28 @@ extension _MapPeopleFilters on _MapPeopleByCityState {
     return parts.isEmpty ? l10n.mapNoFilters : parts.join(' • ');
   }
 
+  void _fitMapToClusters(List<_CityCluster> clusters, {double padding = 36}) {
+    if (!mounted) return;
+    if (clusters.isEmpty) return;
+
+    final points = clusters.map((c) => c.latLng).toList();
+    if (points.length == 1) {
+      final p = points.first;
+      // zoom “ville” raisonnable
+      _map.move(p, (_currentZoom < 9 ? 9.5 : _currentZoom).clamp(3.0, 18.0));
+      return;
+    }
+
+    final bounds = LatLngBounds.fromPoints(points);
+    _map.fitCamera(
+      CameraFit.bounds(bounds: bounds, padding: EdgeInsets.all(padding)),
+    );
+  }
+
   // Feuille de Filtres (avec compteur live + âges dynamiques et clamp)
   Future<void> _openSettingsSheet() async {
     // Copie locale
+    final tempCountries = Set<String>.from(_selectedCountries);
     final tempGenos = Set<String>.from(_selectedGenotypes);
     int? localMin = _selectedMinAge ?? _datasetMinAge;
     int? localMax = _selectedMaxAge ?? _datasetMaxAge;
@@ -157,12 +190,19 @@ extension _MapPeopleFilters on _MapPeopleByCityState {
     List<_Person> _peopleModalFilteredByGenoDist() {
       bool genotypeOk(String? g) {
         if (tempGenos.isEmpty) return false;
-        if (g == null || g.trim().isNotEmpty == false) return false;
+        if (g == null || g.trim().isEmpty) return false;
         final norm = g.trim().toLowerCase();
         for (final sel in tempGenos) {
           if (norm == sel.trim().toLowerCase()) return true;
         }
         return false;
+      }
+
+      bool countryOk(String? c) {
+        // si vide => on considère "pas de filtre pays"
+        if (tempCountries.isEmpty) return true;
+        if (c == null || c.trim().isEmpty) return false;
+        return tempCountries.contains(c.trim());
       }
 
       bool distanceOk(LatLng cityPos) {
@@ -177,7 +217,9 @@ extension _MapPeopleFilters on _MapPeopleByCityState {
       for (final c in _allClusters) {
         if (!distanceOk(c.latLng)) continue;
         for (final p in c.people) {
-          if (genotypeOk(p.genotype)) out.add(p);
+          if (genotypeOk(p.genotype) && countryOk(p.country)) {
+            out.add(p);
+          }
         }
       }
       return out;
@@ -215,15 +257,27 @@ extension _MapPeopleFilters on _MapPeopleByCityState {
 
     int _countModalWithAgeBounds(int minA, int maxA) {
       int count = 0;
+
+      bool countryOk(String? c) {
+        if (tempCountries.isEmpty) return true;
+        if (c == null || c.trim().isEmpty) return false;
+        return tempCountries.contains(c.trim());
+      }
+
       for (final c in _allClusters) {
         // distance
         if (localDistanceEnabled && localOrigin != null && localMaxKm > 0) {
           final dKm = _geo.as(LengthUnit.Kilometer, localOrigin!, c.latLng);
           if (dKm > localMaxKm) continue;
         }
+
         for (final p in c.people) {
-          // geno (compare values as stored from API)
+          // geno
           if (!tempGenos.contains((p.genotype ?? '').trim())) continue;
+
+          // ✅ pays
+          if (!countryOk(p.country)) continue;
+
           // age
           final a = p.ageInt;
           if (a != null && a >= minA && a <= maxA) count++;
@@ -264,276 +318,378 @@ extension _MapPeopleFilters on _MapPeopleByCityState {
                 ? _countModalWithAgeBounds(startI, endI)
                 : 0;
 
-            return Padding(
-              padding: EdgeInsets.only(
-                left: 16,
-                right: 16,
-                bottom: 16 + MediaQuery.of(ctx).viewInsets.bottom,
-                top: 16,
-              ),
-              child: SafeArea(
-                top: false,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Row(
-                      children: [
-                        const Icon(Ionicons.options),
-                        const SizedBox(width: 8),
-                        Text(
-                          l10n.mapFiltersButtonTooltip,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w800,
-                            fontSize: 16,
-                          ),
-                        ),
-                      ],
-                    ),
-
-                    // Compteur live
-                    Padding(
-                      padding: const EdgeInsets.only(top: 6.0, bottom: 12.0),
-                      child: Row(
+            return SafeArea(
+              top: false,
+              child: Padding(
+                padding: EdgeInsets.only(
+                  left: 16,
+                  right: 16,
+                  bottom: 16 + MediaQuery.of(ctx).viewInsets.bottom,
+                  top: 16,
+                ),
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    // empêche la sheet de vouloir tout prendre d'un coup
+                    maxHeight: MediaQuery.of(ctx).size.height * 0.85,
+                  ),
+                  child: ListView(
+                    // ✅ rend tout scrollable
+                    padding: EdgeInsets.zero,
+                    shrinkWrap: true,
+                    keyboardDismissBehavior:
+                        ScrollViewKeyboardDismissBehavior.onDrag,
+                    children: [
+                      Row(
                         children: [
-                          Icon(
-                            hasAges
-                                ? Ionicons.people
-                                : Ionicons.alert_circle_outline,
-                            size: 18,
-                            color: hasAges ? Colors.black54 : Colors.orange,
-                          ),
-                          const SizedBox(width: 6),
-                          Expanded(
-                            child: Text(
-                              hasAges
-                                  ? l10n.mapResultsCount(resultsCount)
-                                  : l10n.mapNoResultsWithTheseFilters,
-                              style: TextStyle(
-                                fontWeight: FontWeight.w600,
-                                color: hasAges ? Colors.black87 : Colors.orange,
-                              ),
+                          const Icon(Ionicons.options),
+                          const SizedBox(width: 8),
+                          Text(
+                            l10n.mapFiltersButtonTooltip,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w800,
+                              fontSize: 16,
                             ),
                           ),
                         ],
                       ),
-                    ),
 
-                    // Distance
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: Text(
-                        l10n.mapDistanceTitle,
-                        style: const TextStyle(fontWeight: FontWeight.w700),
+                      // Compteur live
+                      Padding(
+                        padding: const EdgeInsets.only(top: 6.0, bottom: 12.0),
+                        child: Row(
+                          children: [
+                            Icon(
+                              hasAges
+                                  ? Ionicons.people
+                                  : Ionicons.alert_circle_outline,
+                              size: 18,
+                              color: hasAges ? Colors.black54 : Colors.orange,
+                            ),
+                            const SizedBox(width: 6),
+                            Expanded(
+                              child: Text(
+                                hasAges
+                                    ? l10n.mapResultsCount(resultsCount)
+                                    : l10n.mapNoResultsWithTheseFilters,
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  color: hasAges
+                                      ? Colors.black87
+                                      : Colors.orange,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                    SwitchListTile(
-                      title: Text(l10n.mapEnableDistanceFilter),
-                      value: localDistanceEnabled,
-                      onChanged: (v) async {
-                        if (v) {
-                          setModalState(() => localDistanceEnabled = true);
-                          final ok = await _ensureLocation();
-                          if (ok && _distanceOrigin != null) {
-                            setModalState(() {
-                              localOrigin = _distanceOrigin;
-                            });
-                            _clampAgeSelectionToDomain(setModalState);
+
+                      // Distance
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          l10n.mapDistanceTitle,
+                          style: const TextStyle(fontWeight: FontWeight.w700),
+                        ),
+                      ),
+                      SwitchListTile(
+                        title: Text(l10n.mapEnableDistanceFilter),
+                        value: localDistanceEnabled,
+                        onChanged: (v) async {
+                          if (v) {
+                            setModalState(() => localDistanceEnabled = true);
+                            final ok = await _ensureLocation();
+                            if (ok && _distanceOrigin != null) {
+                              setModalState(() {
+                                localOrigin = _distanceOrigin;
+                              });
+                              _clampAgeSelectionToDomain(setModalState);
+                            } else {
+                              setModalState(() => localDistanceEnabled = false);
+                            }
                           } else {
                             setModalState(() => localDistanceEnabled = false);
-                          }
-                        } else {
-                          setModalState(() => localDistanceEnabled = false);
-                          _clampAgeSelectionToDomain(setModalState);
-                        }
-                      },
-                    ),
-                    ListTile(
-                      dense: true,
-                      contentPadding: EdgeInsets.zero,
-                      title: Text(
-                        localOrigin != null
-                            ? l10n.mapOriginDefined(
-                                localOrigin!.latitude.toStringAsFixed(4),
-                                localOrigin!.longitude.toStringAsFixed(4),
-                              )
-                            : l10n.mapOriginUndefined,
-                      ),
-                      trailing: TextButton.icon(
-                        icon: const Icon(Ionicons.locate),
-                        label: Text(l10n.mapMyPosition),
-                        onPressed: () async {
-                          final ok = await _ensureLocation();
-                          if (ok && _distanceOrigin != null) {
-                            setModalState(() {
-                              localDistanceEnabled = true;
-                              localOrigin = _distanceOrigin;
-                            });
                             _clampAgeSelectionToDomain(setModalState);
                           }
                         },
                       ),
-                    ),
-                    if (localDistanceEnabled) ...[
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Slider(
-                              value: localMaxKm.clamp(1, 1000),
-                              min: 1,
-                              max: 1000,
-                              divisions: 999,
-                              label: l10n.mapKmLabel(
-                                localMaxKm.toStringAsFixed(0),
-                              ),
-                              onChanged: (v) {
-                                setModalState(() => localMaxKm = v);
-                                _clampAgeSelectionToDomain(setModalState);
-                              },
-                            ),
-                          ),
-                          SizedBox(
-                            width: 72,
-                            child: Text(
-                              l10n.mapKmLabel(localMaxKm.toStringAsFixed(0)),
-                              textAlign: TextAlign.right,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-
-                    const SizedBox(height: 16),
-
-                    // Génotypes
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: Text(
-                        l10n.mapGenotypeTitle,
-                        style: const TextStyle(fontWeight: FontWeight.w700),
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    ...kGenotypeOptions.map((g) {
-                      final checked = tempGenos.contains(g);
-                      return CheckboxListTile(
-                        value: checked,
-                        title: Text(_genotypeLabel(ctx, g)),
+                      ListTile(
                         dense: true,
-                        controlAffinity: ListTileControlAffinity.leading,
-                        onChanged: (v) {
-                          setModalState(() {
-                            if (v == true) {
-                              tempGenos.add(g);
-                            } else {
-                              tempGenos.remove(g);
+                        contentPadding: EdgeInsets.zero,
+                        title: Text(
+                          localOrigin != null
+                              ? l10n.mapOriginDefined(
+                                  localOrigin!.latitude.toStringAsFixed(4),
+                                  localOrigin!.longitude.toStringAsFixed(4),
+                                )
+                              : l10n.mapOriginUndefined,
+                        ),
+                        trailing: TextButton.icon(
+                          icon: const Icon(Ionicons.locate),
+                          label: Text(l10n.mapMyPosition),
+                          onPressed: () async {
+                            final ok = await _ensureLocation();
+                            if (ok && _distanceOrigin != null) {
+                              setModalState(() {
+                                localDistanceEnabled = true;
+                                localOrigin = _distanceOrigin;
+                              });
+                              _clampAgeSelectionToDomain(setModalState);
                             }
-                          });
-                          _clampAgeSelectionToDomain(setModalState);
-                        },
-                      );
-                    }).toList(),
-
-                    const SizedBox(height: 16),
-
-                    // Âge (dynamique + clamp)
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: Text(
-                        l10n.mapAgeTitle,
-                        style: const TextStyle(fontWeight: FontWeight.w700),
+                          },
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 6),
-                    if (!hasAges)
-                      const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 8),
-                        child: LinearProgressIndicator(minHeight: 2),
-                      )
-                    else ...[
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(l10n.mapMinValue(startI)),
-                          Text(l10n.mapMaxValue(endI)),
-                        ],
-                      ),
-                      RangeSlider(
-                        values: RangeValues(startI.toDouble(), endI.toDouble()),
-                        min: minAge.toDouble(),
-                        max: maxAge.toDouble(),
-                        divisions: (maxAge - minAge) > 0
-                            ? (maxAge - minAge)
-                            : null,
-                        labels: RangeLabels(startI.toString(), endI.toString()),
-                        onChanged: (rng) {
-                          setModalState(() {
-                            localMin = rng.start.round();
-                            localMax = rng.end.round();
-                          });
-                        },
-                      ),
-                    ],
+                      if (localDistanceEnabled) ...[
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Slider(
+                                value: localMaxKm.clamp(1, 1000),
+                                min: 1,
+                                max: 1000,
+                                divisions: 999,
+                                label: l10n.mapKmLabel(
+                                  localMaxKm.toStringAsFixed(0),
+                                ),
+                                onChanged: (v) {
+                                  setModalState(() => localMaxKm = v);
+                                  _clampAgeSelectionToDomain(setModalState);
+                                },
+                              ),
+                            ),
+                            SizedBox(
+                              width: 72,
+                              child: Text(
+                                l10n.mapKmLabel(localMaxKm.toStringAsFixed(0)),
+                                textAlign: TextAlign.right,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
 
-                    const SizedBox(height: 12),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        TextButton(
-                          child: Text(l10n.mapReset),
-                          onPressed: () {
+                      const SizedBox(height: 16),
+
+                      // Pays
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          l10n.mapCountryTitle,
+                          style: const TextStyle(fontWeight: FontWeight.w700),
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+
+                      Theme(
+                        data: Theme.of(
+                          ctx,
+                        ).copyWith(dividerColor: Colors.transparent),
+                        child: ExpansionTile(
+                          tilePadding: EdgeInsets.zero,
+                          title: Text(
+                            tempCountries.length == _countryOptions.length
+                                ? l10n.mapAllCountriesSelected
+                                : l10n.mapCountriesSelectedCount(
+                                    tempCountries.length,
+                                  ),
+                          ),
+                          children: [
+                            Row(
+                              children: [
+                                TextButton(
+                                  onPressed: () {
+                                    setModalState(() {
+                                      tempCountries
+                                        ..clear()
+                                        ..addAll(_countryOptions);
+                                    });
+                                    _clampAgeSelectionToDomain(setModalState);
+                                  },
+                                  child: Text(l10n.mapSelectAll),
+                                ),
+                                TextButton(
+                                  onPressed: () {
+                                    setModalState(() => tempCountries.clear());
+                                    _clampAgeSelectionToDomain(setModalState);
+                                  },
+                                  child: Text(l10n.mapClear),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 6),
+                            ..._countryOptions.map((country) {
+                              final checked = tempCountries.contains(country);
+                              return CheckboxListTile(
+                                value: checked,
+                                title: Text(country),
+                                dense: true,
+                                controlAffinity:
+                                    ListTileControlAffinity.leading,
+                                onChanged: (v) {
+                                  setModalState(() {
+                                    if (v == true) {
+                                      tempCountries.add(country);
+                                    } else {
+                                      tempCountries.remove(country);
+                                    }
+                                  });
+                                  _clampAgeSelectionToDomain(setModalState);
+                                },
+                              );
+                            }).toList(),
+                          ],
+                        ),
+                      ),
+
+                      const SizedBox(height: 16),
+
+                      // Génotypes
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          l10n.mapGenotypeTitle,
+                          style: const TextStyle(fontWeight: FontWeight.w700),
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      ...kGenotypeOptions.map((g) {
+                        final checked = tempGenos.contains(g);
+                        return CheckboxListTile(
+                          value: checked,
+                          title: Text(_genotypeLabel(ctx, g)),
+                          dense: true,
+                          controlAffinity: ListTileControlAffinity.leading,
+                          onChanged: (v) {
                             setModalState(() {
-                              // 1) Filtres par défaut
-                              tempGenos
-                                ..clear()
-                                ..addAll(kGenotypeOptions);
-                              localDistanceEnabled = false;
-                              localOrigin = null;
-                              localMaxKm = 100.0;
-
-                              // 2) Recalcule le domaine d’âge
-                              final dom = _currentAgeDomainForModal();
-
-                              // 3) Positionne le RangeSlider sur les bornes du domaine
-                              if (dom.hasAges) {
-                                localMin = dom.minAge;
-                                localMax = dom.maxAge;
+                              if (v == true) {
+                                tempGenos.add(g);
                               } else {
-                                localMin = null;
-                                localMax = null;
+                                tempGenos.remove(g);
                               }
+                            });
+                            _clampAgeSelectionToDomain(setModalState);
+                          },
+                        );
+                      }).toList(),
+
+                      const SizedBox(height: 16),
+
+                      // Âge
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          l10n.mapAgeTitle,
+                          style: const TextStyle(fontWeight: FontWeight.w700),
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      if (!hasAges)
+                        const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 8),
+                          child: LinearProgressIndicator(minHeight: 2),
+                        )
+                      else ...[
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(l10n.mapMinValue(startI)),
+                            Text(l10n.mapMaxValue(endI)),
+                          ],
+                        ),
+                        RangeSlider(
+                          values: RangeValues(
+                            startI.toDouble(),
+                            endI.toDouble(),
+                          ),
+                          min: minAge.toDouble(),
+                          max: maxAge.toDouble(),
+                          divisions: (maxAge - minAge) > 0
+                              ? (maxAge - minAge)
+                              : null,
+                          labels: RangeLabels(
+                            startI.toString(),
+                            endI.toString(),
+                          ),
+                          onChanged: (rng) {
+                            setModalState(() {
+                              localMin = rng.start.round();
+                              localMax = rng.end.round();
                             });
                           },
                         ),
-                        const SizedBox(width: 8),
-                        TextButton(
-                          child: Text(l10n.mapCancel),
-                          onPressed: () => Navigator.of(ctx).pop(),
-                        ),
-                        const SizedBox(width: 8),
-                        ElevatedButton.icon(
-                          icon: const Icon(Ionicons.checkmark),
-                          label: Text(l10n.mapApply),
-                          onPressed: () async {
-                            _selectedGenotypes
-                              ..clear()
-                              ..addAll(tempGenos);
-
-                            _selectedMinAge = hasAges ? startI : null;
-                            _selectedMaxAge = hasAges ? endI : null;
-
-                            _distanceFilterEnabled = localDistanceEnabled;
-                            _distanceOrigin = localOrigin;
-                            _maxDistanceKm = localDistanceEnabled
-                                ? localMaxKm
-                                : null;
-
-                            Navigator.of(ctx).pop();
-                            await _applyFilters();
-                          },
-                        ),
                       ],
-                    ),
-                  ],
+
+                      const SizedBox(height: 12),
+
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          TextButton(
+                            child: Text(l10n.mapReset),
+                            onPressed: () {
+                              setModalState(() {
+                                // ✅ Pays : tout remettre
+                                tempCountries
+                                  ..clear()
+                                  ..addAll(_countryOptions);
+                                tempGenos
+                                  ..clear()
+                                  ..addAll(kGenotypeOptions);
+                                localDistanceEnabled = false;
+                                localOrigin = null;
+                                localMaxKm = 100.0;
+
+                                final dom = _currentAgeDomainForModal();
+                                if (dom.hasAges) {
+                                  localMin = dom.minAge;
+                                  localMax = dom.maxAge;
+                                } else {
+                                  localMin = null;
+                                  localMax = null;
+                                }
+                              });
+                            },
+                          ),
+                          const SizedBox(width: 8),
+                          TextButton(
+                            child: Text(l10n.mapCancel),
+                            onPressed: () => Navigator.of(ctx).pop(),
+                          ),
+                          const SizedBox(width: 8),
+                          ElevatedButton.icon(
+                            icon: const Icon(Ionicons.checkmark),
+                            label: Text(l10n.mapApply),
+                            onPressed: () async {
+                              _selectedGenotypes
+                                ..clear()
+                                ..addAll(tempGenos);
+
+                              _selectedCountries
+                                ..clear()
+                                ..addAll(tempCountries);
+
+                              _selectedMinAge = hasAges ? startI : null;
+                              _selectedMaxAge = hasAges ? endI : null;
+
+                              _distanceFilterEnabled = localDistanceEnabled;
+                              _distanceOrigin = localOrigin;
+                              _maxDistanceKm = localDistanceEnabled
+                                  ? localMaxKm
+                                  : null;
+
+                              Navigator.of(ctx).pop();
+                              await _applyFilters();
+                              _fitMapToClusters(
+                                _clusters,
+                              ); // ✅ zoom après fermeture de la sheet
+                            },
+                          ),
+                        ],
+                      ),
+
+                      // ✅ petit "padding" final pour que les boutons ne soient jamais collés
+                      const SizedBox(height: 16),
+                    ],
+                  ),
                 ),
               ),
             );

@@ -1019,4 +1019,21 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get mapApply => 'Aplicar';
+
+  @override
+  String get mapCountryTitle => 'Países';
+
+  @override
+  String get mapAllCountriesSelected => 'Todos los países';
+
+  @override
+  String mapCountriesSelectedCount(int count) {
+    return '$count países seleccionados';
+  }
+
+  @override
+  String get mapSelectAll => 'Seleccionar todo';
+
+  @override
+  String get mapClear => 'Deseleccionar todo';
 }

@@ -78,6 +78,10 @@ class _MapPeopleByCityState extends State<MapPeopleByCity>
   // Compteur de personnes (après filtres)
   int get _peopleCount => _clusters.fold<int>(0, (sum, c) => sum + c.count);
 
+  // Pays (options dynamiques depuis le dataset)
+  List<String> _countryOptions = [];
+  final Set<String> _selectedCountries = {}; // tous cochés par défaut
+
   @override
   void initState() {
     super.initState();

@@ -514,5 +514,19 @@
   "genotypeUpd": "UPD",
   "genotypeIcd": "ICD",
   "genotypeClinical": "Clinical",
-  "genotypeMosaic": "Mosaic"
+  "genotypeMosaic": "Mosaic",
+  "mapCountryTitle": "Countries",
+  "mapAllCountriesSelected": "All countries",
+  "mapCountriesSelectedCount": "{count} countries selected",
+  "mapSelectAll": "Select all",
+  "mapClear": "Clear selection",
+
+  "@mapCountriesSelectedCount": {
+    "description": "Number of selected countries in map filter",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  }
 }
