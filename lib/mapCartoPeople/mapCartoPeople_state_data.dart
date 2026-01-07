@@ -1,7 +1,101 @@
-//API + cache + construction clusters
+// lib/mapCartoPeople/mapCartoPeople_state_data.dart
+// API + cache + construction clusters + country labels i18n
 part of map_carto_people;
 
 extension _MapPeopleData on _MapPeopleByCityState {
+  // ------------------------------
+  // Country labels (ISO2 -> translated)
+  // ------------------------------
+  // Cache in-memory des labels pays pour la locale courante
+  // (déclaré ici via extension: c'est ok car on écrit sur des champs du State)
+  //
+  // >>> IMPORTANT : ces champs doivent exister dans ton State (_MapPeopleByCityState).
+  // Si tu ne les as pas encore, ajoute-les dans mapCartoPeople.dart (State) :
+  //
+  // Map<String, String> _countryLabelsByIso2 = {};
+  // String? _countryLabelsLocale;
+  // bool _loadingCountryLabels = false;
+  //
+  // (Je les utilise ci-dessous.)
+
+  Future<void> _ensureCountryLabelsForLocale(BuildContext context) async {
+    final locale = Localizations.localeOf(
+      context,
+    ).languageCode; // "fr", "en", "es", "de", ...
+    if (_countryLabelsLocale == locale && _countryLabelsByIso2.isNotEmpty) {
+      return;
+    }
+    if (_loadingCountryLabels) return;
+
+    _loadingCountryLabels = true;
+
+    try {
+      final uri = Uri.parse(
+        "https://anthonymoisan.pythonanywhere.com/api/public/people/countriesTranslated?locale=$locale",
+      );
+
+      final res = await http
+          .get(
+            uri,
+            headers: {'Accept': 'application/json', 'X-App-Key': _publicAppKey},
+          )
+          .timeout(const Duration(seconds: 30));
+
+      if (res.statusCode != 200) {
+        throw Exception("HTTP ${res.statusCode}");
+      }
+
+      final decoded = json.decode(res.body);
+
+      // Format attendu :
+      // { "count": 36, "countries": [ { "code":"FR", "name":"France" }, ... ], "locale": "fr" }
+      final Map<String, String> map = {};
+
+      if (decoded is Map) {
+        final countries = decoded['countries'];
+        if (countries is List) {
+          for (final e in countries) {
+            if (e is Map) {
+              final iso = (e['code'] ?? '').toString().trim().toUpperCase();
+              final name = (e['name'] ?? '').toString().trim();
+              if (iso.length == 2 && name.isNotEmpty) {
+                map[iso] = name;
+              }
+            }
+          }
+        }
+      }
+
+      // On ne garde que les pays présents dans le dataset (options)
+      final presentIso = _countryOptions
+          .map((e) => e.trim().toUpperCase())
+          .toSet();
+
+      final filtered = <String, String>{};
+      for (final iso in presentIso) {
+        final label = map[iso];
+        if (label != null && label.isNotEmpty) filtered[iso] = label;
+      }
+
+      if (mounted) {
+        setState(() {
+          _countryLabelsByIso2 = filtered;
+          _countryLabelsLocale = locale;
+        });
+      }
+    } catch (e) {
+      // Fallback : labels vides => l'UI affichera l'ISO2
+      if (mounted) {
+        setState(() {
+          _countryLabelsByIso2 = {};
+          _countryLabelsLocale = locale;
+        });
+      }
+    } finally {
+      _loadingCountryLabels = false;
+    }
+  }
+
   // ------------------------------
   // Build country clusters from city clusters
   // ------------------------------
@@ -11,7 +105,6 @@ extension _MapPeopleData on _MapPeopleByCityState {
     final Map<String, List<_CityCluster>> byCountry = {};
 
     for (final city in cityClusters) {
-      // On récupère les codes pays présents dans la ville (normalement 1 seul)
       final codes = city.people
           .map((p) => (p.countryCode ?? '').trim().toUpperCase())
           .where((c) => c.length == 2)
@@ -20,7 +113,7 @@ extension _MapPeopleData on _MapPeopleByCityState {
 
       if (codes.isEmpty) continue;
 
-      // Hypothèse: 1 pays par cluster ville (si API "sale", on prend le premier)
+      // Hypothèse: 1 pays par cluster ville
       final code = codes.first;
       byCountry.putIfAbsent(code, () => []).add(city);
     }
@@ -28,7 +121,6 @@ extension _MapPeopleData on _MapPeopleByCityState {
     final out = <_CountryCluster>[];
 
     byCountry.forEach((code, cities) {
-      // Centroïde simple des villes
       double lat = 0;
       double lon = 0;
       for (final c in cities) {
@@ -67,7 +159,6 @@ extension _MapPeopleData on _MapPeopleByCityState {
         _datasetMaxAge = ages.last;
       }
 
-      // ✅ pays ISO2 depuis cache
       final countries =
           _allClusters
               .expand((c) => c.people)
@@ -86,11 +177,8 @@ extension _MapPeopleData on _MapPeopleByCityState {
           ..addAll(_countryOptions);
       }
 
-      // Vue par défaut = pays
       _level = _MapLevel.country;
       _activeCountry = null;
-
-      // Source (full dataset) => country clusters
       _countryClusters = _buildCountryClustersFromCityClusters(_allClusters);
 
       _resetFiltersToDefault(rebuild: true);
@@ -109,8 +197,6 @@ extension _MapPeopleData on _MapPeopleByCityState {
     _didInitialFit = false;
 
     await _loadAndBuild(force: true);
-
-    // Vue “full dataset”
     _resetFiltersToDefault(rebuild: true);
   }
 
@@ -178,11 +264,8 @@ extension _MapPeopleData on _MapPeopleByCityState {
           _selectedMaxAge ??= _datasetMaxAge;
         }
 
-        // ✅ vue par défaut = pays
         _level = _MapLevel.country;
         _activeCountry = null;
-
-        // Source => clusters pays
         _countryClusters = _buildCountryClustersFromCityClusters(_allClusters);
 
         _rebuildMarkers();
@@ -264,7 +347,6 @@ extension _MapPeopleData on _MapPeopleByCityState {
       }
       _allClusters = clustersMap.values.toList();
 
-      // ✅ options pays ISO2 depuis réseau
       final countries =
           people
               .map((p) => (p.countryCode ?? '').trim().toUpperCase())
@@ -318,7 +400,6 @@ extension _MapPeopleData on _MapPeopleByCityState {
         "[MAP_PEOPLE] 📊 Bornes d’âge calculées en ${ageDur} ms (min=$_datasetMinAge, max=$_datasetMaxAge)",
       );
 
-      // ✅ vue par défaut = pays (full dataset)
       _level = _MapLevel.country;
       _activeCountry = null;
       _countryClusters = _buildCountryClustersFromCityClusters(_allClusters);
@@ -335,7 +416,6 @@ extension _MapPeopleData on _MapPeopleByCityState {
         );
         _allClusters = List<_CityCluster>.from(_clustersCache!);
 
-        // fallback vue pays
         _level = _MapLevel.country;
         _activeCountry = null;
         _countryClusters = _buildCountryClustersFromCityClusters(_allClusters);

@@ -1,4 +1,3 @@
-//filtres + bottomsheet + labels
 // lib/mapCartoPeople/mapCartoPeople_state_filters.dart
 part of map_carto_people;
 
@@ -30,10 +29,12 @@ extension _MapPeopleFilters on _MapPeopleByCityState {
     }
   }
 
-  // (Pour éviter les traductions bancales / mélange de langues,
-  // on affiche le ISO2. Tu pourras brancher une vraie table ARB plus tard.)
-  String _countryLabel(BuildContext context, String iso2) =>
-      iso2.trim().toUpperCase();
+  // ✅ Affichage pays: nom traduit si dispo, sinon ISO2
+  String _countryLabel(BuildContext context, String iso2) {
+    final code = iso2.trim().toUpperCase();
+    final label = _countryLabelsByIso2[code];
+    return (label == null || label.trim().isEmpty) ? code : label;
+  }
 
   // ----------------------------
   // Drill-down navigation
@@ -44,7 +45,7 @@ extension _MapPeopleFilters on _MapPeopleByCityState {
       _activeCountry = null;
     });
 
-    _rebuildMarkers(); // doit maintenant gérer pays OU villes
+    _rebuildMarkers();
     if (fit) _fitMapToCountryClusters(_countryClusters);
   }
 
@@ -53,7 +54,6 @@ extension _MapPeopleFilters on _MapPeopleByCityState {
     _level = _MapLevel.city;
     _activeCountry = code;
 
-    // villes du pays dans la vue filtrée actuelle
     final cc = _countryClusters.where((c) => c.countryCode == code).toList();
     if (cc.isEmpty) {
       _backToCountries(fit: fit);
@@ -73,7 +73,6 @@ extension _MapPeopleFilters on _MapPeopleByCityState {
       ..clear()
       ..addAll(kGenotypeOptions);
 
-    // ✅ ISO2
     _selectedCountries
       ..clear()
       ..addAll(_countryOptions);
@@ -86,11 +85,9 @@ extension _MapPeopleFilters on _MapPeopleByCityState {
     _maxDistanceKm = null;
 
     if (rebuild) {
-      // Après reset => dataset complet => niveau pays
       _level = _MapLevel.country;
       _activeCountry = null;
 
-      // Source = all clusters
       _clusters = _allClusters;
       _countryClusters = _buildCountryClustersFromCityClusters(_allClusters);
 
@@ -129,9 +126,8 @@ extension _MapPeopleFilters on _MapPeopleByCityState {
         return false;
       }
 
-      // ✅ ISO2 (countryCode)
       bool matchesCountry(String? iso2) {
-        if (_selectedCountries.isEmpty) return true; // vide => pas de filtre
+        if (_selectedCountries.isEmpty) return true;
         if (iso2 == null) return false;
         final v = iso2.trim().toUpperCase();
         if (v.length != 2) return false;
@@ -171,18 +167,15 @@ extension _MapPeopleFilters on _MapPeopleByCityState {
         source = filtered;
       }
 
-      // ✅ on met à jour la base filtrée (villes) + les clusters pays
       final filteredCities = source;
       _countryClusters = _buildCountryClustersFromCityClusters(filteredCities);
 
-      // Si on est dans un pays, on y reste si possible
       if (_level == _MapLevel.city && _activeCountry != null) {
         final cc = _countryClusters
             .where((c) => c.countryCode == _activeCountry)
             .toList();
 
         if (cc.isEmpty) {
-          // le pays n’existe plus avec ces filtres => retour au niveau pays
           _backToCountries(fit: true);
         } else {
           _clusters = cc.first.cities;
@@ -190,7 +183,6 @@ extension _MapPeopleFilters on _MapPeopleByCityState {
           _fitMapToClusters(_clusters);
         }
       } else {
-        // niveau pays
         _level = _MapLevel.country;
         _activeCountry = null;
         _rebuildMarkers();
@@ -306,7 +298,6 @@ extension _MapPeopleFilters on _MapPeopleByCityState {
       _activeCountry = country.countryCode;
     });
 
-    // Met à jour la liste de clusters ville à afficher
     _clusters = _allClusters
         .map((cl) {
           final people = cl.people
@@ -330,8 +321,10 @@ extension _MapPeopleFilters on _MapPeopleByCityState {
   // BottomSheet filtres
   // ----------------------------
   Future<void> _openSettingsSheet() async {
-    // Copie locale
-    final tempCountries = Set<String>.from(_selectedCountries); // ISO2
+    // ✅ s'assure qu'on a les libellés pays dans la bonne langue
+    await _ensureCountryLabelsForLocale(context);
+
+    final tempCountries = Set<String>.from(_selectedCountries);
     final tempGenos = Set<String>.from(_selectedGenotypes);
     int? localMin = _selectedMinAge ?? _datasetMinAge;
     int? localMax = _selectedMaxAge ?? _datasetMaxAge;
@@ -340,10 +333,8 @@ extension _MapPeopleFilters on _MapPeopleByCityState {
     LatLng? localOrigin = _distanceOrigin;
     double localMaxKm = _maxDistanceKm ?? 100.0;
 
-    bool ageTouched =
-        false; // ✅ devient true dès que l’utilisateur touche le slider
+    bool ageTouched = false;
 
-    // Helpers internes
     bool genotypeOk(String? g) {
       if (tempGenos.isEmpty) return false;
       if (g == null || g.trim().isEmpty) return false;
@@ -370,7 +361,6 @@ extension _MapPeopleFilters on _MapPeopleByCityState {
       return dKm <= localMaxKm;
     }
 
-    // ✅ Domaine âge basé sur geno + pays + distance
     List<_Person> _peopleModalFilteredByGenoCountryDist() {
       final out = <_Person>[];
       for (final c in _allClusters) {
@@ -407,11 +397,9 @@ extension _MapPeopleFilters on _MapPeopleByCityState {
 
       setModalState(() {
         if (!ageTouched) {
-          // ✅ tant que l’utilisateur n’a pas touché, on “reset” sur tout le domaine
           localMin = dom.minAge;
           localMax = dom.maxAge;
         } else {
-          // ✅ sinon on respecte sa sélection, mais on clamp
           localMin = (localMin ?? dom.minAge).clamp(dom.minAge, dom.maxAge);
           localMax = (localMax ?? dom.maxAge).clamp(dom.minAge, dom.maxAge);
           if (localMin! > localMax!) {
@@ -470,8 +458,14 @@ extension _MapPeopleFilters on _MapPeopleByCityState {
                 ? _countModalWithAgeBounds(startI, endI)
                 : 0;
 
-            // ✅ tri ISO2 (stable)
-            final sortedCountryOptions = [..._countryOptions]..sort();
+            // ✅ tri par libellé traduit (fallback ISO2)
+            final sortedCountryOptions = [..._countryOptions]
+              ..sort(
+                (a, b) => _countryLabel(
+                  ctx,
+                  a,
+                ).toLowerCase().compareTo(_countryLabel(ctx, b).toLowerCase()),
+              );
 
             return SafeArea(
               top: false,

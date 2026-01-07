@@ -8,6 +8,10 @@ class _MapPeopleByCityState extends State<MapPeopleByCity>
 
   final _map = MapController();
 
+  Map<String, String> _countryLabelsByIso2 = {}; // ISO2 -> name translated
+  String? _countryLabelsLocale;
+  bool _loadingCountryLabels = false;
+
   bool _didInitialFit = false;
 
   // Vue initiale (France / Europe)
@@ -111,6 +115,10 @@ class _MapPeopleByCityState extends State<MapPeopleByCity>
     // Par défaut : TOUS les génotypes cochés
     _selectedGenotypes.addAll(kGenotypeOptions);
     _currentZoom = _initialZoom;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _ensureCountryLabelsForLocale(context);
+    });
     _loadAndBuild(); // première charge (dans state_data.dart)
   }
 
