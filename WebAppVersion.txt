@@ -1,0 +1,6 @@
+1) Faire une copie de webVersion qui est sous le repo ASConnect
+
+git clone https://github.com/anthonymoisan/ASConnect.git
+cd ASConnect
+git sparse-checkout init --cone
+git sparse-checkout set webVersion
