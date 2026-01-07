@@ -269,7 +269,7 @@ class _PersonTileState extends State<_PersonTile> {
             ),
           ),
           title: Text(
-            p.fullName,
+            p.firstName,
             style: const TextStyle(fontWeight: FontWeight.w600),
           ),
           subtitle: Text(subtitle),

@@ -61,6 +61,12 @@ class _Person {
     if (l.isEmpty) return f;
     return '$f $l';
   }
+
+  String get firstName {
+    final f = (firstname ?? '').trim();
+    if (f.isEmpty) return 'Anonyme';
+    return '$f';
+  }
 }
 
 class _CityCluster {
