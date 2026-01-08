@@ -1932,6 +1932,84 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Back'**
   String get mapBack;
+
+  /// No description provided for @chatWithName.
+  ///
+  /// In en, this message translates to:
+  /// **'Chat with {name}'**
+  String chatWithName(Object name);
+
+  /// No description provided for @conversationsReconnectToSee.
+  ///
+  /// In en, this message translates to:
+  /// **'Please log in again to view your conversations.'**
+  String get conversationsReconnectToSee;
+
+  /// No description provided for @loading.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading…'**
+  String get loading;
+
+  /// No description provided for @conversationsEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No conversations'**
+  String get conversationsEmpty;
+
+  /// No description provided for @conversationsNoMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'No messages'**
+  String get conversationsNoMessage;
+
+  /// No description provided for @conversationsLoadError.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading error: {error}'**
+  String conversationsLoadError(Object error);
+
+  /// No description provided for @conversationsLeaveTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Leave conversation?'**
+  String get conversationsLeaveTitle;
+
+  /// No description provided for @conversationsLeaveBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Are you sure you want to leave this conversation?\nAll your messages will be deleted.'**
+  String get conversationsLeaveBody;
+
+  /// No description provided for @conversationsLeaveConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Leave'**
+  String get conversationsLeaveConfirm;
+
+  /// No description provided for @close.
+  ///
+  /// In en, this message translates to:
+  /// **'Close'**
+  String get close;
+
+  /// No description provided for @photo.
+  ///
+  /// In en, this message translates to:
+  /// **'Photo'**
+  String get photo;
+
+  /// No description provided for @yesterday.
+  ///
+  /// In en, this message translates to:
+  /// **'yesterday'**
+  String get yesterday;
+
+  /// No description provided for @genericError.
+  ///
+  /// In en, this message translates to:
+  /// **'Error: {error}'**
+  String genericError(Object error);
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

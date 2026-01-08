@@ -1039,4 +1039,49 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get mapBack => 'Back';
+
+  @override
+  String chatWithName(Object name) {
+    return 'Chat with $name';
+  }
+
+  @override
+  String get conversationsReconnectToSee => 'Please log in again to view your conversations.';
+
+  @override
+  String get loading => 'Loading…';
+
+  @override
+  String get conversationsEmpty => 'No conversations';
+
+  @override
+  String get conversationsNoMessage => 'No messages';
+
+  @override
+  String conversationsLoadError(Object error) {
+    return 'Loading error: $error';
+  }
+
+  @override
+  String get conversationsLeaveTitle => 'Leave conversation?';
+
+  @override
+  String get conversationsLeaveBody => 'Are you sure you want to leave this conversation?\nAll your messages will be deleted.';
+
+  @override
+  String get conversationsLeaveConfirm => 'Leave';
+
+  @override
+  String get close => 'Close';
+
+  @override
+  String get photo => 'Photo';
+
+  @override
+  String get yesterday => 'yesterday';
+
+  @override
+  String genericError(Object error) {
+    return 'Error: $error';
+  }
 }

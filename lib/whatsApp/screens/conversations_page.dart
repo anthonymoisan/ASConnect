@@ -1,10 +1,10 @@
-// lib/whatsApp/screens/conversations_page.dart
-
 import 'dart:async';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
-import 'package:cached_network_image/cached_network_image.dart';
+import 'package:http/http.dart' as http;
 
+import '../../l10n/app_localizations.dart';
 import '../models/conversation_summary.dart';
 import '../services/conversation_api.dart';
 import '../services/conversation_events.dart';
@@ -21,7 +21,6 @@ class ConversationsPage extends StatefulWidget {
 
 class _ConversationsPageState extends State<ConversationsPage>
     with WidgetsBindingObserver {
-  // ✅ On garde les données en mémoire pour éviter tout “spinner” au refresh
   List<ConversationSummary> _items = [];
   bool _initialLoading = true;
   Object? _error;
@@ -95,7 +94,6 @@ class _ConversationsPageState extends State<ConversationsPage>
     _pollTimer = null;
   }
 
-  // ✅ Petite signature pour éviter setState si pas de changement
   int _sig(List<ConversationSummary> list) {
     int s = list.length;
     for (final c in list) {
@@ -146,7 +144,6 @@ class _ConversationsPageState extends State<ConversationsPage>
     }
   }
 
-  // ✅ Reload “silencieux” : pas de spinner / pas de flash
   Future<void> _reload({bool silent = false}) async {
     if (_reloading) return;
     _reloading = true;
@@ -180,19 +177,18 @@ class _ConversationsPageState extends State<ConversationsPage>
           _initialLoading = false;
         });
       } else {
-        // ✅ même si pas de changement, on enlève une éventuelle erreur passée
         if (_error != null) {
           setState(() => _error = null);
         }
       }
     } catch (e) {
       if (!mounted) return;
-      // ✅ En refresh auto : on n’affiche pas une page d’erreur qui remplace tout.
-      // On garde la liste existante, et on stocke l’erreur si tu veux diagnostiquer.
+      final l10n = AppLocalizations.of(context)!;
+
       if (!silent) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Erreur de chargement : $e')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n.conversationsLoadError(e.toString()))),
+        );
       }
       _error = e;
     } finally {
@@ -219,25 +215,30 @@ class _ConversationsPageState extends State<ConversationsPage>
     final pid = widget.personId;
     if (pid == null) return;
 
+    final l10n = AppLocalizations.of(context)!;
+
     final confirm = await showDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Quitter la conversation ?'),
-        content: const Text(
-          'Êtes-vous sûr(e) de vouloir quitter la conversation ?\n'
-          'Tous vos messages seront effacés.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('Annuler'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(true),
-            child: const Text('Quitter', style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
+      builder: (ctx) {
+        final l10n2 = AppLocalizations.of(ctx)!;
+        return AlertDialog(
+          title: Text(l10n2.conversationsLeaveTitle),
+          content: Text(l10n2.conversationsLeaveBody),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(false),
+              child: Text(l10n2.cancel),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(true),
+              child: Text(
+                l10n2.conversationsLeaveConfirm,
+                style: const TextStyle(color: Colors.red),
+              ),
+            ),
+          ],
+        );
+      },
     );
 
     if (confirm != true) return;
@@ -254,12 +255,15 @@ class _ConversationsPageState extends State<ConversationsPage>
       if (!mounted) return;
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text('Erreur : $e')));
+      ).showSnackBar(SnackBar(content: Text(l10n.genericError(e.toString()))));
     }
   }
 
   String _formatConversationDate(DateTime? date) {
     if (date == null) return '';
+
+    final l10n = AppLocalizations.of(context)!;
+
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     final messageDay = DateTime(date.year, date.month, date.day);
@@ -270,7 +274,7 @@ class _ConversationsPageState extends State<ConversationsPage>
       final mm = date.minute.toString().padLeft(2, '0');
       return "$hh:$mm";
     }
-    if (diff == 1) return "hier";
+    if (diff == 1) return l10n.yesterday;
 
     final dd = date.day.toString().padLeft(2, '0');
     final mm = date.month.toString().padLeft(2, '0');
@@ -278,16 +282,24 @@ class _ConversationsPageState extends State<ConversationsPage>
     return "$dd/$mm/$yyyy";
   }
 
+  String _conversationTitle(BuildContext context, ConversationSummary conv) {
+    final l10n = AppLocalizations.of(context)!;
+    final name = conv.title.trim().isEmpty ? '—' : conv.title.trim();
+    return l10n.chatWithName(name);
+  }
+
   void _openAvatarFullScreen(int otherPeopleId) {
+    final l10n = AppLocalizations.of(context)!;
     final url = personPhotoUrl(otherPeopleId);
 
     showGeneralDialog(
       context: context,
       barrierDismissible: true,
-      barrierLabel: 'Photo',
+      barrierLabel: l10n.photo,
       barrierColor: Colors.black,
       transitionDuration: const Duration(milliseconds: 180),
       pageBuilder: (ctx, _, __) {
+        final l10n2 = AppLocalizations.of(ctx)!;
         return Scaffold(
           backgroundColor: Colors.black,
           body: SafeArea(
@@ -297,20 +309,23 @@ class _ConversationsPageState extends State<ConversationsPage>
                   child: InteractiveViewer(
                     minScale: 1.0,
                     maxScale: 4.0,
-                    child: CachedNetworkImage(
-                      imageUrl: url,
-                      httpHeaders: {'X-App-Key': publicAppKey},
+                    child: Image.network(
+                      url,
+                      headers: {'X-App-Key': publicAppKey},
                       fit: BoxFit.contain,
-                      placeholder: (_, __) => const SizedBox(
-                        width: 36,
-                        height: 36,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      ),
-                      errorWidget: (_, __, ___) => const Icon(
+                      errorBuilder: (_, __, ___) => const Icon(
                         Icons.person,
                         size: 120,
                         color: Colors.white54,
                       ),
+                      loadingBuilder: (ctx, child, prog) {
+                        if (prog == null) return child;
+                        return const SizedBox(
+                          width: 36,
+                          height: 36,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        );
+                      },
                     ),
                   ),
                 ),
@@ -320,7 +335,7 @@ class _ConversationsPageState extends State<ConversationsPage>
                   child: IconButton(
                     icon: const Icon(Icons.close, color: Colors.white),
                     onPressed: () => Navigator.of(ctx).pop(),
-                    tooltip: 'Fermer',
+                    tooltip: l10n2.close,
                   ),
                 ),
               ],
@@ -336,15 +351,14 @@ class _ConversationsPageState extends State<ConversationsPage>
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+
     if (widget.personId == null) {
-      return const Center(
-        child: Text('Veuillez vous reconnecter pour voir vos discussions.'),
-      );
+      return Center(child: Text(l10n.conversationsReconnectToSee));
     }
 
     final pid = widget.personId!;
 
-    // ✅ Pull-to-refresh sans spinner : RefreshIndicator affiche juste la “barre”
     return RefreshIndicator(
       onRefresh: () => _reload(silent: false),
       child: _buildBody(pid),
@@ -352,26 +366,29 @@ class _ConversationsPageState extends State<ConversationsPage>
   }
 
   Widget _buildBody(int pid) {
-    // ✅ “Chargement initial” : on évite le spinner (tu peux styliser)
+    final l10n = AppLocalizations.of(context)!;
+
     if (_initialLoading && _items.isEmpty) {
       return ListView(
         physics: const AlwaysScrollableScrollPhysics(),
-        children: const [
-          SizedBox(height: 160),
+        children: [
+          const SizedBox(height: 160),
           Center(
-            child: Text('Chargement…', style: TextStyle(color: Colors.black54)),
+            child: Text(
+              l10n.loading,
+              style: const TextStyle(color: Colors.black54),
+            ),
           ),
         ],
       );
     }
 
-    // ✅ Si vide (après chargement)
     if (_items.isEmpty) {
       return ListView(
         physics: const AlwaysScrollableScrollPhysics(),
-        children: const [
-          SizedBox(height: 160),
-          Center(child: Text('Aucune conversation')),
+        children: [
+          const SizedBox(height: 160),
+          Center(child: Text(l10n.conversationsEmpty)),
         ],
       );
     }
@@ -388,15 +405,20 @@ class _ConversationsPageState extends State<ConversationsPage>
             horizontal: 16,
             vertical: 8,
           ),
-
-          leading: _ConversationAvatarFast(otherPeopleId: conv.otherPeopleId),
-
+          leading: _PeoplePhotoAvatar(
+            peopleId: conv.otherPeopleId,
+            radius: 22,
+            onTap: () {
+              final id = conv.otherPeopleId;
+              if (id != null) _openAvatarFullScreen(id);
+            },
+          ),
           title: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Expanded(
                 child: Text(
-                  conv.title,
+                  _conversationTitle(context, conv),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(fontWeight: FontWeight.w600),
@@ -408,13 +430,10 @@ class _ConversationsPageState extends State<ConversationsPage>
               ),
             ],
           ),
-
           subtitle: _LastLine(conv: conv, currentPersonId: pid),
-
           trailing: conv.unreadCount > 0
               ? _UnreadBubble(count: conv.unreadCount)
               : null,
-
           onTap: () => _openConversation(conv.id),
           onLongPress: () => _confirmLeaveConversation(conv.id),
         );
@@ -423,30 +442,104 @@ class _ConversationsPageState extends State<ConversationsPage>
   }
 }
 
-class _ConversationAvatarFast extends StatelessWidget {
-  final int? otherPeopleId;
+// ============================================================================
+// ✅ Avatar robuste : fetch bytes avec header X-App-Key => Image.memory
+// ============================================================================
 
-  const _ConversationAvatarFast({required this.otherPeopleId});
+class _PeoplePhotoAvatar extends StatefulWidget {
+  const _PeoplePhotoAvatar({
+    required this.peopleId,
+    required this.radius,
+    this.onTap,
+  });
+
+  final int? peopleId;
+  final double radius;
+  final VoidCallback? onTap;
+
+  @override
+  State<_PeoplePhotoAvatar> createState() => _PeoplePhotoAvatarState();
+}
+
+class _PeoplePhotoAvatarState extends State<_PeoplePhotoAvatar> {
+  static final Map<int, Uint8List> _memCache = {};
+  Future<Uint8List?>? _future;
+
+  @override
+  void initState() {
+    super.initState();
+    _future = _load();
+  }
+
+  @override
+  void didUpdateWidget(covariant _PeoplePhotoAvatar oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.peopleId != widget.peopleId) {
+      _future = _load();
+    }
+  }
+
+  Future<Uint8List?> _load() async {
+    final id = widget.peopleId;
+    if (id == null) return null;
+
+    final cached = _memCache[id];
+    if (cached != null) return cached;
+
+    final url = personPhotoUrl(id);
+
+    final resp = await http.get(
+      Uri.parse(url),
+      headers: {'X-App-Key': publicAppKey},
+    );
+
+    if (resp.statusCode == 200 && resp.bodyBytes.isNotEmpty) {
+      _memCache[id] = resp.bodyBytes;
+      return resp.bodyBytes;
+    }
+
+    return null;
+  }
 
   @override
   Widget build(BuildContext context) {
-    if (otherPeopleId == null) {
-      return const CircleAvatar(radius: 22, child: Icon(Icons.group));
-    }
+    final r = widget.radius;
 
-    final url = personPhotoUrl(otherPeopleId!);
+    Widget avatarFallback({Widget? child}) => CircleAvatar(
+      radius: r,
+      backgroundColor: Colors.grey.shade200,
+      child: child ?? const Icon(Icons.person, color: Colors.black54),
+    );
+
+    final id = widget.peopleId;
+    if (id == null) return avatarFallback(child: const Icon(Icons.group));
 
     return GestureDetector(
-      onTap: () {
-        final st = context.findAncestorStateOfType<_ConversationsPageState>();
-        if (st != null) st._openAvatarFullScreen(otherPeopleId!);
-      },
-      child: CircleAvatar(
-        radius: 22,
-        backgroundImage: CachedNetworkImageProvider(
-          url,
-          headers: {'X-App-Key': publicAppKey},
-        ),
+      onTap: widget.onTap,
+      child: FutureBuilder<Uint8List?>(
+        future: _future,
+        builder: (ctx, snap) {
+          if (snap.connectionState != ConnectionState.done) {
+            return avatarFallback(
+              child: const SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+            );
+          }
+
+          final bytes = snap.data;
+          if (bytes == null) {
+            return avatarFallback();
+          }
+
+          return CircleAvatar(
+            radius: r,
+            backgroundColor: Colors.grey.shade200,
+            backgroundImage: MemoryImage(bytes),
+          );
+        },
       ),
     );
   }
@@ -464,7 +557,7 @@ class _UnreadBubble extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: const Color(0xFF25D366), // WhatsApp green
+        color: const Color(0xFF25D366),
         borderRadius: BorderRadius.circular(16),
       ),
       child: Text(
@@ -487,18 +580,19 @@ class _LastLine extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+
     final last = conv.lastMessage;
 
     if (last == null) {
       return Text(
-        'Aucun message',
+        l10n.conversationsNoMessage,
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
         style: TextStyle(color: Colors.grey.shade600),
       );
     }
 
-    // ✅ isMine = dernier message envoyé par moi
     final isMine =
         (last.senderPeopleId != null && last.senderPeopleId == currentPersonId);
 

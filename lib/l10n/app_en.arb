@@ -529,5 +529,29 @@
       }
     }
   },
-  "mapBack": "Back"
+  "mapBack": "Back",
+  "chatWithName": "Chat with {name}",
+  "@chatWithName": { "placeholders": { "name": {} } },
+  "conversationsReconnectToSee": "Please log in again to view your conversations.",
+  "loading": "Loading…",
+  "conversationsEmpty": "No conversations",
+  "conversationsNoMessage": "No messages",
+
+  "conversationsLoadError": "Loading error: {error}",
+  "@conversationsLoadError": {
+    "placeholders": { "error": {} }
+  },
+
+  "conversationsLeaveTitle": "Leave conversation?",
+  "conversationsLeaveBody": "Are you sure you want to leave this conversation?\nAll your messages will be deleted.",
+  "conversationsLeaveConfirm": "Leave",
+
+  "cancel": "Cancel",
+  "close": "Close",
+  "photo": "Photo",
+  "yesterday": "yesterday",
+  "genericError": "Error: {error}",
+  "@genericError": {
+    "placeholders": { "error": {} }
+  }
 }
