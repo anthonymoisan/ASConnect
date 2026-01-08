@@ -1,10 +1,11 @@
-// lib/whatsApp/screens/chat_page.dart
-
 import 'dart:async';
 import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:intl/intl.dart';
 
+import '../../l10n/app_localizations.dart';
 import '../models/chat_message.dart';
 import '../services/conversation_api.dart';
 import '../services/conversation_events.dart';
@@ -114,25 +115,30 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
   bool _isSameDay(DateTime a, DateTime b) =>
       a.year == b.year && a.month == b.month && a.day == b.day;
 
-  String _formatTime(DateTime date) {
-    final hh = date.hour.toString().padLeft(2, '0');
-    final mm = date.minute.toString().padLeft(2, '0');
-    return '$hh:$mm';
+  // ✅ Heure selon locale
+  String _formatTime(BuildContext context, DateTime date) {
+    final locale = Localizations.localeOf(context).toLanguageTag();
+    return DateFormat.Hm(locale).format(date);
   }
 
-  String _formatDayLabel(DateTime date) {
+  // ✅ Date selon locale + today/yesterday via l10n
+  String _formatDayLabel(BuildContext context, DateTime date) {
+    final l10n = AppLocalizations.of(context)!;
+    final locale = Localizations.localeOf(context).toLanguageTag();
+
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     final d = DateTime(date.year, date.month, date.day);
     final diff = today.difference(d).inDays;
 
-    if (diff == 0) return 'Aujourd’hui';
-    if (diff == 1) return 'hier';
+    if (diff == 0) return l10n.today;
+    if (diff == 1) return l10n.yesterday;
 
-    final dd = date.day.toString().padLeft(2, '0');
-    final mm = date.month.toString().padLeft(2, '0');
-    final yyyy = date.year.toString();
-    return '$dd/$mm/$yyyy';
+    // Exemple:
+    // FR: 8 janv. 2026
+    // EN: Jan 8, 2026
+    // ES: 8 ene 2026
+    return DateFormat.yMMMd(locale).format(date);
   }
 
   bool _isAtBottom({double threshold = 80}) {
@@ -156,8 +162,6 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
     }
   }
 
-  /// ✅ Robust scroll: waits for the ListView to be attached.
-  /// If controller has no clients on this frame, it retries on the next frame.
   void _scheduleScrollToBottom({bool animated = false}) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
@@ -174,7 +178,6 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
     });
   }
 
-  // ✅ Hash stable pour détecter bodyText changes (edit/delete)
   int _hashStr(String s) {
     final bytes = utf8.encode(s);
     int h = 0;
@@ -184,7 +187,6 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
     return h;
   }
 
-  // ✅ Signature robuste (inclut bodyText => detect edit/delete immediately)
   int _messagesSignature(List<ChatMessage> list) {
     int sig = list.length;
     for (final m in list) {
@@ -237,20 +239,20 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
         _initialLoading = false;
       });
 
-      // ✅ scroll first (UI), then sync read (network)
       if (!_didInitialScroll) {
         _didInitialScroll = true;
         _scheduleScrollToBottom(animated: false);
       }
 
-      // Fire and forget: do not block initial scroll
       unawaited(_syncReadReceipt());
       ConversationEvents.bump();
     } catch (e) {
       if (!mounted) return;
+      final l10n = AppLocalizations.of(context)!;
+
       setState(() => _initialLoading = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erreur chargement messages : $e')),
+        SnackBar(content: Text(l10n.chatLoadMessagesError(e.toString()))),
       );
     }
   }
@@ -275,9 +277,7 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
 
       setState(() => _messages = msgs);
 
-      // sync read (throttled)
       unawaited(_syncReadReceipt());
-
       ConversationEvents.bump();
 
       final shouldScroll =
@@ -295,6 +295,8 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
   }
 
   Future<void> _sendMessage() async {
+    final l10n = AppLocalizations.of(context)!;
+
     final text = _controller.text.trim();
     if (text.isEmpty || _sending) return;
 
@@ -318,7 +320,7 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
       if (!mounted) return;
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text('Erreur lors de l’envoi : $e')));
+      ).showSnackBar(SnackBar(content: Text(l10n.chatSendError(e.toString()))));
     } finally {
       if (mounted) setState(() => _sending = false);
     }
@@ -328,34 +330,36 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
     if (!_isMine(msg)) return;
     if (_isDeleted(msg)) return;
 
+    final l10n = AppLocalizations.of(context)!;
     final editController = TextEditingController(text: msg.bodyText);
 
     final newText = await showDialog<String>(
       context: context,
       builder: (ctx) {
+        final l10n2 = AppLocalizations.of(ctx)!;
         return AlertDialog(
-          title: const Text('Modifier le message'),
+          title: Text(l10n2.chatEditMessageTitle),
           content: TextField(
             controller: editController,
             minLines: 1,
             maxLines: 5,
             autofocus: true,
-            decoration: const InputDecoration(
-              border: OutlineInputBorder(),
-              hintText: 'Votre message',
+            decoration: InputDecoration(
+              border: const OutlineInputBorder(),
+              hintText: l10n2.chatYourMessageHint,
             ),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(ctx).pop(null),
-              child: const Text('Annuler'),
+              child: Text(l10n2.cancel),
             ),
             TextButton(
               onPressed: () {
                 final t = editController.text.trim();
                 Navigator.of(ctx).pop(t.isEmpty ? null : t);
               },
-              child: const Text('Enregistrer'),
+              child: Text(l10n2.save),
             ),
           ],
         );
@@ -375,9 +379,9 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
       ConversationEvents.bump();
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erreur lors de la modification : $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(l10n.chatEditError(e.toString()))));
     }
   }
 
@@ -385,24 +389,25 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
     if (!_isMine(msg)) return;
     if (_isDeleted(msg)) return;
 
+    final l10n = AppLocalizations.of(context)!;
+
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) {
+        final l10n2 = AppLocalizations.of(ctx)!;
         return AlertDialog(
-          title: const Text('Supprimer le message ?'),
-          content: const Text(
-            'Ce message sera marqué comme supprimé pour cette conversation.',
-          ),
+          title: Text(l10n2.chatDeleteMessageTitle),
+          content: Text(l10n2.chatDeleteMessageBody),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(ctx).pop(false),
-              child: const Text('Annuler'),
+              child: Text(l10n2.cancel),
             ),
             TextButton(
               onPressed: () => Navigator.of(ctx).pop(true),
-              child: const Text(
-                'Supprimer',
-                style: TextStyle(color: Colors.red),
+              child: Text(
+                l10n2.delete,
+                style: const TextStyle(color: Colors.red),
               ),
             ),
           ],
@@ -423,7 +428,7 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erreur lors de la suppression : $e')),
+        SnackBar(content: Text(l10n.chatDeleteError(e.toString()))),
       );
     }
   }
@@ -432,13 +437,14 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
     showModalBottomSheet<void>(
       context: context,
       builder: (ctx) {
+        final l10n2 = AppLocalizations.of(ctx)!;
         return SafeArea(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               ListTile(
                 leading: const Icon(Icons.edit),
-                title: const Text('Modifier'),
+                title: Text(l10n2.edit),
                 onTap: () {
                   Navigator.of(ctx).pop();
                   _editMessage(msg);
@@ -446,9 +452,9 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
               ),
               ListTile(
                 leading: const Icon(Icons.delete_outline, color: Colors.red),
-                title: const Text(
-                  'Supprimer',
-                  style: TextStyle(color: Colors.red),
+                title: Text(
+                  l10n2.delete,
+                  style: const TextStyle(color: Colors.red),
                 ),
                 onTap: () {
                   Navigator.of(ctx).pop();
@@ -466,13 +472,14 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
     showModalBottomSheet<void>(
       context: context,
       builder: (ctx) {
+        final l10n2 = AppLocalizations.of(ctx)!;
         return SafeArea(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               ListTile(
                 leading: const Icon(Icons.reply),
-                title: const Text('Répondre'),
+                title: Text(l10n2.reply),
                 onTap: () {
                   Navigator.of(ctx).pop();
                   _startReplyTo(msg);
@@ -539,29 +546,34 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
       ConversationEvents.bump();
     } catch (e) {
       if (!mounted) return;
+      final l10n = AppLocalizations.of(context)!;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erreur lors de la réaction : $e')),
+        SnackBar(content: Text(l10n.chatReactError(e.toString()))),
       );
     }
   }
 
   Future<void> _leaveConversation() async {
+    final l10n = AppLocalizations.of(context)!;
+
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) {
+        final l10n2 = AppLocalizations.of(ctx)!;
         return AlertDialog(
-          title: const Text('Quitter la conversation ?'),
-          content: const Text(
-            'Êtes-vous sûr(e) de vouloir quitter la conversation et effacer tous vos messages ?',
-          ),
+          title: Text(l10n2.conversationsLeaveTitle),
+          content: Text(l10n2.chatLeaveConversationBody),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(ctx).pop(false),
-              child: const Text('Annuler'),
+              child: Text(l10n2.cancel),
             ),
             TextButton(
               onPressed: () => Navigator.of(ctx).pop(true),
-              child: const Text('Quitter', style: TextStyle(color: Colors.red)),
+              child: Text(
+                l10n2.conversationsLeaveConfirm,
+                style: const TextStyle(color: Colors.red),
+              ),
             ),
           ],
         );
@@ -584,9 +596,9 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
       Navigator.of(context).pop(true);
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Erreur pour quitter : $e')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.chatLeaveError(e.toString()))),
+      );
     }
   }
 
@@ -607,10 +619,12 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+
     final body = _initialLoading
         ? const Center(child: CircularProgressIndicator())
         : (_messages.isEmpty
-              ? const Center(child: Text('Aucun message pour le moment.'))
+              ? Center(child: Text(l10n.chatNoMessagesYet))
               : NotificationListener<ScrollNotification>(
                   onNotification: _handleScrollNotification,
                   child: ListView.builder(
@@ -659,7 +673,7 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
                                     borderRadius: BorderRadius.circular(12),
                                   ),
                                   child: Text(
-                                    _formatDayLabel(msg.createdAt),
+                                    _formatDayLabel(context, msg.createdAt),
                                     style: const TextStyle(
                                       fontSize: 12,
                                       color: Colors.black87,
@@ -674,6 +688,7 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
                               message: msg,
                               isMine: isMine,
                               timeLabel: _formatTime(
+                                context,
                                 (msg.editedAt != null && !_isDeleted(msg))
                                     ? msg.editedAt!
                                     : msg.createdAt,
@@ -696,13 +711,12 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
         title: FutureBuilder<String?>(
           future: _otherPseudoFuture,
           builder: (context, snapshot) {
-            final pseudo = snapshot.data;
-            final label = (pseudo == null || pseudo.isEmpty)
-                ? 'Conversation …'
-                : 'Conversation $pseudo';
+            final pseudo = (snapshot.data ?? '').trim();
+            final name = pseudo.isEmpty ? '—' : pseudo;
+            final title = l10n.chatWithName(name);
 
             return Text(
-              label,
+              title,
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
                 fontWeight: FontWeight.w700,
                 color: Colors.black,
@@ -712,7 +726,7 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
         ),
         actions: [
           IconButton(
-            tooltip: 'Quitter',
+            tooltip: l10n.conversationsLeaveConfirm,
             icon: const Icon(Icons.exit_to_app),
             onPressed: _leaveConversation,
           ),
@@ -739,14 +753,14 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
                           controller: _controller,
                           minLines: 1,
                           maxLines: 5,
-                          decoration: const InputDecoration(
-                            hintText: 'Message',
-                            border: OutlineInputBorder(
+                          decoration: InputDecoration(
+                            hintText: l10n.message,
+                            border: const OutlineInputBorder(
                               borderRadius: BorderRadius.all(
                                 Radius.circular(24),
                               ),
                             ),
-                            contentPadding: EdgeInsets.symmetric(
+                            contentPadding: const EdgeInsets.symmetric(
                               horizontal: 16,
                               vertical: 10,
                             ),
@@ -755,6 +769,7 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
                       ),
                       const SizedBox(width: 8),
                       IconButton(
+                        tooltip: l10n.send,
                         icon: const Icon(Icons.send),
                         onPressed: _sendMessage,
                       ),
@@ -845,6 +860,8 @@ class _MessageBubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+
     final replyText = (message.replyBodyText ?? '').trim();
     final hasReply = replyText.isNotEmpty && !isDeleted;
 
@@ -953,7 +970,7 @@ class _MessageBubble extends StatelessWidget {
                         ),
                       ],
                       Text(
-                        isDeleted ? 'Message supprimé' : message.bodyText,
+                        isDeleted ? l10n.deletedMessage : message.bodyText,
                         style: TextStyle(
                           fontSize: 15,
                           fontStyle: isDeleted
@@ -981,7 +998,7 @@ class _MessageBubble extends StatelessWidget {
                           if (showEdited && !isDeleted) ...[
                             const SizedBox(width: 4),
                             Text(
-                              'modifié',
+                              l10n.edited,
                               style: TextStyle(
                                 fontSize: 10,
                                 fontStyle: FontStyle.italic,

@@ -553,5 +553,39 @@
   "genericError": "Error: {error}",
   "@genericError": {
     "placeholders": { "error": {} }
-  }
+  },
+  "today": "Today",
+  "chatNoMessagesYet": "No messages yet.",
+  "chatLoadMessagesError": "Error loading messages: {error}",
+  "@chatLoadMessagesError": { "placeholders": { "error": {} } },
+
+  "chatSendError": "Error while sending: {error}",
+  "@chatSendError": { "placeholders": { "error": {} } },
+
+  "chatEditMessageTitle": "Edit message",
+  "chatYourMessageHint": "Your message",
+  "chatEditError": "Error while editing: {error}",
+  "@chatEditError": { "placeholders": { "error": {} } },
+
+  "chatDeleteMessageTitle": "Delete message?",
+  "chatDeleteMessageBody": "This message will be marked as deleted in this conversation.",
+  "chatDeleteError": "Error while deleting: {error}",
+  "@chatDeleteError": { "placeholders": { "error": {} } },
+
+  "chatReactError": "Error while reacting: {error}",
+  "@chatReactError": { "placeholders": { "error": {} } },
+
+  "chatLeaveConversationBody": "Are you sure you want to leave the conversation and delete all your messages?",
+  "chatLeaveError": "Error while leaving: {error}",
+  "@chatLeaveError": { "placeholders": { "error": {} } },
+
+  "message": "Message",
+  "send": "Send",
+  "edited": "edited",
+  "deletedMessage": "Deleted message",
+
+  "edit": "Edit",
+  "reply": "Reply",
+  "save": "Save",
+  "delete": "Delete"
 }

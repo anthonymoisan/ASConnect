@@ -1084,4 +1084,76 @@ class AppLocalizationsEn extends AppLocalizations {
   String genericError(Object error) {
     return 'Error: $error';
   }
+
+  @override
+  String get today => 'Today';
+
+  @override
+  String get chatNoMessagesYet => 'No messages yet.';
+
+  @override
+  String chatLoadMessagesError(Object error) {
+    return 'Error loading messages: $error';
+  }
+
+  @override
+  String chatSendError(Object error) {
+    return 'Error while sending: $error';
+  }
+
+  @override
+  String get chatEditMessageTitle => 'Edit message';
+
+  @override
+  String get chatYourMessageHint => 'Your message';
+
+  @override
+  String chatEditError(Object error) {
+    return 'Error while editing: $error';
+  }
+
+  @override
+  String get chatDeleteMessageTitle => 'Delete message?';
+
+  @override
+  String get chatDeleteMessageBody => 'This message will be marked as deleted in this conversation.';
+
+  @override
+  String chatDeleteError(Object error) {
+    return 'Error while deleting: $error';
+  }
+
+  @override
+  String chatReactError(Object error) {
+    return 'Error while reacting: $error';
+  }
+
+  @override
+  String get chatLeaveConversationBody => 'Are you sure you want to leave the conversation and delete all your messages?';
+
+  @override
+  String chatLeaveError(Object error) {
+    return 'Error while leaving: $error';
+  }
+
+  @override
+  String get message => 'Message';
+
+  @override
+  String get send => 'Send';
+
+  @override
+  String get edited => 'edited';
+
+  @override
+  String get deletedMessage => 'Deleted message';
+
+  @override
+  String get edit => 'Edit';
+
+  @override
+  String get reply => 'Reply';
+
+  @override
+  String get delete => 'Delete';
 }

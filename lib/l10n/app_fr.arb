@@ -556,5 +556,39 @@
   "genericError": "Erreur : {error}",
   "@genericError": {
     "placeholders": { "error": {} }
-  }
+  },
+  "today": "Aujourd’hui",
+  "chatNoMessagesYet": "Aucun message pour le moment.",
+  "chatLoadMessagesError": "Erreur chargement messages : {error}",
+  "@chatLoadMessagesError": { "placeholders": { "error": {} } },
+
+  "chatSendError": "Erreur lors de l’envoi : {error}",
+  "@chatSendError": { "placeholders": { "error": {} } },
+
+  "chatEditMessageTitle": "Modifier le message",
+  "chatYourMessageHint": "Votre message",
+  "chatEditError": "Erreur lors de la modification : {error}",
+  "@chatEditError": { "placeholders": { "error": {} } },
+
+  "chatDeleteMessageTitle": "Supprimer le message ?",
+  "chatDeleteMessageBody": "Ce message sera marqué comme supprimé pour cette conversation.",
+  "chatDeleteError": "Erreur lors de la suppression : {error}",
+  "@chatDeleteError": { "placeholders": { "error": {} } },
+
+  "chatReactError": "Erreur lors de la réaction : {error}",
+  "@chatReactError": { "placeholders": { "error": {} } },
+
+  "chatLeaveConversationBody": "Êtes-vous sûr(e) de vouloir quitter la conversation et effacer tous vos messages ?",
+  "chatLeaveError": "Erreur pour quitter : {error}",
+  "@chatLeaveError": { "placeholders": { "error": {} } },
+
+  "message": "Message",
+  "send": "Envoyer",
+  "edited": "modifié",
+  "deletedMessage": "Message supprimé",
+
+  "edit": "Modifier",
+  "reply": "Répondre",
+  "save": "Enregistrer",
+  "delete": "Supprimer"
 }

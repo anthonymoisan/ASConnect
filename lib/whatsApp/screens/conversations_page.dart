@@ -284,8 +284,17 @@ class _ConversationsPageState extends State<ConversationsPage>
 
   String _conversationTitle(BuildContext context, ConversationSummary conv) {
     final l10n = AppLocalizations.of(context)!;
-    final name = conv.title.trim().isEmpty ? '—' : conv.title.trim();
-    return l10n.chatWithName(name);
+
+    final raw = conv.title.trim();
+    if (raw.isEmpty) return l10n.chatWithName('—');
+
+    // ✅ enlève le préfixe FR si déjà présent (API renvoie "Chat avec Pseudo")
+    final pseudo = raw
+        .replaceFirst(RegExp(r'^Chat\s+avec\s+', caseSensitive: false), '')
+        .trim();
+
+    // ✅ maintenant on applique la version multi-langue UNE seule fois
+    return l10n.chatWithName(pseudo.isEmpty ? '—' : pseudo);
   }
 
   void _openAvatarFullScreen(int otherPeopleId) {

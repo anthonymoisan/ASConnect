@@ -553,5 +553,39 @@
   "genericError": "Error: {error}",
   "@genericError": {
     "placeholders": { "error": {} }
-  }
+  },
+  "today": "Hoy",
+  "chatNoMessagesYet": "Aún no hay mensajes.",
+  "chatLoadMessagesError": "Error al cargar mensajes: {error}",
+  "@chatLoadMessagesError": { "placeholders": { "error": {} } },
+
+  "chatSendError": "Error al enviar: {error}",
+  "@chatSendError": { "placeholders": { "error": {} } },
+
+  "chatEditMessageTitle": "Editar mensaje",
+  "chatYourMessageHint": "Tu mensaje",
+  "chatEditError": "Error al editar: {error}",
+  "@chatEditError": { "placeholders": { "error": {} } },
+
+  "chatDeleteMessageTitle": "¿Eliminar mensaje?",
+  "chatDeleteMessageBody": "Este mensaje se marcará como eliminado en esta conversación.",
+  "chatDeleteError": "Error al eliminar: {error}",
+  "@chatDeleteError": { "placeholders": { "error": {} } },
+
+  "chatReactError": "Error al reaccionar: {error}",
+  "@chatReactError": { "placeholders": { "error": {} } },
+
+  "chatLeaveConversationBody": "¿Seguro que quieres salir de la conversación y borrar todos tus mensajes?",
+  "chatLeaveError": "Error al salir: {error}",
+  "@chatLeaveError": { "placeholders": { "error": {} } },
+
+  "message": "Mensaje",
+  "send": "Enviar",
+  "edited": "editado",
+  "deletedMessage": "Mensaje eliminado",
+
+  "edit": "Editar",
+  "reply": "Responder",
+  "save": "Guardar",
+  "delete": "Eliminar"
 }

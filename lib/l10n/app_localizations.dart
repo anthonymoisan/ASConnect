@@ -2010,6 +2010,126 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Error: {error}'**
   String genericError(Object error);
+
+  /// No description provided for @today.
+  ///
+  /// In en, this message translates to:
+  /// **'Today'**
+  String get today;
+
+  /// No description provided for @chatNoMessagesYet.
+  ///
+  /// In en, this message translates to:
+  /// **'No messages yet.'**
+  String get chatNoMessagesYet;
+
+  /// No description provided for @chatLoadMessagesError.
+  ///
+  /// In en, this message translates to:
+  /// **'Error loading messages: {error}'**
+  String chatLoadMessagesError(Object error);
+
+  /// No description provided for @chatSendError.
+  ///
+  /// In en, this message translates to:
+  /// **'Error while sending: {error}'**
+  String chatSendError(Object error);
+
+  /// No description provided for @chatEditMessageTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit message'**
+  String get chatEditMessageTitle;
+
+  /// No description provided for @chatYourMessageHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Your message'**
+  String get chatYourMessageHint;
+
+  /// No description provided for @chatEditError.
+  ///
+  /// In en, this message translates to:
+  /// **'Error while editing: {error}'**
+  String chatEditError(Object error);
+
+  /// No description provided for @chatDeleteMessageTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete message?'**
+  String get chatDeleteMessageTitle;
+
+  /// No description provided for @chatDeleteMessageBody.
+  ///
+  /// In en, this message translates to:
+  /// **'This message will be marked as deleted in this conversation.'**
+  String get chatDeleteMessageBody;
+
+  /// No description provided for @chatDeleteError.
+  ///
+  /// In en, this message translates to:
+  /// **'Error while deleting: {error}'**
+  String chatDeleteError(Object error);
+
+  /// No description provided for @chatReactError.
+  ///
+  /// In en, this message translates to:
+  /// **'Error while reacting: {error}'**
+  String chatReactError(Object error);
+
+  /// No description provided for @chatLeaveConversationBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Are you sure you want to leave the conversation and delete all your messages?'**
+  String get chatLeaveConversationBody;
+
+  /// No description provided for @chatLeaveError.
+  ///
+  /// In en, this message translates to:
+  /// **'Error while leaving: {error}'**
+  String chatLeaveError(Object error);
+
+  /// No description provided for @message.
+  ///
+  /// In en, this message translates to:
+  /// **'Message'**
+  String get message;
+
+  /// No description provided for @send.
+  ///
+  /// In en, this message translates to:
+  /// **'Send'**
+  String get send;
+
+  /// No description provided for @edited.
+  ///
+  /// In en, this message translates to:
+  /// **'edited'**
+  String get edited;
+
+  /// No description provided for @deletedMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Deleted message'**
+  String get deletedMessage;
+
+  /// No description provided for @edit.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit'**
+  String get edit;
+
+  /// No description provided for @reply.
+  ///
+  /// In en, this message translates to:
+  /// **'Reply'**
+  String get reply;
+
+  /// No description provided for @delete.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete'**
+  String get delete;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

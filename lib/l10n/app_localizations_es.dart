@@ -1084,4 +1084,76 @@ class AppLocalizationsEs extends AppLocalizations {
   String genericError(Object error) {
     return 'Error: $error';
   }
+
+  @override
+  String get today => 'Hoy';
+
+  @override
+  String get chatNoMessagesYet => 'Aún no hay mensajes.';
+
+  @override
+  String chatLoadMessagesError(Object error) {
+    return 'Error al cargar mensajes: $error';
+  }
+
+  @override
+  String chatSendError(Object error) {
+    return 'Error al enviar: $error';
+  }
+
+  @override
+  String get chatEditMessageTitle => 'Editar mensaje';
+
+  @override
+  String get chatYourMessageHint => 'Tu mensaje';
+
+  @override
+  String chatEditError(Object error) {
+    return 'Error al editar: $error';
+  }
+
+  @override
+  String get chatDeleteMessageTitle => '¿Eliminar mensaje?';
+
+  @override
+  String get chatDeleteMessageBody => 'Este mensaje se marcará como eliminado en esta conversación.';
+
+  @override
+  String chatDeleteError(Object error) {
+    return 'Error al eliminar: $error';
+  }
+
+  @override
+  String chatReactError(Object error) {
+    return 'Error al reaccionar: $error';
+  }
+
+  @override
+  String get chatLeaveConversationBody => '¿Seguro que quieres salir de la conversación y borrar todos tus mensajes?';
+
+  @override
+  String chatLeaveError(Object error) {
+    return 'Error al salir: $error';
+  }
+
+  @override
+  String get message => 'Mensaje';
+
+  @override
+  String get send => 'Enviar';
+
+  @override
+  String get edited => 'editado';
+
+  @override
+  String get deletedMessage => 'Mensaje eliminado';
+
+  @override
+  String get edit => 'Editar';
+
+  @override
+  String get reply => 'Responder';
+
+  @override
+  String get delete => 'Eliminar';
 }
