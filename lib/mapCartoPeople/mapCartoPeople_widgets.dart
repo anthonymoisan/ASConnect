@@ -1,5 +1,88 @@
 part of map_carto_people;
 
+class _PhotoBytesCache {
+  static final Map<String, Uint8List> _cache = {};
+  static Uint8List? get(String url) => _cache[url];
+  static void put(String url, Uint8List bytes) => _cache[url] = bytes;
+}
+
+class _PersonAvatar extends StatelessWidget {
+  const _PersonAvatar({
+    required this.url,
+    required this.onTap,
+    required this.headers,
+    this.radius = 22,
+  });
+
+  final String url;
+  final VoidCallback onTap;
+  final Map<String, String> headers;
+  final double radius;
+
+  Widget _fallback() => CircleAvatar(
+    radius: radius,
+    backgroundColor: Colors.grey.shade200,
+    child: Icon(Icons.person, color: Colors.grey.shade600, size: radius),
+  );
+
+  Future<Uint8List?> _loadBytes() async {
+    final cached = _PhotoBytesCache.get(url);
+    if (cached != null) return cached;
+
+    final resp = await http.get(Uri.parse(url), headers: headers);
+    if (resp.statusCode != 200) return null;
+
+    final bytes = resp.bodyBytes;
+    _PhotoBytesCache.put(url, bytes);
+    return bytes;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // ✅ Mobile/desktop natif : OK avec headers
+    if (!kIsWeb) {
+      return GestureDetector(
+        onTap: onTap,
+        child: CircleAvatar(
+          radius: radius,
+          backgroundColor: Colors.grey.shade200,
+          backgroundImage: CachedNetworkImageProvider(url, headers: headers),
+        ),
+      );
+    }
+
+    // ✅ Web : on fetch en bytes avec headers, puis Image.memory
+    return GestureDetector(
+      onTap: onTap,
+      child: FutureBuilder<Uint8List?>(
+        future: _loadBytes(),
+        builder: (context, snap) {
+          if (snap.connectionState != ConnectionState.done) {
+            return CircleAvatar(
+              radius: radius,
+              backgroundColor: Colors.grey.shade200,
+              child: const SizedBox(
+                width: 14,
+                height: 14,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+            );
+          }
+
+          final bytes = snap.data;
+          if (bytes == null) return _fallback();
+
+          return CircleAvatar(
+            radius: radius,
+            backgroundColor: Colors.grey.shade200,
+            backgroundImage: MemoryImage(bytes),
+          );
+        },
+      ),
+    );
+  }
+}
+
 // ---------- Widgets ----------
 class _Bubble extends StatelessWidget {
   const _Bubble({required this.count, required this.size});
@@ -257,17 +340,14 @@ class _PersonTileState extends State<_PersonTile> {
       children: [
         ListTile(
           contentPadding: EdgeInsets.zero,
-          leading: GestureDetector(
+
+          leading: _PersonAvatar(
+            url: photoUrl,
             onTap: () => widget.onOpenPhoto(photoUrl),
-            child: CircleAvatar(
-              radius: 22,
-              backgroundColor: Colors.grey.shade200,
-              backgroundImage: CachedNetworkImageProvider(
-                photoUrl,
-                headers: {'X-App-Key': _publicAppKey},
-              ),
-            ),
+            headers: {'X-App-Key': _publicAppKey},
+            radius: 22,
           ),
+
           title: Text(
             p.firstName,
             style: const TextStyle(fontWeight: FontWeight.w600),
