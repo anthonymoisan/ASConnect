@@ -2,6 +2,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:ionicons/ionicons.dart';
@@ -72,6 +73,178 @@ Future<void> main() async {
   runApp(const ASConnexion());
 }
 
+// ============================================================================
+// ✅ Frame controller + scope (permet aux pages d'être "wide" ou "mobile frame")
+// value == true  => mobile frame
+// value == false => wide
+// ============================================================================
+
+class AppFrameController extends ValueNotifier<bool> {
+  AppFrameController({bool initialMobileFrame = true})
+    : super(initialMobileFrame);
+
+  void setMobileFrame(bool enabled) {
+    if (value == enabled) return;
+    value = enabled;
+  }
+}
+
+class AppFrameScope extends InheritedWidget {
+  const AppFrameScope({
+    super.key,
+    required this.controller,
+    required super.child,
+  });
+
+  final AppFrameController controller;
+
+  static AppFrameController of(BuildContext context) {
+    final scope = context.dependOnInheritedWidgetOfExactType<AppFrameScope>();
+    assert(scope != null, 'AppFrameScope not found in widget tree');
+    return scope!.controller;
+  }
+
+  @override
+  bool updateShouldNotify(AppFrameScope oldWidget) =>
+      oldWidget.controller != controller;
+}
+
+// ============================================================================
+// ✅ NavigatorObserver : frame dépend de la route courante
+// - Wide : /home, /privacy
+// - Mobile : le reste
+// ============================================================================
+
+class FrameRouteObserver extends NavigatorObserver {
+  FrameRouteObserver(this.controller);
+
+  final AppFrameController controller;
+
+  void _syncFrameFor(Route<dynamic>? route) {
+    // 1) Ignore overlays: bottom sheets, dialogs, etc.
+    if (route is PopupRoute) return;
+
+    // 2) On ne réagit que sur des vraies pages
+    if (route is! PageRoute) return;
+
+    // 3) Il nous faut un nom de route
+    final name = route.settings.name;
+    if (name == null) return;
+
+    // 4) Wide uniquement pour /home (Map+Chat) par exemple
+    final wide = (name == '/home');
+
+    // Ici controller.value = true => mobile frame (chez toi)
+    controller.setMobileFrame(!wide);
+  }
+
+  @override
+  void didPush(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    _syncFrameFor(route);
+    super.didPush(route, previousRoute);
+  }
+
+  @override
+  void didPop(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    // après pop, on revient à la route précédente
+    _syncFrameFor(previousRoute);
+    super.didPop(route, previousRoute);
+  }
+
+  @override
+  void didReplace({Route<dynamic>? newRoute, Route<dynamic>? oldRoute}) {
+    _syncFrameFor(newRoute);
+    super.didReplace(newRoute: newRoute, oldRoute: oldRoute);
+  }
+}
+
+// ============================================================================
+// ✅ Web shell : mobile frame OU wide selon controller.value
+// ============================================================================
+
+class WebResponsiveShell extends StatelessWidget {
+  const WebResponsiveShell({
+    super.key,
+    required this.controller,
+    required this.child,
+  });
+
+  final AppFrameController controller;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    if (!kIsWeb) return child;
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isDesktop = constraints.maxWidth >= 900;
+
+        // Web étroit => plein écran
+        if (!isDesktop) return child;
+
+        return AnimatedBuilder(
+          animation: controller,
+          builder: (_, __) {
+            final useMobileFrame = controller.value; // true => frame mobile
+            const bg = BoxDecoration(color: Color(0xFFF2F3F5));
+
+            if (useMobileFrame) {
+              // ✅ mobile frame centré
+              return Container(
+                decoration: bg,
+                child: Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 420),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 24),
+                      child: Material(
+                        elevation: 10,
+                        borderRadius: BorderRadius.circular(20),
+                        clipBehavior: Clip.antiAlias,
+                        color: Colors.white,
+                        child: child,
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            }
+
+            // ✅ wide (home+privacy) mais avec max
+            return Container(
+              decoration: bg,
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 1200),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 24,
+                      vertical: 18,
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(16),
+                      child: Material(
+                        elevation: 6,
+                        color: Colors.white,
+                        child: child,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+}
+
+// ============================================================================
+// App
+// ============================================================================
+
 class ASConnexion extends StatefulWidget {
   const ASConnexion({super.key});
 
@@ -85,6 +258,13 @@ class _ASConnexionState extends State<ASConnexion> {
   /// ✅ Locale sélectionnée par l’utilisateur.
   /// - null = "Système"
   Locale? _locale;
+
+  // ✅ contrôleur frame (par défaut : mobile frame sur web desktop)
+  final AppFrameController _frameCtrl = AppFrameController(
+    initialMobileFrame: true,
+  );
+
+  late final FrameRouteObserver _frameObserver = FrameRouteObserver(_frameCtrl);
 
   Future<void> _handleLogin(String email, String pass, int id) async {
     setState(() => _personId = id);
@@ -117,83 +297,97 @@ class _ASConnexionState extends State<ASConnexion> {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
+    return AppFrameScope(
+      controller: _frameCtrl,
+      child: MaterialApp(
+        debugShowCheckedModeBanner: false,
 
-      // ✅ Multi-langue
-      locale: _locale, // null = système
-      supportedLocales: const [Locale('fr'), Locale('en'), Locale('es')],
-      localizationsDelegates: const [
-        AppLocalizations.delegate, // ✅
-        GlobalMaterialLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-      ],
+        // ✅ Multi-langue
+        locale: _locale, // null = système
+        supportedLocales: const [Locale('fr'), Locale('en'), Locale('es')],
+        localizationsDelegates: const [
+          AppLocalizations.delegate,
+          GlobalMaterialLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+        ],
 
-      // ✅ Titre localisé (utilisé surtout sur web / task switcher)
-      onGenerateTitle: (ctx) => AppLocalizations.of(ctx)!.appTitle,
+        onGenerateTitle: (ctx) => AppLocalizations.of(ctx)!.appTitle,
 
-      initialRoute: '/login',
+        navigatorObservers: [_frameObserver],
 
-      // ====== ROUTES ======
-      routes: <String, WidgetBuilder>{
-        '/login': (ctx) => LoginPage(
-          currentLocale: _locale,
-          onLocaleChanged: _setLocale,
-          onLogin: (email, pass, id) async {
-            await _handleLogin(email, pass, id);
-            if (ctx.mounted) {
-              Navigator.of(ctx).pushReplacementNamed('/home');
-            }
-          },
-        ),
-        '/signup': (_) => const SignUpPage(),
-        '/home': (ctx) {
-          final pid = _personId;
-          if (pid == null) {
-            return LoginPage(
-              currentLocale: _locale,
-              onLocaleChanged: _setLocale,
-              onLogin: (email, pass, id) async {
-                await _handleLogin(email, pass, id);
-                if (ctx.mounted) {
-                  Navigator.of(ctx).pushReplacementNamed('/home');
-                }
-              },
-            );
-          }
-          return HomeScreen(
-            personId: pid,
-            onLogout: _handleLogout,
-            onBadgeUpdate: _setLauncherBadge,
+        // ✅ wrap global du rendu web
+        builder: (ctx, child) {
+          if (child == null) return const SizedBox.shrink();
+          return WebResponsiveShell(controller: _frameCtrl, child: child);
+        },
+
+        initialRoute: '/login',
+
+        // ====== ROUTES ======
+        routes: <String, WidgetBuilder>{
+          '/login': (ctx) => LoginPage(
             currentLocale: _locale,
             onLocaleChanged: _setLocale,
-          );
-        },
-        '/contact': (_) => const ContactPage(),
-        '/version': (_) => const VersionPage(),
-        '/profile/edit': (ctx) {
-          final pid = _personId;
-          if (pid == null) {
-            return LoginPage(
+            onLogin: (email, pass, id) async {
+              await _handleLogin(email, pass, id);
+              if (ctx.mounted) {
+                Navigator.of(ctx).pushReplacementNamed('/home');
+              }
+            },
+          ),
+
+          '/signup': (_) => const SignUpPage(),
+
+          '/home': (ctx) {
+            final pid = _personId;
+            if (pid == null) {
+              return LoginPage(
+                currentLocale: _locale,
+                onLocaleChanged: _setLocale,
+                onLogin: (email, pass, id) async {
+                  await _handleLogin(email, pass, id);
+                  if (ctx.mounted) {
+                    Navigator.of(ctx).pushReplacementNamed('/home');
+                  }
+                },
+              );
+            }
+            return HomeScreen(
+              personId: pid,
+              onLogout: _handleLogout,
+              onBadgeUpdate: _setLauncherBadge,
               currentLocale: _locale,
               onLocaleChanged: _setLocale,
-              onLogin: (email, pass, id) async {
-                await _handleLogin(email, pass, id);
-                if (ctx.mounted) {
-                  Navigator.of(ctx).pushReplacementNamed('/home');
-                }
-              },
             );
-          }
-          return EditProfilePage(personId: pid);
-        },
-      },
+          },
 
-      // ====== THEME ======
-      theme: ThemeData(
-        useMaterial3: true,
-        colorSchemeSeed: const Color(0xFF3F51B5),
+          '/contact': (_) => const ContactPage(),
+          '/version': (_) => const VersionPage(),
+
+          '/profile/edit': (ctx) {
+            final pid = _personId;
+            if (pid == null) {
+              return LoginPage(
+                currentLocale: _locale,
+                onLocaleChanged: _setLocale,
+                onLogin: (email, pass, id) async {
+                  await _handleLogin(email, pass, id);
+                  if (ctx.mounted) {
+                    Navigator.of(ctx).pushReplacementNamed('/home');
+                  }
+                },
+              );
+            }
+            return EditProfilePage(personId: pid);
+          },
+        },
+
+        // ====== THEME ======
+        theme: ThemeData(
+          useMaterial3: true,
+          colorSchemeSeed: const Color(0xFF3F51B5),
+        ),
       ),
     );
   }
@@ -371,8 +565,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   Future<void> _openPrivacy() async {
     if (!mounted) return;
+
+    // ✅ IMPORTANT: on donne un name à la route pour que l'observer la détecte (wide)
     await Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => PrivacyPage(personId: widget.personId)),
+      MaterialPageRoute(
+        settings: const RouteSettings(name: '/privacy'),
+        builder: (_) => PrivacyPage(personId: widget.personId),
+      ),
     );
   }
 
@@ -466,7 +665,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
       body: IndexedStack(index: _currentIndex, children: _tabs),
 
-      // ✅ Barre du bas : plus petite + toujours centrée + 2 icônes uniquement
       bottomNavigationBar: SafeArea(
         child: BottomAppBar(
           color: Colors.transparent,
@@ -493,14 +691,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   ],
                 ),
                 child: SizedBox(
-                  height: 50, // ✅ plus petit
+                  height: 50,
                   child: Padding(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 10,
                       vertical: 2,
                     ),
                     child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center, // ✅ centré
+                      mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         _NavIcon(
                           icon: Ionicons.people,
@@ -552,8 +750,8 @@ class _NavIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final selColor = const Color.fromARGB(255, 206, 106, 107);
-    final baseColor = const Color.fromARGB(255, 33, 46, 83);
+    const selColor = Color.fromARGB(255, 206, 106, 107);
+    const baseColor = Color.fromARGB(255, 33, 46, 83);
 
     return InkResponse(
       onTap: onTap,
