@@ -246,22 +246,40 @@ class _LoginPageState extends State<LoginPage> {
 
   Future<void> _openSignUp() async {
     _hideAuthSnackbars();
-    await Navigator.of(
-      context,
-    ).push(MaterialPageRoute(builder: (_) => const SignUpPage()));
+
+    // ✅ Si le parent (main.dart) gère la navigation => on l’utilise
+    if (widget.onSignUp != null) {
+      widget.onSignUp!.call();
+      return;
+    }
+
+    // Fallback (si utilisé hors main.dart)
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        settings: const RouteSettings(name: '/signup'),
+        builder: (_) => const SignUpPage(),
+      ),
+    );
+
     _hideAuthSnackbars();
-    widget.onSignUp?.call();
   }
 
   void _openForgotPassword() {
     _hideAuthSnackbars();
+
+    // ✅ Si le parent (main.dart) gère la navigation => on l’utilise
     if (widget.onForgotPassword != null) {
-      widget.onForgotPassword!();
-    } else {
-      Navigator.of(
-        context,
-      ).push(MaterialPageRoute(builder: (_) => ForgotPasswordPage()));
+      widget.onForgotPassword!.call();
+      return;
     }
+
+    // Fallback (si utilisé hors main.dart)
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        settings: const RouteSettings(name: '/forgot-password'),
+        builder: (_) => ForgotPasswordPage(),
+      ),
+    );
   }
 
   // ✅ Sélecteur de langue (bas de la page) + refresh immédiat

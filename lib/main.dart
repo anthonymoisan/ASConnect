@@ -5,18 +5,17 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
-import 'package:ionicons/ionicons.dart';
 import 'package:http/http.dart' as http;
+import 'package:ionicons/ionicons.dart';
 
-// ✅ Badge icône app (launcher)
 import 'package:flutter_app_badger/flutter_app_badger.dart';
-
-// ✅ Permission badge iOS (sans Firebase)
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 // Pages locales
 import 'profil/login_page.dart' show LoginPage;
 import 'profil/signup_page.dart' show SignUpPage;
+import 'profil/forgot_password_page.dart' show ForgotPasswordPage;
+
 import 'mapCartoPeople/mapCartoPeople.dart';
 import 'component/app_menu.dart';
 import 'profil/privacy_page.dart';
@@ -25,10 +24,10 @@ import 'profil/edit_profile_page.dart';
 import 'component/version.dart';
 import 'whatsApp/screens/conversations_page.dart';
 
-// ✅ AppLocalizations (généré via ARB)
+// L10n
 import 'l10n/app_localizations.dart';
 
-// 🔑 Clé d'application publique — valable pour tous les endpoints /api/public/*
+// 🔑 Clé app
 const String _publicAppKey = String.fromEnvironment(
   'PUBLIC_APP_KEY',
   defaultValue: '',
@@ -39,11 +38,10 @@ const apiEnvMapTitleKey = String.fromEnvironment(
   defaultValue: '',
 );
 
-// Base API publique
 const String _publicBase =
     'https://anthonymoisan.pythonanywhere.com/api/public';
 
-// ✅ Local notifications (uniquement pour demander permission badge sur iOS)
+// Local notifications (iOS badge)
 final FlutterLocalNotificationsPlugin _localNotifs =
     FlutterLocalNotificationsPlugin();
 
@@ -74,19 +72,24 @@ Future<void> main() async {
 }
 
 // ============================================================================
-// ✅ Frame controller + scope (permet aux pages d'être "wide" ou "mobile frame")
-// value == true  => mobile frame
-// value == false => wide
+// ✅ 2 modes d'affichage web desktop
+// - wideCard  : carte large centrée (login + home)
+// - mobileCard: carte mobile centrée (le reste)
 // ============================================================================
 
-class AppFrameController extends ValueNotifier<bool> {
-  AppFrameController({bool initialMobileFrame = true})
-    : super(initialMobileFrame);
+enum AppFrameMode { mobileCard, wideCard }
 
-  void setMobileFrame(bool enabled) {
-    if (value == enabled) return;
-    value = enabled;
+class AppFrameController extends ValueNotifier<AppFrameMode> {
+  AppFrameController({AppFrameMode initial = AppFrameMode.mobileCard})
+    : super(initial);
+
+  void setMode(AppFrameMode mode) {
+    if (value == mode) return;
+    value = mode;
   }
+
+  void setMobileCard() => setMode(AppFrameMode.mobileCard);
+  void setWideCard() => setMode(AppFrameMode.wideCard);
 }
 
 class AppFrameScope extends InheritedWidget {
@@ -109,10 +112,17 @@ class AppFrameScope extends InheritedWidget {
       oldWidget.controller != controller;
 }
 
+/// Règles: login + home en wide, le reste en mobile.
+/// Route sans name => mobile par sécurité (évite de rester en wide par erreur).
+AppFrameMode frameModeForRouteName(String? name) {
+  if (name == null || name.isEmpty) return AppFrameMode.mobileCard;
+  if (name == '/login' || name == '/home') return AppFrameMode.wideCard;
+  return AppFrameMode.mobileCard;
+}
+
 // ============================================================================
-// ✅ NavigatorObserver : frame dépend de la route courante
-// - Wide : /home, /privacy
-// - Mobile : le reste
+// ✅ NavigatorObserver : IMPORTANT pour resync le mode sur POP
+// (sinon après /signup -> back, on resterait en mobile sur /login)
 // ============================================================================
 
 class FrameRouteObserver extends NavigatorObserver {
@@ -120,46 +130,35 @@ class FrameRouteObserver extends NavigatorObserver {
 
   final AppFrameController controller;
 
-  void _syncFrameFor(Route<dynamic>? route) {
-    // 1) Ignore overlays: bottom sheets, dialogs, etc.
+  void _apply(Route<dynamic>? route) {
     if (route is PopupRoute) return;
-
-    // 2) On ne réagit que sur des vraies pages
     if (route is! PageRoute) return;
 
-    // 3) Il nous faut un nom de route
     final name = route.settings.name;
-    if (name == null) return;
-
-    // 4) Wide uniquement pour /home (Map+Chat) par exemple
-    final wide = (name == '/home');
-
-    // Ici controller.value = true => mobile frame (chez toi)
-    controller.setMobileFrame(!wide);
+    controller.setMode(frameModeForRouteName(name));
   }
 
   @override
   void didPush(Route<dynamic> route, Route<dynamic>? previousRoute) {
-    _syncFrameFor(route);
+    _apply(route);
     super.didPush(route, previousRoute);
   }
 
   @override
   void didPop(Route<dynamic> route, Route<dynamic>? previousRoute) {
-    // après pop, on revient à la route précédente
-    _syncFrameFor(previousRoute);
+    _apply(previousRoute); // ✅ essentiel
     super.didPop(route, previousRoute);
   }
 
   @override
   void didReplace({Route<dynamic>? newRoute, Route<dynamic>? oldRoute}) {
-    _syncFrameFor(newRoute);
+    _apply(newRoute);
     super.didReplace(newRoute: newRoute, oldRoute: oldRoute);
   }
 }
 
 // ============================================================================
-// ✅ Web shell : mobile frame OU wide selon controller.value
+// ✅ Web shell : carte mobile OU wide selon controller.value
 // ============================================================================
 
 class WebResponsiveShell extends StatelessWidget {
@@ -186,11 +185,9 @@ class WebResponsiveShell extends StatelessWidget {
         return AnimatedBuilder(
           animation: controller,
           builder: (_, __) {
-            final useMobileFrame = controller.value; // true => frame mobile
             const bg = BoxDecoration(color: Color(0xFFF2F3F5));
 
-            if (useMobileFrame) {
-              // ✅ mobile frame centré
+            if (controller.value == AppFrameMode.mobileCard) {
               return Container(
                 decoration: bg,
                 child: Center(
@@ -211,7 +208,7 @@ class WebResponsiveShell extends StatelessWidget {
               );
             }
 
-            // ✅ wide (home+privacy) mais avec max
+            // wideCard
             return Container(
               decoration: bg,
               child: Center(
@@ -242,6 +239,20 @@ class WebResponsiveShell extends StatelessWidget {
 }
 
 // ============================================================================
+// ✅ Route sans animation (évite flash / transition bizarre quand on change de mode)
+// ============================================================================
+
+class _NoAnimMaterialPageRoute<T> extends MaterialPageRoute<T> {
+  _NoAnimMaterialPageRoute({required super.builder, super.settings});
+
+  @override
+  Duration get transitionDuration => Duration.zero;
+
+  @override
+  Duration get reverseTransitionDuration => Duration.zero;
+}
+
+// ============================================================================
 // App
 // ============================================================================
 
@@ -254,14 +265,10 @@ class ASConnexion extends StatefulWidget {
 
 class _ASConnexionState extends State<ASConnexion> {
   int? _personId;
-
-  /// ✅ Locale sélectionnée par l’utilisateur.
-  /// - null = "Système"
   Locale? _locale;
 
-  // ✅ contrôleur frame (par défaut : mobile frame sur web desktop)
   final AppFrameController _frameCtrl = AppFrameController(
-    initialMobileFrame: true,
+    initial: AppFrameMode.wideCard, // login wide
   );
 
   late final FrameRouteObserver _frameObserver = FrameRouteObserver(_frameCtrl);
@@ -275,11 +282,8 @@ class _ASConnexionState extends State<ASConnexion> {
     _setLauncherBadge(0);
   }
 
-  void _setLocale(Locale? locale) {
-    setState(() => _locale = locale);
-  }
+  void _setLocale(Locale? locale) => setState(() => _locale = locale);
 
-  // ✅ helper badge launcher
   void _setLauncherBadge(int count) async {
     try {
       final supported = await FlutterAppBadger.isAppBadgeSupported();
@@ -290,20 +294,147 @@ class _ASConnexionState extends State<ASConnexion> {
       } else {
         FlutterAppBadger.updateBadgeCount(count);
       }
-    } catch (_) {
-      // ignore
-    }
+    } catch (_) {}
   }
+
+  Route<dynamic> _onGenerateRoute(RouteSettings settings) {
+    final name = settings.name ?? '/login';
+
+    // ✅ mode calculé depuis le nom
+    final nextMode = frameModeForRouteName(name);
+
+    // ✅ si mode change, on supprime l'anim (évite “flash” login -> signup)
+    final bool modeChanged = _frameCtrl.value != nextMode;
+    _frameCtrl.setMode(nextMode);
+
+    Widget page;
+
+    switch (name) {
+      case '/login':
+        page = LoginPage(
+          currentLocale: _locale,
+          onLocaleChanged: _setLocale,
+          onSignUp: () =>
+              Navigator.of(navigatorKey.currentContext!).pushNamed('/signup'),
+          onForgotPassword: () => Navigator.of(
+            navigatorKey.currentContext!,
+          ).pushNamed('/forgot-password'),
+          onLogin: (email, pass, id) async {
+            await _handleLogin(email, pass, id);
+            if (!mounted) return;
+            Navigator.of(
+              navigatorKey.currentContext!,
+            ).pushReplacementNamed('/home');
+          },
+        );
+        break;
+
+      case '/signup':
+        page = const SignUpPage();
+        break;
+
+      case '/forgot-password':
+        page = const ForgotPasswordPage();
+        break;
+
+      case '/home':
+        final pid = _personId;
+        if (pid == null) {
+          page = LoginPage(
+            currentLocale: _locale,
+            onLocaleChanged: _setLocale,
+            onSignUp: () =>
+                Navigator.of(navigatorKey.currentContext!).pushNamed('/signup'),
+            onForgotPassword: () => Navigator.of(
+              navigatorKey.currentContext!,
+            ).pushNamed('/forgot-password'),
+            onLogin: (email, pass, id) async {
+              await _handleLogin(email, pass, id);
+              if (!mounted) return;
+              Navigator.of(
+                navigatorKey.currentContext!,
+              ).pushReplacementNamed('/home');
+            },
+          );
+        } else {
+          page = HomeScreen(
+            personId: pid,
+            onLogout: _handleLogout,
+            onBadgeUpdate: _setLauncherBadge,
+            currentLocale: _locale,
+            onLocaleChanged: _setLocale,
+          );
+        }
+        break;
+
+      case '/contact':
+        page = const ContactPage();
+        break;
+
+      case '/version':
+        page = const VersionPage();
+        break;
+
+      case '/profile/edit':
+        final pid = _personId;
+        if (pid == null) {
+          page = LoginPage(
+            currentLocale: _locale,
+            onLocaleChanged: _setLocale,
+            onLogin: (email, pass, id) async {
+              await _handleLogin(email, pass, id);
+              if (!mounted) return;
+              Navigator.of(
+                navigatorKey.currentContext!,
+              ).pushReplacementNamed('/home');
+            },
+          );
+        } else {
+          page = EditProfilePage(personId: pid);
+        }
+        break;
+
+      default:
+        page = LoginPage(
+          currentLocale: _locale,
+          onLocaleChanged: _setLocale,
+          onSignUp: () =>
+              Navigator.of(navigatorKey.currentContext!).pushNamed('/signup'),
+          onForgotPassword: () => Navigator.of(
+            navigatorKey.currentContext!,
+          ).pushNamed('/forgot-password'),
+          onLogin: (email, pass, id) async {
+            await _handleLogin(email, pass, id);
+            if (!mounted) return;
+            Navigator.of(
+              navigatorKey.currentContext!,
+            ).pushReplacementNamed('/home');
+          },
+        );
+        break;
+    }
+
+    final st = RouteSettings(name: name, arguments: settings.arguments);
+
+    if (modeChanged) {
+      return _NoAnimMaterialPageRoute(settings: st, builder: (_) => page);
+    }
+    return MaterialPageRoute(settings: st, builder: (_) => page);
+  }
+
+  // ✅ un navigatorKey évite d’avoir des ctx “dans le vide” pendant les transitions
+  final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
   @override
   Widget build(BuildContext context) {
     return AppFrameScope(
       controller: _frameCtrl,
       child: MaterialApp(
+        key: const ValueKey('as-connexion-app'),
+        navigatorKey: navigatorKey,
         debugShowCheckedModeBanner: false,
 
-        // ✅ Multi-langue
-        locale: _locale, // null = système
+        locale: _locale,
         supportedLocales: const [Locale('fr'), Locale('en'), Locale('es')],
         localizationsDelegates: const [
           AppLocalizations.delegate,
@@ -316,74 +447,14 @@ class _ASConnexionState extends State<ASConnexion> {
 
         navigatorObservers: [_frameObserver],
 
-        // ✅ wrap global du rendu web
         builder: (ctx, child) {
           if (child == null) return const SizedBox.shrink();
           return WebResponsiveShell(controller: _frameCtrl, child: child);
         },
 
         initialRoute: '/login',
+        onGenerateRoute: _onGenerateRoute,
 
-        // ====== ROUTES ======
-        routes: <String, WidgetBuilder>{
-          '/login': (ctx) => LoginPage(
-            currentLocale: _locale,
-            onLocaleChanged: _setLocale,
-            onLogin: (email, pass, id) async {
-              await _handleLogin(email, pass, id);
-              if (ctx.mounted) {
-                Navigator.of(ctx).pushReplacementNamed('/home');
-              }
-            },
-          ),
-
-          '/signup': (_) => const SignUpPage(),
-
-          '/home': (ctx) {
-            final pid = _personId;
-            if (pid == null) {
-              return LoginPage(
-                currentLocale: _locale,
-                onLocaleChanged: _setLocale,
-                onLogin: (email, pass, id) async {
-                  await _handleLogin(email, pass, id);
-                  if (ctx.mounted) {
-                    Navigator.of(ctx).pushReplacementNamed('/home');
-                  }
-                },
-              );
-            }
-            return HomeScreen(
-              personId: pid,
-              onLogout: _handleLogout,
-              onBadgeUpdate: _setLauncherBadge,
-              currentLocale: _locale,
-              onLocaleChanged: _setLocale,
-            );
-          },
-
-          '/contact': (_) => const ContactPage(),
-          '/version': (_) => const VersionPage(),
-
-          '/profile/edit': (ctx) {
-            final pid = _personId;
-            if (pid == null) {
-              return LoginPage(
-                currentLocale: _locale,
-                onLocaleChanged: _setLocale,
-                onLogin: (email, pass, id) async {
-                  await _handleLogin(email, pass, id);
-                  if (ctx.mounted) {
-                    Navigator.of(ctx).pushReplacementNamed('/home');
-                  }
-                },
-              );
-            }
-            return EditProfilePage(personId: pid);
-          },
-        },
-
-        // ====== THEME ======
         theme: ThemeData(
           useMaterial3: true,
           colorSchemeSeed: const Color(0xFF3F51B5),
@@ -394,7 +465,7 @@ class _ASConnexionState extends State<ASConnexion> {
 }
 
 // ============================================================================
-// Home (onglets avec IndexedStack)
+// Home (tabs)
 // ============================================================================
 
 class HomeScreen extends StatefulWidget {
@@ -411,7 +482,6 @@ class HomeScreen extends StatefulWidget {
   final VoidCallback onLogout;
   final void Function(int count) onBadgeUpdate;
 
-  // ✅ pour le sélecteur dans AppMenu
   final Locale? currentLocale;
   final void Function(Locale? locale) onLocaleChanged;
 
@@ -422,17 +492,13 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   final _scaffoldKey = GlobalKey<ScaffoldState>();
 
-  /// 0 = Community (MapPeopleByCity)
-  /// 1 = Chats
   int _currentIndex = 0;
-
   int _unreadMessagesTotal = 0;
 
   Timer? _unreadTimer;
   bool _pollingEnabled = true;
   static const Duration _pollInterval = Duration(seconds: 10);
 
-  // --- CONFIG MAPS ---
   static const String? kMapTilerKey = apiEnvMapTitleKey;
   static const bool kAllowOsmInRelease = false;
 
@@ -503,7 +569,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     }
 
     final List<dynamic> list = jsonDecode(resp.body) as List<dynamic>;
-
     int total = 0;
     for (final item in list) {
       final m = item as Map<String, dynamic>;
@@ -566,7 +631,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   Future<void> _openPrivacy() async {
     if (!mounted) return;
 
-    // ✅ IMPORTANT: on donne un name à la route pour que l'observer la détecte (wide)
     await Navigator.of(context).push(
       MaterialPageRoute(
         settings: const RouteSettings(name: '/privacy'),
@@ -589,7 +653,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       key: _scaffoldKey,
       extendBody: true,
       backgroundColor: Colors.white,
-
       drawer: AppMenu(
         selected: switch (_currentIndex) {
           0 => MenuAction.profil,
@@ -608,7 +671,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               }
               final updated = await Navigator.of(
                 context,
-              ).pushNamed('/profile/edit');
+              ).pushNamed('/profile/edit', arguments: const {});
               _setIndex(0);
               if (updated == true && mounted) {
                 ScaffoldMessenger.of(
@@ -644,7 +707,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           }
         },
       ),
-
       appBar: AppBar(
         elevation: 0,
         backgroundColor: Theme.of(context).colorScheme.surface,
@@ -662,9 +724,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           ),
         ),
       ),
-
       body: IndexedStack(index: _currentIndex, children: _tabs),
-
       bottomNavigationBar: SafeArea(
         child: BottomAppBar(
           color: Colors.transparent,
@@ -733,10 +793,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 }
 
-// ============================================================================
-// Petit bouton d’onglet stylé
-// ============================================================================
-
 class _NavIcon extends StatelessWidget {
   const _NavIcon({
     required this.icon,
@@ -763,10 +819,6 @@ class _NavIcon extends StatelessWidget {
     );
   }
 }
-
-// ============================================================================
-// Badge WhatsApp-like (vert)
-// ============================================================================
 
 class _Badge extends StatelessWidget {
   final int count;
