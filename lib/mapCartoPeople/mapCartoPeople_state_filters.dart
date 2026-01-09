@@ -409,6 +409,7 @@ extension _MapPeopleFilters on _MapPeopleByCityState {
 
     void _syncAgeSelectionToDomain(StateSetter setModalState) {
       final dom = _currentAgeDomainForModal();
+
       if (!dom.hasAges) {
         setModalState(() {
           localMin = null;
@@ -418,16 +419,17 @@ extension _MapPeopleFilters on _MapPeopleByCityState {
       }
 
       setModalState(() {
-        if (!ageTouched) {
+        // ✅ on garde la sélection existante si elle existe, sinon on prend le domaine complet
+        final prevMin = localMin ?? dom.minAge;
+        final prevMax = localMax ?? dom.maxAge;
+
+        localMin = prevMin.clamp(dom.minAge, dom.maxAge);
+        localMax = prevMax.clamp(dom.minAge, dom.maxAge);
+
+        // ✅ sécurité si le domaine s’est fortement resserré
+        if (localMin! > localMax!) {
           localMin = dom.minAge;
           localMax = dom.maxAge;
-        } else {
-          localMin = (localMin ?? dom.minAge).clamp(dom.minAge, dom.maxAge);
-          localMax = (localMax ?? dom.maxAge).clamp(dom.minAge, dom.maxAge);
-          if (localMin! > localMax!) {
-            localMin = dom.minAge;
-            localMax = dom.maxAge;
-          }
         }
       });
     }
