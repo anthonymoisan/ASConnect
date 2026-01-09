@@ -52,11 +52,6 @@ class AppMenu extends StatelessWidget {
 
             const Divider(height: 20),
 
-            // Sélecteur de langue
-            _languageSelector(context),
-
-            const Divider(height: 20),
-
             // Nous contacter
             _tile(
               context,
@@ -101,88 +96,6 @@ class AppMenu extends StatelessWidget {
         ),
       ),
     );
-  }
-
-  /// ✅ Bloc sélecteur de langue
-  Widget _languageSelector(BuildContext context) {
-    final t = AppLocalizations.of(context)!;
-    final theme = Theme.of(context);
-    final enabled = onLocaleChanged != null;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.only(left: 8, bottom: 6),
-          child: Text(
-            t.languageLabel,
-            style: theme.textTheme.bodyMedium?.copyWith(
-              fontWeight: FontWeight.w800,
-              color: theme.colorScheme.onSurface.withOpacity(0.75),
-            ),
-          ),
-        ),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
-          decoration: BoxDecoration(
-            border: Border.all(color: theme.dividerColor.withOpacity(0.7)),
-            borderRadius: BorderRadius.circular(12),
-            color: theme.colorScheme.surfaceVariant.withOpacity(0.25),
-          ),
-          child: DropdownButtonHideUnderline(
-            child: DropdownButton<Locale?>(
-              value: currentLocale, // null = Système
-              isExpanded: true,
-              onChanged: enabled ? (v) => onLocaleChanged?.call(v) : null,
-              items: [
-                DropdownMenuItem<Locale?>(
-                  value: null,
-                  child: Text(t.systemLanguage),
-                ),
-                const DropdownMenuItem<Locale?>(
-                  value: Locale('fr'),
-                  child: Text('Français'),
-                ),
-                const DropdownMenuItem<Locale?>(
-                  value: Locale('en'),
-                  child: Text('English'),
-                ),
-                const DropdownMenuItem<Locale?>(
-                  value: Locale('es'),
-                  child: Text('Español'),
-                ),
-              ],
-            ),
-          ),
-        ),
-        const SizedBox(height: 6),
-        Padding(
-          padding: const EdgeInsets.only(left: 8),
-          child: Text(
-            t.currentLanguage(_localeLabel(context, currentLocale)),
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: theme.colorScheme.onSurface.withOpacity(0.60),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  String _localeLabel(BuildContext context, Locale? l) {
-    final t = AppLocalizations.of(context)!;
-
-    if (l == null) return t.systemLanguage;
-    switch (l.languageCode) {
-      case 'fr':
-        return 'Français';
-      case 'en':
-        return 'English';
-      case 'es':
-        return 'Español';
-      default:
-        return l.languageCode;
-    }
   }
 
   Widget _tile(
