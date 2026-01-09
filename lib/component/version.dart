@@ -37,7 +37,7 @@ class VersionPage extends StatelessWidget {
                 width: 220,
                 height: 220,
                 child: Image.asset(
-                  'assets/images/Accueil_Image.png',
+                  'assets/images/FAVICON_AA3.png',
                   fit: BoxFit.contain,
                 ),
               ),
