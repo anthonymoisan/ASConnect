@@ -404,6 +404,8 @@ extension _MapPeopleData on _MapPeopleByCityState {
       _activeCountry = null;
       _countryClusters = _buildCountryClustersFromCityClusters(_allClusters);
 
+      _filteredAllClusters = _allClusters;
+
       _rebuildMarkers();
       _fitOnNextFrameOnceCountry();
     } catch (e, st) {

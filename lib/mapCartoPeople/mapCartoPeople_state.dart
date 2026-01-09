@@ -8,6 +8,10 @@ class _MapPeopleByCityState extends State<MapPeopleByCity>
 
   final _map = MapController();
 
+  // Source filtrée globale (après application des filtres)
+  // Sert de base au drilldown pays -> villes
+  List<_CityCluster> _filteredAllClusters = [];
+
   Map<String, String> _countryLabelsByIso2 = {}; // ISO2 -> name translated
   String? _countryLabelsLocale;
   bool _loadingCountryLabels = false;

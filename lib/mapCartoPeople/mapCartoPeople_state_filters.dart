@@ -94,6 +94,7 @@ extension _MapPeopleFilters on _MapPeopleByCityState {
       _rebuildMarkers();
       _fitMapToCountryClusters(_countryClusters);
     }
+    _filteredAllClusters = _allClusters;
   }
 
   // ----------------------------
@@ -112,8 +113,12 @@ extension _MapPeopleFilters on _MapPeopleByCityState {
   // ----------------------------
   // Apply filters (global state)
   // ----------------------------
-  Future<void> _applyFilters({bool rebuildOnly = false}) async {
+  Future<void> _applyFilters({
+    bool rebuildOnly = false,
+    bool doFit = true,
+  }) async {
     try {
+      // ✅ base “full dataset”
       List<_CityCluster> source = _allClusters;
 
       bool matchesGenotype(String? g) {
@@ -140,8 +145,10 @@ extension _MapPeopleFilters on _MapPeopleByCityState {
         return age >= _selectedMinAge! && age <= _selectedMaxAge!;
       }
 
+      // ✅ calcule la source filtrée globale
       if (!rebuildOnly) {
         final filtered = <_CityCluster>[];
+
         for (final c in _allClusters) {
           if (!_matchesDistance(c.latLng)) continue;
 
@@ -164,29 +171,39 @@ extension _MapPeopleFilters on _MapPeopleByCityState {
             );
           }
         }
+
         source = filtered;
       }
 
-      final filteredCities = source;
-      _countryClusters = _buildCountryClustersFromCityClusters(filteredCities);
+      // ✅ IMPORTANT : on mémorise la source filtrée
+      _filteredAllClusters = source;
 
+      // ✅ rebuild des pays à partir de la source filtrée (pas _allClusters)
+      _countryClusters = _buildCountryClustersFromCityClusters(
+        _filteredAllClusters,
+      );
+
+      // ✅ si on est déjà en drilldown pays -> villes, on garde le même pays
       if (_level == _MapLevel.city && _activeCountry != null) {
         final cc = _countryClusters
             .where((c) => c.countryCode == _activeCountry)
             .toList();
 
         if (cc.isEmpty) {
-          _backToCountries(fit: true);
+          // pays n'existe plus après filtre -> retour liste pays
+          _backToCountries(fit: doFit);
         } else {
+          // ✅ villes filtrées du pays actif
           _clusters = cc.first.cities;
           _rebuildMarkers();
-          _fitMapToClusters(_clusters);
+          if (doFit) _fitMapToClusters(_clusters);
         }
       } else {
+        // ✅ sinon on revient au niveau pays (filtré)
         _level = _MapLevel.country;
         _activeCountry = null;
         _rebuildMarkers();
-        _fitMapToCountryClusters(_countryClusters);
+        if (doFit) _fitMapToCountryClusters(_countryClusters);
       }
     } catch (e) {
       if (mounted) {
@@ -298,7 +315,12 @@ extension _MapPeopleFilters on _MapPeopleByCityState {
       _activeCountry = country.countryCode;
     });
 
-    _clusters = _allClusters
+    // ✅ drilldown SUR LA SOURCE FILTRÉE (sinon tu perds les filtres)
+    final base = _filteredAllClusters.isNotEmpty
+        ? _filteredAllClusters
+        : _allClusters;
+
+    _clusters = base
         .map((cl) {
           final people = cl.people
               .where(
