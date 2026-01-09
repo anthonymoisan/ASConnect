@@ -292,7 +292,7 @@
     }
   },
 
-  "versionMadeByFastFrance": "Cette application est réalisée par FAST France",
+  "versionMadeByFastFrance": "Cette application est réalisée par Angelman Analytics (www.angelmananalytics.org)",
   "versionNumber": "Version {version}",
   "@versionNumber": {
     "placeholders": {

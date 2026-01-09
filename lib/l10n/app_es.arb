@@ -291,7 +291,7 @@
     }
   },
 
-  "versionMadeByFastFrance": "Esta aplicación ha sido desarrollada por FAST France",
+  "versionMadeByFastFrance": "Esta aplicación ha sido desarrollada por Angelman Analytics (www.angelmananalytics.org)",
   "versionNumber": "Versión {version}",
   "@versionNumber": {
     "placeholders": {

@@ -37,7 +37,7 @@ class VersionPage extends StatelessWidget {
                 width: 220,
                 height: 220,
                 child: Image.asset(
-                  'assets/images/FAST-France-Logo_Black.png',
+                  'assets/images/Accueil_Image.png',
                   fit: BoxFit.contain,
                 ),
               ),

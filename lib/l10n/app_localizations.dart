@@ -1146,7 +1146,7 @@ abstract class AppLocalizations {
   /// No description provided for @versionMadeByFastFrance.
   ///
   /// In en, this message translates to:
-  /// **'This app is developed by FAST France'**
+  /// **'This app is developed by Angelman Analytics (www.angelmananalytics.org)'**
   String get versionMadeByFastFrance;
 
   /// No description provided for @versionNumber.

@@ -560,7 +560,7 @@ class AppLocalizationsPl extends AppLocalizations {
   }
 
   @override
-  String get versionMadeByFastFrance => 'Ta aplikacja została opracowana przez FAST France';
+  String get versionMadeByFastFrance => 'Ta aplikacja została opracowana przez Angelman Analytics (www.angelmananalytics.org)';
 
   @override
   String versionNumber(String version) {

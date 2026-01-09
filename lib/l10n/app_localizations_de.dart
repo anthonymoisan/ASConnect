@@ -560,7 +560,7 @@ class AppLocalizationsDe extends AppLocalizations {
   }
 
   @override
-  String get versionMadeByFastFrance => 'Diese App wird von FAST France entwickelt';
+  String get versionMadeByFastFrance => 'Diese App wird von Angelman Analytics (www.angelmananalytics.org) entwickelt';
 
   @override
   String versionNumber(String version) {
