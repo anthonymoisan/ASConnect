@@ -51106,7 +51106,7 @@ $S:11}
 A.a0u.prototype={
 G(a){var s,r=null,q=A.D(a),p=A.S(a,B.i,t.J),o=A.ki(r,r,r,!0,!0,r,r,1,!0,r,r,!1,r,!1,r,r,r,r,!0,r,r,r,r,r,A.M(p.gro(),r,r,r,r,r,r,r,r),r,r,r,1,r,!0),n=p.gyJ(),m=q.ok.w,l=m==null
 n=A.M(n,r,r,r,r,l?r:m.os(B.dQ),B.bm,r,r)
-s=A.ct(A.aZ7("assets/images/Accueil_Image.png",B.hI,r),220,220)
+s=A.ct(A.aZ7("assets/images/FAVICON_AA3.png",B.hI,r),220,220)
 p=p.yK("0.9")
 return A.jM(o,r,A.cP(new A.aM(B.ia,A.cQ(A.b([n,B.lY,s,B.lY,A.M(p,r,r,r,r,l?r:m.Ke(q.ax.b,B.ci),B.bm,r,r)],t.p),B.w,B.eM,B.I),r),r,r),r,r,!1,r,r,r)}}
 A.hC.prototype={}
