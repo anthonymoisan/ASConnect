@@ -1156,4 +1156,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get delete => 'Eliminar';
+
+  @override
+  String get languageName => 'Español';
 }

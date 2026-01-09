@@ -6,6 +6,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:ionicons/ionicons.dart';
 import 'package:http/http.dart' as http;
+import 'package:flutter_localized_locales/flutter_localized_locales.dart';
 
 import 'signup_page.dart';
 import 'forgot_password_page.dart';
@@ -20,16 +21,11 @@ class LoginPage extends StatefulWidget {
     this.onSignUp,
     this.onForgotPassword,
     this.backgroundAsset = 'assets/images/ImageFond.png',
-
-    // ✅ pour piloter la langue depuis le parent (MaterialApp)
     this.currentLocale,
     this.onLocaleChanged,
   });
 
-  /// Callback déclenché APRÈS auth réussie côté API.
-  /// Reçoit l'`email`, le `password` et l'`id` renvoyé par l’API.
   final Future<void> Function(String email, String password, int id)? onLogin;
-
   final VoidCallback? onSignUp;
   final VoidCallback? onForgotPassword;
   final String backgroundAsset;
@@ -48,6 +44,7 @@ class _LoginPageState extends State<LoginPage> {
   final _formKey = GlobalKey<FormState>();
   final _emailCtrl = TextEditingController();
   final _pwdCtrl = TextEditingController();
+
   bool _obscure = true;
   bool _loading = false;
 
@@ -67,6 +64,8 @@ class _LoginPageState extends State<LoginPage> {
   @override
   void initState() {
     super.initState();
+
+    // au démarrage : reflète le choix parent (null = système)
     _selectedLangCode = widget.currentLocale?.languageCode;
 
     WidgetsBinding.instance.addPostFrameCallback((_) => _hideAuthSnackbars());
@@ -247,13 +246,11 @@ class _LoginPageState extends State<LoginPage> {
   Future<void> _openSignUp() async {
     _hideAuthSnackbars();
 
-    // ✅ Si le parent (main.dart) gère la navigation => on l’utilise
     if (widget.onSignUp != null) {
       widget.onSignUp!.call();
       return;
     }
 
-    // Fallback (si utilisé hors main.dart)
     await Navigator.of(context).push(
       MaterialPageRoute(
         settings: const RouteSettings(name: '/signup'),
@@ -267,13 +264,11 @@ class _LoginPageState extends State<LoginPage> {
   void _openForgotPassword() {
     _hideAuthSnackbars();
 
-    // ✅ Si le parent (main.dart) gère la navigation => on l’utilise
     if (widget.onForgotPassword != null) {
       widget.onForgotPassword!.call();
       return;
     }
 
-    // Fallback (si utilisé hors main.dart)
     Navigator.of(context).push(
       MaterialPageRoute(
         settings: const RouteSettings(name: '/forgot-password'),
@@ -282,9 +277,43 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 
-  // ✅ Sélecteur de langue (bas de la page) + refresh immédiat
+  // ---------------------------------------------------------------------------
+  // ✅ Sélecteur de langue : non hardcodé
+  // - options = AppLocalizations.supportedLocales
+  // - label = ARB languageName si dispo, sinon LocaleNames
+  // - value = _selectedLangCode (null = système) => UI bouge instantanément
+  // - selectedItemBuilder : si "système", affiche la langue effective (pas “Système”)
+  // ---------------------------------------------------------------------------
   Widget _languageSelector(BuildContext context) {
     final t = AppLocalizations.of(context)!;
+
+    final localeNames = LocaleNames.of(
+      context,
+    ); // peut être null si delegate absent
+    final effectiveCode = Localizations.localeOf(context).languageCode;
+
+    // codes supportés (unique, triés)
+    final supportedCodes = <String>{
+      for (final l in AppLocalizations.supportedLocales) l.languageCode,
+    }.toList()..sort();
+
+    String prettyNameForCode(String code) {
+      // 1) Si tu as `languageName` dans tes ARB -> “Français/English/Español…”
+      try {
+        final l10n = lookupAppLocalizations(Locale(code));
+        final s = l10n.languageName.trim();
+        if (s.isNotEmpty) return s;
+      } catch (_) {
+        // ignore
+      }
+
+      // 2) Fallback via flutter_localized_locales
+      final n = localeNames?.nameOf(code);
+      if (n != null && n.trim().isNotEmpty) return n;
+
+      // 3) Ultime fallback
+      return code;
+    }
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -298,43 +327,53 @@ class _LoginPageState extends State<LoginPage> {
         children: [
           const Icon(Icons.language, size: 18),
           const SizedBox(width: 10),
-          DropdownButton<String?>(
-            value: _selectedLangCode, // ✅ état local => refresh instantané
-            underline: const SizedBox.shrink(),
-            onChanged: (code) {
-              // 1) refresh immédiat du dropdown (et donc de la page)
-              setState(() => _selectedLangCode = code);
+          DropdownButtonHideUnderline(
+            child: DropdownButton<String?>(
+              value: _selectedLangCode, // null = système
+              isDense: true,
+              onChanged: (code) {
+                // 1) refresh immédiat UI
+                setState(() => _selectedLangCode = code);
 
-              // 2) remonte la nouvelle locale au parent (main.dart) pour changer MaterialApp.locale
-              final cb = widget.onLocaleChanged;
-              if (cb == null) return;
-              if (code == null) {
-                cb(null); // système
-              } else {
-                cb(Locale(code));
-              }
+                // 2) remonte au parent (MaterialApp.locale)
+                final cb = widget.onLocaleChanged;
+                if (cb != null) {
+                  cb(code == null ? null : Locale(code));
+                }
 
-              // 3) optionnel : ferme un clavier ouvert
-              FocusScope.of(context).unfocus();
-            },
-            items: [
-              DropdownMenuItem<String?>(
-                value: null,
-                child: Text('🌐 ${t.systemLanguage}'),
-              ),
-              const DropdownMenuItem<String?>(
-                value: 'fr',
-                child: Text('🇫🇷 Français'),
-              ),
-              const DropdownMenuItem<String?>(
-                value: 'en',
-                child: Text('🇬🇧 English'),
-              ),
-              const DropdownMenuItem<String?>(
-                value: 'es',
-                child: Text('🇪🇸 Español'),
-              ),
-            ],
+                FocusScope.of(context).unfocus();
+              },
+
+              // ✅ texte affiché dans le champ sélectionné :
+              // si null => afficher la langue effective, pas "Système"
+              selectedItemBuilder: (_) {
+                return [
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(prettyNameForCode(effectiveCode)),
+                  ),
+                  ...supportedCodes.map(
+                    (c) => Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(prettyNameForCode(c)),
+                    ),
+                  ),
+                ];
+              },
+
+              items: [
+                DropdownMenuItem<String?>(
+                  value: null,
+                  child: Text('🌐 ${t.systemLanguage}'),
+                ),
+                ...supportedCodes.map(
+                  (code) => DropdownMenuItem<String?>(
+                    value: code,
+                    child: Text(prettyNameForCode(code)),
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -506,7 +545,7 @@ class _LoginPageState extends State<LoginPage> {
                                 ],
                               ),
 
-                              // ✅ Sélecteur de langue en bas + refresh
+                              // ✅ Sélecteur de langue en bas (non hardcodé)
                               const SizedBox(height: 14),
                               Center(child: _languageSelector(context)),
 

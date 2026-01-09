@@ -26,6 +26,7 @@ import 'whatsApp/screens/conversations_page.dart';
 
 // L10n
 import 'l10n/app_localizations.dart';
+import 'package:flutter_localized_locales/flutter_localized_locales.dart';
 
 // 🔑 Clé app
 const String _publicAppKey = String.fromEnvironment(
@@ -435,16 +436,20 @@ class _ASConnexionState extends State<ASConnexion> {
         debugShowCheckedModeBanner: false,
 
         locale: _locale,
-        supportedLocales: const [Locale('fr'), Locale('en'), Locale('es')],
-        localizationsDelegates: const [
+
+        // ✅ plus de hardcode : suit automatiquement tes ARB
+        supportedLocales: AppLocalizations.supportedLocales,
+
+        // ✅ ajoute le delegate de flutter_localized_locales
+        localizationsDelegates: [
           AppLocalizations.delegate,
+          LocaleNamesLocalizationsDelegate(),
           GlobalMaterialLocalizations.delegate,
           GlobalCupertinoLocalizations.delegate,
           GlobalWidgetsLocalizations.delegate,
         ],
 
         onGenerateTitle: (ctx) => AppLocalizations.of(ctx)!.appTitle,
-
         navigatorObservers: [_frameObserver],
 
         builder: (ctx, child) {
