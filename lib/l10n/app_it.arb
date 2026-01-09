@@ -1,0 +1,592 @@
+{
+  "@@locale": "it",
+
+  "appTitle": "ASConnexion",
+  "systemLanguage": "Sistema",
+
+  "menu": "Menu",
+  "menuNavigation": "Navigazione",
+  "menuMyProfile": "Il mio profilo",
+  "menuContact": "Contattaci",
+  "menuPrivacyPolicy": "Informativa sulla privacy",
+  "menuVersion": "Versione",
+  "menuContactSubject": "Contatto tramite app",
+
+  "languageLabel": "Lingua",
+  "currentLanguage": "Attuale: {label}",
+  "@currentLanguage": {
+    "placeholders": {
+      "label": { "type": "String" }
+    }
+  },
+
+  "cancel": "Annulla",
+  "confirm": "Conferma",
+  "ok": "OK",
+
+  "logoutTitle": "Disconnettersi",
+  "logoutConfirm": "Sei sicuro di voler uscire dall'app?",
+
+  "tabCommunity": "Connettiti con la comunità",
+  "tabChats": "Le mie chat",
+  "tabPoi": "Punti di interesse",
+
+  "profileUpdated": "Profilo aggiornato ✅",
+
+  "loginTitle": "Accedi",
+  "loginIntro": "L'app ASConnect è destinata esclusivamente ai caregiver che hanno un figlio con la sindrome di Angelman, una rara malattia genetica.",
+  "emailLabel": "Indirizzo email",
+  "emailHintRequired": "Inserisci la tua email",
+  "emailHintInvalid": "Email non valida",
+  "passwordLabel": "Password",
+  "show": "Mostra",
+  "hide": "Nascondi",
+  "passwordRequired": "Inserisci la password",
+  "loginButton": "Accedi",
+  "loginLoading": "Accesso in corso…",
+  "createAccount": "Crea un account",
+  "forgotPassword": "Hai dimenticato la password?",
+
+  "invalidCredentials": "Credenziali non valide.",
+  "accessDeniedKey": "Accesso negato: chiave app mancante o non valida.",
+  "badRequest": "Richiesta non valida (400).",
+  "tooManyAttempts": "Troppi tentativi. Riprova tra poco.",
+  "serviceUnavailable": "Servizio non disponibile. Riprova più tardi.",
+  "serverErrorWithCode": "Errore del server ({code}).",
+  "unexpectedServerResponse": "Risposta inattesa dal server.",
+  "cannotConnectServer": "Impossibile connettersi al server.",
+  "timeoutCheckConnection": "Richiesta scaduta. Controlla la connessione.",
+  "errorWithMessage": "Errore: {message}",
+
+  "missingAppKeyWarning": "⚠️ Chiave app mancante. Avvia l'app con --dart-define=PUBLIC_APP_KEY=your_public_key",
+
+  "signupTitle": "Crea un account",
+  "signupSectionPerson": "Persona con sindrome di Angelman",
+  "signupSectionAuth": "Autenticazione",
+  "consentTitle": "Consenso",
+
+  "firstNameLabel": "Nome",
+  "firstNameRequired": "Il nome è obbligatorio",
+  "lastNameLabel": "Cognome",
+  "lastNameRequired": "Il cognome è obbligatorio",
+
+  "birthdateLabel": "Data di nascita (gg/mm/aaaa)",
+  "birthdateRequired": "La data di nascita è obbligatoria",
+  "chooseDate": "Scegli una data",
+  "signupBirthdateHelp": "Data di nascita",
+
+  "genotypeLabel": "Genotipo",
+  "genotypeRequired": "Il genotipo è obbligatorio",
+  "genotypeDeletion": "Delezione",
+  "genotypeMutation": "Mutazione",
+  "genotypeUpd": "UPD",
+  "genotypeIcd": "ICD",
+  "genotypeClinical": "Clinico",
+  "genotypeMosaic": "Mosaico",
+
+  "signupPhotoHint": "Foto del bambino (obbligatoria, < 4 MB)",
+  "importPhoto": "Importa una foto",
+  "takePhoto": "Scatta una foto",
+  "deletePhoto": "Elimina foto",
+  "signupPhotoRequired": "La foto è obbligatoria",
+  "signupAddPhotoToContinue": "Aggiungi una foto per continuare",
+  "signupPhotoTooLarge": "La foto supera i 4 MB ({mb} MB).",
+  "@signupPhotoTooLarge": {
+    "placeholders": {
+      "mb": { "type": "String" }
+    }
+  },
+  "signupPhotoCannotLoad": "Impossibile caricare la foto: {message}",
+  "@signupPhotoCannotLoad": {
+    "placeholders": {
+      "message": { "type": "String" }
+    }
+  },
+
+  "signupPasswordTooWeak": "La password è troppo debole",
+  "signupPwdRuleMin8": "Min. 8 caratteri",
+  "signupPwdRuleUpper": "1 lettera maiuscola",
+  "signupPwdRuleDigit": "1 numero",
+  "signupPwdRuleSpecial": "1 carattere speciale",
+
+  "secretQuestionLabel": "Domanda di sicurezza",
+  "secretQuestionRequired": "La domanda di sicurezza è obbligatoria",
+  "secretQuestion1": "Cognome da nubile di tua madre?",
+  "secretQuestion2": "Nome del tuo attore preferito?",
+  "secretQuestion3": "Nome del tuo animale preferito?",
+
+  "secretAnswerLabel": "Risposta",
+  "secretAnswerRequired": "La risposta è obbligatoria",
+
+  "consentCheckbox": "Accetto le condizioni d’uso dei miei dati e do il mio consenso.",
+  "signupConsentNotGiven": "Non hai dato il consenso",
+
+  "signupCreating": "Creazione in corso…",
+  "signupCreateBtn": "Crea il mio account",
+
+  "signupSuccess": "Account creato con successo.",
+  "signupEmailAlreadyExistsRedirect": "La tua email è già nel nostro database. Verrai reindirizzato alla pagina di accesso.",
+  "signupSelectBirthdate": "Seleziona una data di nascita",
+  "signupChooseGenotype": "Scegli un genotipo",
+  "signupChooseSecretQuestion": "Scegli una domanda di sicurezza",
+  "signupEnterSecretAnswer": "Inserisci la risposta segreta",
+
+  "signupApiFailed": "Errore API ({code}): {body}",
+  "@signupApiFailed": {
+    "placeholders": {
+      "code": { "type": "int" },
+      "body": { "type": "String" }
+    }
+  },
+
+  "forgotPasswordTitle": "Password dimenticata",
+  "forgotEmailLabel": "Indirizzo email",
+  "forgotFetchQuestionTooltip": "Recupera la domanda",
+  "forgotEnterValidEmail": "Inserisci un'email valida.",
+  "forgotUnknownEmail": "Email sconosciuta.",
+  "forgotErrorCode": "Errore ({code})",
+  "@forgotErrorCode": {
+    "placeholders": {
+      "code": { "type": "int" }
+    }
+  },
+  "forgotTimeoutRetry": "Tempo scaduto. Riprova.",
+  "forgotErrorWithMessage": "Errore: {message}",
+  "@forgotErrorWithMessage": {
+    "placeholders": {
+      "message": { "type": "String" }
+    }
+  },
+
+  "forgotQuestionFallback": "Domanda di sicurezza",
+  "forgotQuestionLabel": "Domanda",
+
+  "forgotSecretAnswerLabel": "Risposta segreta",
+  "forgotAnswerRequired": "La risposta è obbligatoria",
+  "forgotEnterYourAnswer": "Inserisci la tua risposta.",
+
+  "forgotVerify": "Verifica",
+  "forgotAnswerCorrectSnack": "Risposta corretta 👍",
+  "forgotAnswerIncorrectAttempts": "Risposta errata ({attempts}/3).",
+  "@forgotAnswerIncorrectAttempts": {
+    "placeholders": {
+      "attempts": { "type": "int" }
+    }
+  },
+  "forgotFailedAttempts": "Tentativi falliti: {attempts} / 3",
+  "@forgotFailedAttempts": {
+    "placeholders": {
+      "attempts": { "type": "int" }
+    }
+  },
+
+  "forgotAnswerOkHint": "✅ Risposta corretta, puoi impostare una nuova password.",
+
+  "forgotNewPasswordLabel": "Nuova password",
+  "forgotPasswordRequired": "La password è obbligatoria",
+  "forgotPasswordTooWeak": "La password è troppo debole",
+  "forgotPwdRuleMin8": "Almeno 8 caratteri",
+  "forgotPwdRuleUpper": "Almeno 1 lettera maiuscola",
+  "forgotPwdRuleSpecial": "Almeno 1 carattere speciale",
+
+  "forgotConfirmPasswordLabel": "Conferma password",
+  "forgotEnterNewPasswordFirst": "Inserisci prima la nuova password",
+  "forgotPasswordsDoNotMatch": "Le password non coincidono",
+  "forgotPasswordsMatch": "Le password coincidono",
+
+  "forgotResetSuccess": "Password reimpostata ✅",
+  "forgotResetFailed": "Operazione fallita ({code}).",
+  "@forgotResetFailed": {
+    "placeholders": {
+      "code": { "type": "int" }
+    }
+  },
+
+  "tooManyAttemptsTitle": "Troppi tentativi",
+  "tooManyAttemptsMessage": "Troppi tentativi.\n\nScrivi a contact@fastfrance.org per spiegare il tuo problema di accesso.",
+
+  "forgotValidating": "Invio in corso…",
+
+  "editProfileTitle": "Modifica profilo",
+  "loadingProfile": "Caricamento profilo…",
+  "timeoutLoadingProfile": "Tempo scaduto durante il caricamento del profilo.",
+  "errorLoadingProfile": "Errore di caricamento: {message}",
+  "@errorLoadingProfile": {
+    "placeholders": {
+      "message": { "type": "String" }
+    }
+  },
+
+  "import": "Importa",
+  "deleteMyPhoto": "Elimina la mia foto",
+  "cancelSelection": "Annulla selezione",
+
+  "photoTooLarge": "La foto supera i 4 MB ({size} MB).",
+  "@photoTooLarge": {
+    "placeholders": {
+      "size": { "type": "String" }
+    }
+  },
+  "cannotGetPhoto": "Impossibile ottenere la foto: {message}",
+  "@cannotGetPhoto": {
+    "placeholders": {
+      "message": { "type": "String" }
+    }
+  },
+
+  "photoRequired": "Foto obbligatoria",
+  "photoRequiredAddToSave": "Aggiungi una foto per salvare",
+  "photoRequiredAfterDelete": "Foto obbligatoria: importa o scatta una nuova foto.",
+  "photoDeleted": "Foto eliminata ✅",
+
+  "profileInfoSection": "Informazioni del profilo",
+
+  "firstName": "Nome",
+  "lastName": "Cognome",
+  "birthDateLabel": "Data di nascita (gg/mm/aaaa)",
+  "birthDateRequired": "La data di nascita è obbligatoria",
+
+  "genotype": "Genotipo",
+
+  "city": "Città",
+  "geolocateMe": "Usa la mia posizione",
+  "locationUpdated": "Posizione aggiornata",
+  "locationUpdatedWithCity": "Posizione aggiornata ({city})",
+  "@locationUpdatedWithCity": {
+    "placeholders": {
+      "city": { "type": "String" }
+    }
+  },
+
+  "geolocation": "Geolocalizzazione",
+  "geolocationHint": "Ricorda di aggiornare la tua posizione se è cambiata dopo la registrazione.",
+
+  "secretQuestionSection": "Domanda di sicurezza",
+  "question": "Domanda",
+  "answer": "Risposta",
+
+  "changeMyPassword": "Cambia la mia password",
+  "changePasswordTitle": "Cambia la mia password",
+  "newPasswordLabel": "Nuova password",
+  "confirmPasswordLabel": "Conferma password",
+  "passwordTooWeak": "La password è troppo debole",
+  "enterPassword": "Inserisci una password",
+  "passwordsDoNotMatch": "Le password non coincidono",
+  "passwordsMatch": "Le password coincidono",
+  "pwdRuleMin8": "Almeno 8 caratteri",
+  "pwdRuleUpper": "Almeno 1 lettera maiuscola",
+  "pwdRuleSpecial": "Almeno 1 carattere speciale",
+  "passwordChanged": "Password cambiata ✅",
+
+  "save": "Salva",
+  "saving": "Salvataggio…",
+  "savedChanges": "Modifiche salvate ✅",
+
+  "timeoutTryAgain": "Tempo scaduto. Riprova.",
+
+  "failedWithCode": "Operazione fallita ({code})",
+  "@failedWithCode": {
+    "placeholders": {
+      "code": { "type": "int" }
+    }
+  },
+
+  "versionMadeByFastFrance": "Questa app è sviluppata da FAST France",
+  "versionNumber": "Versione {version}",
+  "@versionNumber": {
+    "placeholders": {
+      "version": { "type": "String" }
+    }
+  },
+
+  "privacyTitle": "Informativa sulla privacy",
+  "privacyRightToBeForgotten": "Diritto all'oblio",
+
+  "privacyDeleteTitle": "Avviso",
+  "privacyDeleteConfirmBody": "Questa azione è irreversibile.\n\nIl tuo profilo e i dati associati verranno eliminati definitivamente.\n\nVuoi continuare?",
+
+  "privacyDeletedOkTitle": "Account eliminato",
+  "privacyDeletedOkBody": "Il tuo account è stato eliminato.\nVerrai reindirizzato alla pagina di accesso.",
+
+  "privacyDeleteFailedWithCode": "Impossibile eliminare (codice {code}).",
+  "@privacyDeleteFailedWithCode": {
+    "placeholders": {
+      "code": { "type": "int" }
+    }
+  },
+
+  "timeoutRetry": "Richiesta scaduta. Riprova.",
+
+  "consentText": "Informativa sulla privacy – app ASConnect\n\n1) Titolare del trattamento\nI dati raccolti nell'app ASConnect sono trattati da FAST France in qualità di titolare del trattamento.\nPer qualsiasi domanda sui tuoi dati o su come esercitare i tuoi diritti, contattaci a: contact@fastfrance.org.\n\n2) Finalità del trattamento\nIl trattamento dei dati effettuato tramite l'app serve alle seguenti finalità:\n• Creare e gestire il tuo account utente per accedere all'app ASConnect;\n• Utilizzare le funzioni di geolocalizzazione per mostrare:\n  o punti di interesse relativi alla sindrome di Angelman,\n  o e/o profili di persone interessate, secondo vari criteri (distanza geografica, genotipo, fascia d’età);\n• Migliorare il servizio e personalizzare l’esperienza utente, anche consentendo agli utenti di scegliere se mostrare una foto, il nome o il cognome.\n\n3) Categorie di dati raccolti\nPossono essere raccolti i seguenti dati:\n• Dati identificativi:\n  o cognome, nome, indirizzo email, password, foto,\n  o domanda e risposta segreta (in caso di password dimenticata);\n• Dati sensibili:\n  o genotipo, posizione del telefono (geolocalizzazione).\nLa base giuridica del trattamento è il consenso esplicito e informato dell’utente.\n\n4) Periodo di conservazione dei dati\nI dati sono conservati per la durata dell’utilizzo dell’account, poi eliminati entro un massimo di 12 mesi dall’ultima attività.\nGli utenti possono esercitare il diritto all’oblio in qualsiasi momento direttamente nell’app tramite:\nInformativa sulla privacy → Diritto all'oblio.\n\n5) Destinatari e hosting dei dati\nI dati sono ospitati in modo sicuro sui server di PythonAnywhere.\nI dati sono archiviati nell’Unione Europea.\n(Per maggiori informazioni sull’informativa del provider, vedi https://www.pythonanywhere.com/privacy/.)\n\n6) Diritti degli utenti\nIn conformità al Regolamento (UE) 2016/679 (GDPR), gli utenti hanno i seguenti diritti:\n• Diritto di accesso, rettifica e cancellazione (“diritto all’oblio”) — direttamente tramite il profilo o tramite Informativa sulla privacy → Diritto all'oblio;\n• Diritto di opposizione, portabilità dei dati e limitazione del trattamento;\n• Diritto di revocare il consenso in qualsiasi momento.\nPer esercitare questi diritti (diversi dal diritto all’oblio in-app), invia un’email a: contact@fastfrance.org.\n\n7) Sicurezza e riservatezza\nTutti i dati sono criptati durante l’archiviazione e la trasmissione.\nLe password sono hashate secondo le migliori pratiche di sicurezza e tutte le comunicazioni con il servizio avvengono tramite HTTPS.\n\n8) Consenso esplicito\nLa registrazione all’app ASConnect richiede il consenso esplicito e informato dell’utente per il trattamento descritto nella sezione 2.\nGli utenti possono revocare il consenso in qualsiasi momento tramite le impostazioni dell’account o contattando contact@fastfrance.org.",
+
+  "contactPageTitle": "Contattaci",
+  "contactSendMessageTitle": "Invia un messaggio",
+  "contactSubjectLabel": "Titolo",
+  "contactSubjectHint": "Oggetto della tua richiesta",
+  "contactMessageLabel": "Messaggio",
+  "contactMessageHint": "Descrivi la tua richiesta…",
+  "contactAntiSpamTitle": "Verifica anti-spam",
+  "contactRefresh": "Aggiorna",
+  "contactCaptchaQuestion": "Quanto fa {a} + {b}?",
+  "@contactCaptchaQuestion": {
+    "placeholders": { "a": { "type": "int" }, "b": { "type": "int" } }
+  },
+  "contactCaptchaAnswerLabel": "Risposta",
+  "contactCaptchaRequired": "Captcha obbligatorio",
+  "contactCaptchaIncorrect": "Captcha non corretto.",
+  "contactSend": "Invia",
+  "contactSending": "Invio in corso…",
+  "contactCancel": "Annulla",
+  "contactMessageSent": "Messaggio inviato ✅",
+  "contactSendFailedWithCode": "Invio non riuscito ({code})",
+  "@contactSendFailedWithCode": {
+    "placeholders": { "code": { "type": "int" } }
+  },
+  "contactAccessDenied": "Accesso negato (chiave app mancante o non valida).",
+  "contactTooManyRequests": "Troppe richieste. Riprova tra qualche secondo.",
+  "contactServiceUnavailable": "Servizio temporaneamente non disponibile. Riprova più tardi.",
+  "contactCheckInternet": "Controlla la connessione internet.",
+  "contactTimeout": "Tempo scaduto. Riprova più tardi.",
+  "contactFooterNote": "Il tuo messaggio viene inviato tramite la nostra API pubblica sicura. Grazie!",
+  "contactMissingAppKey": "⚠️ Chiave app mancante. Avvia l'app con {command}",
+  "@contactMissingAppKey": {
+    "placeholders": { "command": { "type": "String" } }
+  },
+  "fieldRequired": "{field} è obbligatorio",
+  "@fieldRequired": {
+    "placeholders": { "field": { "type": "String" } }
+  },
+  "unexpectedError": "Errore imprevisto: {message}",
+  "@unexpectedError": {
+    "placeholders": { "message": { "type": "String" } }
+  },
+  "@errorWithMessage": {
+    "description": "Generic error message with details",
+    "placeholders": {
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "@serverErrorWithCode": {
+    "description": "Server error with HTTP/status code",
+    "placeholders": {
+      "code": {
+        "type": "int"
+      }
+    }
+  },
+  "commonOk": "OK",
+  "commonCancel": "Annulla",
+  "commonConfirm": "Conferma",
+  "emailRequired": "L'email è obbligatoria",
+  "emailInvalid": "Email non valida",
+  "editProfileImport": "Importa",
+  "editProfileTakePhoto": "Scatta una foto",
+  "editProfileDeletePhoto": "Elimina la mia foto",
+  "editProfileCancelSelection": "Annulla selezione",
+  "editProfilePhotoRequired": "Foto obbligatoria",
+  "editProfilePhotoRequiredHint": "Foto obbligatoria: importa o scatta una nuova foto.",
+  "editProfileAddPhotoToSave": "Aggiungi una foto per salvare",
+  "editProfilePhotoDeleted": "Foto eliminata ✅",
+  "editProfilePhotoTooLarge": "La foto supera i 4 MB ({size} MB).",
+  "@editProfilePhotoTooLarge": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "editProfilePhotoPickError": "Impossibile ottenere la foto: {message}",
+  "@editProfilePhotoPickError": {
+    "placeholders": {
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "editProfileProfileInfoTitle": "Informazioni del profilo",
+  "editProfileFirstNameLabel": "Nome",
+  "editProfileLastNameLabel": "Cognome",
+  "editProfileEmailLabel": "Indirizzo email",
+  "editProfileBirthDateLabel": "Data di nascita (gg/mm/aaaa)",
+  "editProfileBirthDateHelp": "Data di nascita",
+  "editProfileBirthDatePickTooltip": "Scegli una data",
+  "editProfileBirthDateRequired": "La data di nascita è obbligatoria",
+  "editProfileGenotypeLabel": "Genotipo",
+  "editProfileGenotypeRequired": "Il genotipo è obbligatorio",
+  "editProfileCityLabel": "Città",
+  "editProfileGeolocate": "Localizzami",
+  "editProfileGeoTooltip": "Aggiorna la tua posizione se è cambiata dopo la registrazione.",
+  "geoTitle": "Geolocalizzazione",
+  "geoInfoText": "Aggiorna la tua posizione se è cambiata dopo la registrazione.",
+  "editProfileLocationUpdated": "Posizione aggiornata{cityPart}",
+  "@editProfileLocationUpdated": {
+    "placeholders": {
+      "cityPart": {
+        "type": "String"
+      }
+    }
+  },
+  "editProfileSecretSectionTitle": "Domanda segreta",
+  "editProfileSecretQuestionLabel": "Domanda",
+  "editProfileSecretAnswerLabel": "Risposta segreta",
+  "editProfileChangePassword": "Cambia la mia password",
+  "passwordEnterFirst": "Inserisci prima una password",
+  "passwordMismatch": "Le password non coincidono",
+  "passwordMatch": "Le password coincidono",
+  "editProfilePasswordChanged": "Password cambiata ✅",
+  "editProfileSave": "Salva",
+  "editProfileSaving": "Salvataggio…",
+  "editProfileChangesSaved": "Modifiche salvate ✅",
+  "editProfileTimeoutLoading": "Tempo scaduto durante il caricamento del profilo.",
+  "editProfileLoadError": "Errore di caricamento: {message}",
+  "@editProfileLoadError": {
+    "placeholders": {
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "editProfileTimeoutGeneric": "Tempo scaduto. Riprova.",
+  "editProfileErrorGeneric": "Errore: {message}",
+  "@editProfileErrorGeneric": {
+    "placeholders": {
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "genotypeUPD": "UPD",
+  "genotypeICD": "ICD",
+  "secretQ1": "Qual è il cognome da nubile di tua madre?",
+  "secretQ2": "Qual è il nome del tuo attore preferito?",
+  "secretQ3": "Qual è il nome del tuo animale preferito?",
+  "mapPersonTileIsMeHint": "Questo è il tuo profilo",
+  "mapPersonTileSendHint": "Invia un messaggio…",
+  "mapPersonTileCannotWriteTooltip": "Non puoi scrivere a te stesso",
+  "mapPersonTileSendTooltip": "Invia",
+
+  "mapPersonTileSendFailed": "Invio non riuscito: {error}",
+  "@mapPersonTileSendFailed": {
+    "placeholders": { "error": {} }
+  },
+
+  "mapPersonTileAge": "{age} anni",
+  "@mapPersonTileAge": {
+    "placeholders": { "age": { "type": "int" } }
+  },
+  "mapFiltersButtonTooltip": "Filtri",
+  "mapNoFilters": "Nessun filtro",
+  "mapGenotypeCount": "{count, plural, one{{count} genotipo} other{{count} genotipi}}",
+  "mapAgeRangeYears": "{min}–{max} anni",
+  "mapDistanceMaxKm": "≤ {km} km",
+  "mapPeopleCountBanner": "{count, plural, one{{count} persona} other{{count} persone}}",
+  "mapReloadFromNetworkTooltip": "Ricarica (rete, ignora filtri, aggiorna cache)",
+  "mapTilesBlockedInReleaseMessage": "Le tile OSM sono disabilitate in produzione.\nConfigura una chiave MapTiler (o imposta allowOsmInRelease=true).",
+  "mapInitializingDataMessage": "Stiamo inizializzando tutti i dati…",
+  "mapNetworkUnavailableCacheUsed": "Rete non disponibile — cache utilizzata: {error}",
+  "mapLoadGenericError": "Errore di caricamento: {error}",
+  "mapFilterError": "Errore filtro: {error}",
+  "mapLocationServiceDisabled": "Servizio di localizzazione disattivato",
+  "mapLocationPermissionDenied": "Permesso di localizzazione negato",
+  "mapLocationUnavailable": "Posizione non disponibile: {error}",
+  "mapPhotoViewerBarrierLabel": "Foto",
+  "mapClose": "Chiudi",
+  "mapCityPeopleCount": "{city} • {count, plural, one{{count} persona} other{{count} persone}}",
+  "mapResultsCount": "{count, plural, one{{count} risultato} other{{count} risultati}}",
+  "mapNoResultsWithTheseFilters": "Nessun risultato con questi filtri (genotipo/distanza).",
+  "mapDistanceTitle": "Distanza (dalla mia posizione)",
+  "mapEnableDistanceFilter": "Abilita filtro distanza",
+  "mapOriginDefined": "Origine: {lat}, {lon}",
+  "mapOriginUndefined": "Origine: non impostata",
+  "mapMyPosition": "La mia posizione",
+  "mapKmLabel": "{km} km",
+  "mapGenotypeTitle": "Genotipo",
+  "mapAgeTitle": "Età (anni)",
+  "mapMinValue": "Min: {value}",
+  "mapMaxValue": "Max: {value}",
+  "mapReset": "Reimposta",
+  "mapCancel": "Annulla",
+  "mapApply": "Applica",
+  "genotypeDeletion": "Delezione",
+  "genotypeMutation": "Mutazione",
+  "genotypeUpd": "UPD",
+  "genotypeIcd": "ICD",
+  "genotypeClinical": "Clinico",
+  "genotypeMosaic": "Mosaico",
+  "mapCountryTitle": "Paesi",
+  "mapAllCountriesSelected": "Tutti i paesi",
+  "mapCountriesSelectedCount": "{count} paesi selezionati",
+  "mapSelectAll": "Seleziona tutto",
+  "mapClear": "Cancella selezione",
+
+  "@mapCountriesSelectedCount": {
+    "description": "Number of selected countries in map filter",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "mapBack": "Indietro",
+  "chatWithName": "Chat con {name}",
+  "@chatWithName": { "placeholders": { "name": {} } },
+  "conversationsReconnectToSee": "Accedi di nuovo per visualizzare le tue conversazioni.",
+  "loading": "Caricamento…",
+  "conversationsEmpty": "Nessuna conversazione",
+  "conversationsNoMessage": "Nessun messaggio",
+
+  "conversationsLoadError": "Errore di caricamento: {error}",
+  "@conversationsLoadError": {
+    "placeholders": { "error": {} }
+  },
+
+  "conversationsLeaveTitle": "Uscire dalla conversazione?",
+  "conversationsLeaveBody": "Sei sicuro di voler uscire da questa conversazione?\nTutti i tuoi messaggi verranno eliminati.",
+  "conversationsLeaveConfirm": "Esci",
+
+  "cancel": "Annulla",
+  "close": "Chiudi",
+  "photo": "Foto",
+  "yesterday": "ieri",
+  "genericError": "Errore: {error}",
+  "@genericError": {
+    "placeholders": { "error": {} }
+  },
+  "today": "Oggi",
+  "chatNoMessagesYet": "Nessun messaggio ancora.",
+  "chatLoadMessagesError": "Errore nel caricamento dei messaggi: {error}",
+  "@chatLoadMessagesError": { "placeholders": { "error": {} } },
+
+  "chatSendError": "Errore durante l'invio: {error}",
+  "@chatSendError": { "placeholders": { "error": {} } },
+
+  "chatEditMessageTitle": "Modifica messaggio",
+  "chatYourMessageHint": "Il tuo messaggio",
+  "chatEditError": "Errore durante la modifica: {error}",
+  "@chatEditError": { "placeholders": { "error": {} } },
+
+  "chatDeleteMessageTitle": "Eliminare il messaggio?",
+  "chatDeleteMessageBody": "Questo messaggio verrà contrassegnato come eliminato in questa conversazione.",
+  "chatDeleteError": "Errore durante l'eliminazione: {error}",
+  "@chatDeleteError": { "placeholders": { "error": {} } },
+
+  "chatReactError": "Errore durante la reazione: {error}",
+  "@chatReactError": { "placeholders": { "error": {} } },
+
+  "chatLeaveConversationBody": "Sei sicuro di voler uscire dalla conversazione ed eliminare tutti i tuoi messaggi?",
+  "chatLeaveError": "Errore durante l'uscita: {error}",
+  "@chatLeaveError": { "placeholders": { "error": {} } },
+
+  "message": "Messaggio",
+  "send": "Invia",
+  "edited": "modificato",
+  "deletedMessage": "Messaggio eliminato",
+
+  "edit": "Modifica",
+  "reply": "Rispondi",
+  "save": "Salva",
+  "delete": "Elimina",
+  "languageName": "Italiano"
+}
