@@ -65,5 +65,6 @@ flutter:
   assets:
     - assets/images/ImageFond.png
     - assets/images/FAST-France-Logo_Black.png
+    - assets/images/Accueil_Image.png
   # assets:
   #   - assets/icons/ASConnect.png
