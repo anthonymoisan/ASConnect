@@ -255,7 +255,7 @@ extension _MapPeopleUI on _MapPeopleByCityState {
         // ✅ limite la consommation
         maxZoom: 10, // au lieu de 19
         minZoom: 1,
-
+        maxNativeZoom: 10,
         // ✅ important : pas de retina tiles
         retinaMode: false,
 
