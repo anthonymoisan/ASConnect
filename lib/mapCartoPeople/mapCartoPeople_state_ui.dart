@@ -27,12 +27,15 @@ extension _MapPeopleUI on _MapPeopleByCityState {
           options: MapOptions(
             initialCenter: _initialCenter,
             initialZoom: _initialZoom,
+
+            minZoom: 1,
+            maxZoom: 10,
             interactionOptions: const InteractionOptions(
               flags: InteractiveFlag.all & ~InteractiveFlag.rotate,
             ),
             onMapEvent: (evt) {
               final z = evt.camera.zoom;
-              if ((z - _currentZoom).abs() > 0.01) {
+              if ((z - _currentZoom).abs() > 0.05) {
                 _currentZoom = z;
                 _rebuildMarkers();
               }
@@ -247,9 +250,15 @@ extension _MapPeopleUI on _MapPeopleByCityState {
     if (!canUseOsm && (widget.mapTilerApiKey?.isNotEmpty ?? false)) {
       return TileLayer(
         urlTemplate:
-            'https://api.maptiler.com/maps/streets-v2/{z}/{x}/{y}.png?key={key}',
+            'https://api.maptiler.com/maps/streets-v2/256/{z}/{x}/{y}.png?key={key}',
         additionalOptions: {'key': widget.mapTilerApiKey!},
-        maxZoom: 19,
+        // ✅ limite la consommation
+        maxZoom: 10, // au lieu de 19
+        minZoom: 1,
+
+        // ✅ important : pas de retina tiles
+        retinaMode: false,
+
         tileProvider: NetworkTileProvider(),
       );
     }

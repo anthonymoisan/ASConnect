@@ -47,6 +47,7 @@ class _MapPeopleByCityState extends State<MapPeopleByCity>
       _clustersCacheTime != null &&
       DateTime.now().difference(_clustersCacheTime!) < _cacheTtl;
 
+  int _markersSignature = 0;
   // Marqueurs pour clustering
   final List<Marker> _cityMarkers = [];
 
