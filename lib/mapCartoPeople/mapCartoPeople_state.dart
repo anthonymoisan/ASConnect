@@ -51,6 +51,8 @@ class _MapPeopleByCityState extends State<MapPeopleByCity>
   // Marqueurs pour clustering
   final List<Marker> _cityMarkers = [];
 
+  bool _connectedOnly = false;
+
   // Filtres (valeurs attendues côté API)
   static const List<String> _genotypeOptions = <String>[
     'Délétion',

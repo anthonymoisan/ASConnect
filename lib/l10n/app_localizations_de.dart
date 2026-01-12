@@ -1159,4 +1159,16 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get languageName => 'Deutsch';
+
+  @override
+  String get mapConnectionSectionTitle => 'Verbindung';
+
+  @override
+  String get mapConnectedOnlyLabel => 'Nur verbundene Personen anzeigen';
+
+  @override
+  String get mapConnectedOnlyHint => 'Blendet Offline-Profile aus.';
+
+  @override
+  String get mapConnectedOnlyChip => 'Verbunden';
 }

@@ -77,6 +77,8 @@ extension _MapPeopleFilters on _MapPeopleByCityState {
       ..clear()
       ..addAll(_countryOptions);
 
+    _connectedOnly = false;
+
     _selectedMinAge = _datasetMinAge;
     _selectedMaxAge = _datasetMaxAge;
 
@@ -139,6 +141,11 @@ extension _MapPeopleFilters on _MapPeopleByCityState {
         return _selectedCountries.contains(v);
       }
 
+      bool matchesConnected(_Person p) {
+        if (!_connectedOnly) return true;
+        return p.isConnected;
+      }
+
       bool matchesAge(int? age) {
         if (_selectedMinAge == null || _selectedMaxAge == null) return true;
         if (age == null) return false;
@@ -156,7 +163,8 @@ extension _MapPeopleFilters on _MapPeopleByCityState {
           for (final p in c.people) {
             if (matchesGenotype(p.genotype) &&
                 matchesAge(p.ageInt) &&
-                matchesCountry(p.countryCode)) {
+                matchesCountry(p.countryCode) &&
+                matchesConnected(p)) {
               filteredPeople.add(p);
             }
           }
@@ -248,6 +256,8 @@ extension _MapPeopleFilters on _MapPeopleByCityState {
           )
         : null;
 
+    final connectedPart = _connectedOnly ? l10n.mapConnectedOnlyChip : null;
+
     final distActive =
         _distanceFilterEnabled &&
         _distanceOrigin != null &&
@@ -261,6 +271,7 @@ extension _MapPeopleFilters on _MapPeopleByCityState {
       countryPart,
       agePart,
       distPart,
+      connectedPart,
     ].whereType<String>().toList();
 
     return parts.isEmpty ? l10n.mapNoFilters : parts.join(' • ');
@@ -347,6 +358,8 @@ extension _MapPeopleFilters on _MapPeopleByCityState {
     // ✅ s'assure qu'on a les libellés pays dans la bonne langue
     await _ensureCountryLabelsForLocale(context);
 
+    bool localConnectedOnly = _connectedOnly;
+
     final tempCountries = Set<String>.from(_selectedCountries);
     final tempGenos = Set<String>.from(_selectedGenotypes);
     int? localMin = _selectedMinAge ?? _datasetMinAge;
@@ -366,6 +379,11 @@ extension _MapPeopleFilters on _MapPeopleByCityState {
         if (norm == sel.trim().toLowerCase()) return true;
       }
       return false;
+    }
+
+    bool connectedOk(_Person p) {
+      if (!localConnectedOnly) return true;
+      return p.isConnected;
     }
 
     bool countryOk(String? iso2) {
@@ -389,7 +407,9 @@ extension _MapPeopleFilters on _MapPeopleByCityState {
       for (final c in _allClusters) {
         if (!distanceOk(c.latLng)) continue;
         for (final p in c.people) {
-          if (genotypeOk(p.genotype) && countryOk(p.countryCode)) {
+          if (genotypeOk(p.genotype) &&
+              countryOk(p.countryCode) &&
+              connectedOk(p)) {
             out.add(p);
           }
         }
@@ -444,6 +464,7 @@ extension _MapPeopleFilters on _MapPeopleByCityState {
         for (final p in c.people) {
           if (!tempGenos.contains((p.genotype ?? '').trim())) continue;
           if (!countryOk(p.countryCode)) continue;
+          if (!connectedOk(p)) continue;
 
           final a = p.ageInt;
           if (a != null && a >= minA && a <= maxA) count++;
@@ -641,6 +662,25 @@ extension _MapPeopleFilters on _MapPeopleByCityState {
 
                       const SizedBox(height: 16),
 
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          l10n.mapConnectionSectionTitle,
+                          style: const TextStyle(fontWeight: FontWeight.w700),
+                        ),
+                      ),
+                      SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: Text(l10n.mapConnectedOnlyLabel),
+                        value: localConnectedOnly,
+                        onChanged: (v) {
+                          setModalState(() => localConnectedOnly = v);
+                          _syncAgeSelectionToDomain(setModalState);
+                        },
+                      ),
+
+                      const SizedBox(height: 16),
+
                       // Pays
                       Align(
                         alignment: Alignment.centerLeft,
@@ -799,6 +839,7 @@ extension _MapPeopleFilters on _MapPeopleByCityState {
                           TextButton(
                             child: Text(l10n.mapReset),
                             onPressed: () {
+                              localConnectedOnly = false;
                               setModalState(() {
                                 ageTouched = false;
                                 tempCountries
@@ -833,6 +874,8 @@ extension _MapPeopleFilters on _MapPeopleByCityState {
                             icon: const Icon(Ionicons.checkmark),
                             label: Text(l10n.mapApply),
                             onPressed: () async {
+                              _connectedOnly = localConnectedOnly;
+
                               _selectedGenotypes
                                 ..clear()
                                 ..addAll(tempGenos);

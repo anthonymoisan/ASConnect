@@ -588,5 +588,9 @@
   "reply": "Odpowiedz",
   "save": "Zapisz",
   "delete": "Usuń",
-  "languageName": "Polski"
+  "languageName": "Polski",
+  "mapConnectionSectionTitle": "Połączenie",
+  "mapConnectedOnlyLabel": "Pokaż tylko osoby połączone",
+  "mapConnectedOnlyHint": "Ukrywa profile offline.",
+  "mapConnectedOnlyChip": "Połączeni"
 }

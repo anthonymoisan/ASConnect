@@ -2144,6 +2144,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'English'**
   String get languageName;
+
+  /// No description provided for @mapConnectionSectionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Connection'**
+  String get mapConnectionSectionTitle;
+
+  /// No description provided for @mapConnectedOnlyLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Show connected people only'**
+  String get mapConnectedOnlyLabel;
+
+  /// No description provided for @mapConnectedOnlyHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Hides offline profiles.'**
+  String get mapConnectedOnlyHint;
+
+  /// No description provided for @mapConnectedOnlyChip.
+  ///
+  /// In en, this message translates to:
+  /// **'Connected'**
+  String get mapConnectedOnlyChip;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

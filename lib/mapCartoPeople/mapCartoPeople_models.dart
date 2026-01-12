@@ -13,6 +13,7 @@ class _Person {
   final double? longitude;
   final int? ageInt; // âge (années)
   final String? genotype;
+  final bool isConnected;
 
   _Person({
     this.id,
@@ -25,6 +26,7 @@ class _Person {
     this.longitude,
     this.ageInt,
     this.genotype,
+    this.isConnected = false,
   });
 
   factory _Person.fromJson(Map<String, dynamic> json) {
@@ -50,7 +52,16 @@ class _Person {
       longitude: lon,
       ageInt: _parseAgeInt(json['age']),
       genotype: json['genotype']?.toString(),
+      isConnected: _parseIsConnected(json['is_connected']),
     );
+  }
+
+  static bool _parseIsConnected(dynamic v) {
+    if (v == null) return false;
+    if (v is bool) return v;
+    if (v is num) return v != 0;
+    final s = v.toString().trim().toLowerCase();
+    return s == '1' || s == 'true' || s == 'yes';
   }
 
   String get fullName {

@@ -591,5 +591,9 @@
   "reply": "Répondre",
   "save": "Enregistrer",
   "delete": "Supprimer",
-  "languageName": "Français"
+  "languageName": "Français",
+  "mapConnectionSectionTitle": "Connexion",
+  "mapConnectedOnlyLabel": "Afficher uniquement les personnes connectées",
+  "mapConnectedOnlyHint": "Masque les profils hors ligne.",
+  "mapConnectedOnlyChip": "Connectés"
 }

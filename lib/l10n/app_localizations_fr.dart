@@ -1159,4 +1159,16 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get languageName => 'Français';
+
+  @override
+  String get mapConnectionSectionTitle => 'Connexion';
+
+  @override
+  String get mapConnectedOnlyLabel => 'Afficher uniquement les personnes connectées';
+
+  @override
+  String get mapConnectedOnlyHint => 'Masque les profils hors ligne.';
+
+  @override
+  String get mapConnectedOnlyChip => 'Connectés';
 }
