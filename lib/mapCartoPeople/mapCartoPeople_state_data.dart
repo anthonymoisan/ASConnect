@@ -4,24 +4,94 @@ part of map_carto_people;
 
 extension _MapPeopleData on _MapPeopleByCityState {
   // ------------------------------
+  // ✅ Helper: apply a dataset (clusters) and rebuild all derived state consistently
+  // ------------------------------
+  void _applyClustersAsDataset(
+    List<_CityCluster> clusters, {
+    required bool fit,
+  }) {
+    _allClusters = clusters;
+
+    // Bornes d’âge dataset
+    final ages =
+        _allClusters
+            .expand((c) => c.people.map((p) => p.ageInt))
+            .whereType<int>()
+            .toList()
+          ..sort();
+
+    if (ages.isNotEmpty) {
+      _datasetMinAge = ages.first;
+      _datasetMaxAge = ages.last;
+      _selectedMinAge ??= _datasetMinAge;
+      _selectedMaxAge ??= _datasetMaxAge;
+    }
+
+    // Pays options
+    final countries =
+        _allClusters
+            .expand((c) => c.people)
+            .map((p) => (p.countryCode ?? '').trim().toUpperCase())
+            .where((c) => c.length == 2)
+            .toSet()
+            .toList()
+          ..sort();
+
+    _countryOptions = countries;
+
+    if (_selectedCountries.isEmpty ||
+        _selectedCountries.length != _countryOptions.length) {
+      _selectedCountries
+        ..clear()
+        ..addAll(_countryOptions);
+    }
+
+    // Niveau & clusters pays
+    _level = _MapLevel.country;
+    _activeCountry = null;
+    _countryClusters = _buildCountryClustersFromCityClusters(_allClusters);
+
+    // ✅ important pour rebuild markers / drilldown
+    _filteredAllClusters = _allClusters;
+
+    _rebuildMarkers();
+
+    if (fit) {
+      _fitOnNextFrameOnceCountry();
+    }
+  }
+
+  // ------------------------------
+  // ✅ Fit signature: avoid refit if the dataset bounds didn't really change
+  // (reduces MapTiler tile downloads)
+  // ------------------------------
+  int _computeFitSig(List<_CountryCluster> cc) {
+    if (cc.isEmpty) return 0;
+
+    final lats = cc.map((c) => c.latLng.latitude).toList()..sort();
+    final lngs = cc.map((c) => c.latLng.longitude).toList()..sort();
+
+    // quantize to reduce sensitivity to tiny variations
+    final minLat = (lats.first * 100).round();
+    final maxLat = (lats.last * 100).round();
+    final minLng = (lngs.first * 100).round();
+    final maxLng = (lngs.last * 100).round();
+
+    return minLat ^ (maxLat << 6) ^ (minLng << 12) ^ (maxLng << 18) ^ cc.length;
+  }
+
+  // ------------------------------
   // Country labels (ISO2 -> translated)
   // ------------------------------
-  // Cache in-memory des labels pays pour la locale courante
-  // (déclaré ici via extension: c'est ok car on écrit sur des champs du State)
-  //
-  // >>> IMPORTANT : ces champs doivent exister dans ton State (_MapPeopleByCityState).
-  // Si tu ne les as pas encore, ajoute-les dans mapCartoPeople.dart (State) :
-  //
-  // Map<String, String> _countryLabelsByIso2 = {};
-  // String? _countryLabelsLocale;
-  // bool _loadingCountryLabels = false;
-  //
-  // (Je les utilise ci-dessous.)
-
   Future<void> _ensureCountryLabelsForLocale(BuildContext context) async {
-    final locale = Localizations.localeOf(
-      context,
-    ).languageCode; // "fr", "en", "es", "de", ...
+    final loc = Localizations.localeOf(context);
+
+    // Use "pt_BR" style if countryCode exists, else "fr"
+    final String locale =
+        (loc.countryCode != null && loc.countryCode!.trim().isNotEmpty)
+        ? '${loc.languageCode}_${loc.countryCode}'
+        : loc.languageCode;
+
     if (_countryLabelsLocale == locale && _countryLabelsByIso2.isNotEmpty) {
       return;
     }
@@ -30,8 +100,10 @@ extension _MapPeopleData on _MapPeopleByCityState {
     _loadingCountryLabels = true;
 
     try {
-      final uri = Uri.parse(
-        "https://anthonymoisan.pythonanywhere.com/api/public/people/countriesTranslated?locale=$locale",
+      final uri = Uri.https(
+        'anthonymoisan.pythonanywhere.com',
+        '/api/public/people/countriesTranslated',
+        {'locale': locale},
       );
 
       final res = await http
@@ -83,7 +155,7 @@ extension _MapPeopleData on _MapPeopleByCityState {
           _countryLabelsLocale = locale;
         });
       }
-    } catch (e) {
+    } catch (_) {
       // Fallback : labels vides => l'UI affichera l'ISO2
       if (mounted) {
         setState(() {
@@ -144,43 +216,20 @@ extension _MapPeopleData on _MapPeopleByCityState {
     debugPrint(
       "[MAP_PEOPLE] 🔄 _reloadFromCacheIgnoringFilters (cacheFresh=$cacheFreshNow)",
     );
+
     if (cacheFreshNow) {
-      _allClusters = List<_CityCluster>.from(_clustersCache!);
-
-      final ages =
-          _allClusters
-              .expand((c) => c.people.map((p) => p.ageInt))
-              .whereType<int>()
-              .toList()
-            ..sort();
-
-      if (ages.isNotEmpty) {
-        _datasetMinAge = ages.first;
-        _datasetMaxAge = ages.last;
+      if (mounted) {
+        setState(() {
+          _error = null;
+          _loading = false;
+          _initializing = false;
+        });
       }
 
-      final countries =
-          _allClusters
-              .expand((c) => c.people)
-              .map((p) => (p.countryCode ?? '').trim().toUpperCase())
-              .where((c) => c.length == 2)
-              .toSet()
-              .toList()
-            ..sort((a, b) => a.compareTo(b));
-
-      _countryOptions = countries;
-
-      if (_selectedCountries.isEmpty ||
-          _selectedCountries.length != _countryOptions.length) {
-        _selectedCountries
-          ..clear()
-          ..addAll(_countryOptions);
-      }
-
-      _level = _MapLevel.country;
-      _activeCountry = null;
-      _countryClusters = _buildCountryClustersFromCityClusters(_allClusters);
-
+      _applyClustersAsDataset(
+        List<_CityCluster>.from(_clustersCache!),
+        fit: true,
+      );
       _resetFiltersToDefault(rebuild: true);
       return;
     }
@@ -194,7 +243,9 @@ extension _MapPeopleData on _MapPeopleByCityState {
     debugPrint(
       "[MAP_PEOPLE] 🔄 _reloadFromNetworkIgnoringFilters (force network)",
     );
-    _didInitialFit = false;
+
+    // ✅ ne force plus un refit systématique
+    // _didInitialFit = false;
 
     await _loadAndBuild(force: true);
     _resetFiltersToDefault(rebuild: true);
@@ -217,65 +268,38 @@ extension _MapPeopleData on _MapPeopleByCityState {
     _loadingInProgress = true;
 
     try {
-      setState(() {
-        _loading = true;
-        _error = null;
-        _cityMarkers.clear();
-        _clusters = [];
-        _allClusters = [];
-        _countryClusters = [];
-        if (!_firstLoadTried) _initializing = true;
-      });
+      if (mounted) {
+        setState(() {
+          _loading = true;
+          _error = null;
+
+          // ✅ prefer replacing list reference (safer if you later re-enable clustering)
+          _cityMarkers = const <Marker>[];
+
+          _clusters = [];
+          _allClusters = [];
+          _countryClusters = [];
+
+          if (!_firstLoadTried) _initializing = true;
+        });
+      }
 
       // ----------------- CACHE -----------------
       if (!force && _cacheIsFresh) {
         debugPrint("[MAP_PEOPLE] ✅ Utilisation du cache en mémoire");
-        _allClusters = List<_CityCluster>.from(_clustersCache!);
 
-        final ages =
-            _allClusters
-                .expand((c) => c.people.map((p) => p.ageInt))
-                .whereType<int>()
-                .toList()
-              ..sort();
+        _applyClustersAsDataset(
+          List<_CityCluster>.from(_clustersCache!),
+          fit: true,
+        );
 
-        final countries =
-            _allClusters
-                .expand((c) => c.people)
-                .map((p) => (p.countryCode ?? '').trim().toUpperCase())
-                .where((c) => c.length == 2)
-                .toSet()
-                .toList()
-              ..sort((a, b) => a.compareTo(b));
-
-        _countryOptions = countries;
-
-        if (_selectedCountries.isEmpty ||
-            _selectedCountries.length != _countryOptions.length) {
-          _selectedCountries
-            ..clear()
-            ..addAll(_countryOptions);
+        if (mounted) {
+          setState(() {
+            _loading = false;
+            _firstLoadTried = true;
+            _initializing = false;
+          });
         }
-
-        if (ages.isNotEmpty) {
-          _datasetMinAge = ages.first;
-          _datasetMaxAge = ages.last;
-          _selectedMinAge ??= _datasetMinAge;
-          _selectedMaxAge ??= _datasetMaxAge;
-        }
-
-        _level = _MapLevel.country;
-        _activeCountry = null;
-        _countryClusters = _buildCountryClustersFromCityClusters(_allClusters);
-
-        _rebuildMarkers();
-        _fitOnNextFrameOnceCountry();
-
-        setState(() {
-          _loading = false;
-          _firstLoadTried = true;
-          _initializing = false;
-        });
         return;
       }
 
@@ -325,6 +349,7 @@ extension _MapPeopleData on _MapPeopleByCityState {
                 p.longitude != null,
           )
           .toList();
+
       final buildPeopleDur = DateTime.now()
           .difference(buildPeopleStart)
           .inMilliseconds;
@@ -335,42 +360,30 @@ extension _MapPeopleData on _MapPeopleByCityState {
       // Clusters villes
       final clusterStart = DateTime.now();
       final Map<String, _CityCluster> clustersMap = {};
+
       for (final p in people) {
         final key = (p.city ?? '').trim().toLowerCase();
         if (key.isEmpty) continue;
+
         final pos = LatLng(p.latitude!, p.longitude!);
+
         clustersMap.putIfAbsent(
           key,
           () => _CityCluster(city: p.city!.trim(), latLng: pos, people: []),
         );
         clustersMap[key]!.people.add(p);
       }
-      _allClusters = clustersMap.values.toList();
 
-      final countries =
-          people
-              .map((p) => (p.countryCode ?? '').trim().toUpperCase())
-              .where((c) => c.length == 2)
-              .toSet()
-              .toList()
-            ..sort((a, b) => a.compareTo(b));
-      _countryOptions = countries;
-
-      if (_selectedCountries.isEmpty ||
-          _selectedCountries.length != _countryOptions.length) {
-        _selectedCountries
-          ..clear()
-          ..addAll(_countryOptions);
-      }
+      final builtClusters = clustersMap.values.toList();
 
       final clusterDur = DateTime.now().difference(clusterStart).inMilliseconds;
       debugPrint(
-        "[MAP_PEOPLE] 🏙️ ${_allClusters.length} clusters ville construits en ${clusterDur} ms",
+        "[MAP_PEOPLE] 🏙️ ${builtClusters.length} clusters ville construits en ${clusterDur} ms",
       );
 
       // Cache
       final cacheStart = DateTime.now();
-      _clustersCache = _allClusters
+      _clustersCache = builtClusters
           .map(
             (c) => _CityCluster(
               city: c.city,
@@ -380,34 +393,14 @@ extension _MapPeopleData on _MapPeopleByCityState {
           )
           .toList();
       _clustersCacheTime = DateTime.now();
+
       final cacheDur = DateTime.now().difference(cacheStart).inMilliseconds;
       debugPrint(
-        "[MAP_PEOPLE] 🧠 Cache mis à jour en ${cacheDur} ms (clusters=${_allClusters.length})",
+        "[MAP_PEOPLE] 🧠 Cache mis à jour en ${cacheDur} ms (clusters=${builtClusters.length})",
       );
 
-      // Bornes d’âge dataset
-      final ageStart = DateTime.now();
-      final allAges = people.map((e) => e.ageInt).whereType<int>().toList()
-        ..sort();
-      if (allAges.isNotEmpty) {
-        _datasetMinAge = allAges.first;
-        _datasetMaxAge = allAges.last;
-        _selectedMinAge ??= _datasetMinAge;
-        _selectedMaxAge ??= _datasetMaxAge;
-      }
-      final ageDur = DateTime.now().difference(ageStart).inMilliseconds;
-      debugPrint(
-        "[MAP_PEOPLE] 📊 Bornes d’âge calculées en ${ageDur} ms (min=$_datasetMinAge, max=$_datasetMaxAge)",
-      );
-
-      _level = _MapLevel.country;
-      _activeCountry = null;
-      _countryClusters = _buildCountryClustersFromCityClusters(_allClusters);
-
-      _filteredAllClusters = _allClusters;
-
-      _rebuildMarkers();
-      _fitOnNextFrameOnceCountry();
+      // ✅ Apply dataset consistently
+      _applyClustersAsDataset(builtClusters, fit: true);
     } catch (e, st) {
       debugPrint("[MAP_PEOPLE] ❌ Exception dans _loadAndBuild: $e");
       debugPrint("[MAP_PEOPLE] Stack: $st");
@@ -416,15 +409,15 @@ extension _MapPeopleData on _MapPeopleByCityState {
         debugPrint(
           "[MAP_PEOPLE] ⚠️ Erreur réseau mais cache dispo, utilisation du cache",
         );
-        _allClusters = List<_CityCluster>.from(_clustersCache!);
 
-        _level = _MapLevel.country;
-        _activeCountry = null;
-        _countryClusters = _buildCountryClustersFromCityClusters(_allClusters);
+        // ✅ Rejoue la même logique que le chemin cache normal
+        _applyClustersAsDataset(
+          List<_CityCluster>.from(_clustersCache!),
+          fit: false, // évite un refit => évite des tuiles MapTiler
+        );
 
-        _rebuildMarkers();
-
-        if (mounted) {
+        // SnackBar seulement si l'écran n'est plus en "initializing"
+        if (mounted && !_initializing) {
           final l10n = AppLocalizations.of(context)!;
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -446,7 +439,9 @@ extension _MapPeopleData on _MapPeopleByCityState {
       debugPrint(
         "[MAP_PEOPLE] ⏱️ _loadAndBuild(force=$force) FIN en ${totalMs} ms",
       );
+
       _loadingInProgress = false;
+
       if (mounted) {
         setState(() {
           _loading = false;
@@ -458,11 +453,21 @@ extension _MapPeopleData on _MapPeopleByCityState {
   }
 
   // Fit après frame : clusters pays
+  // ✅ Optimisé: ne fit pas si les bounds n'ont pas vraiment changé
   void _fitOnNextFrameOnceCountry() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
+
+      final sig = _computeFitSig(_countryClusters);
+
+      // ⚠️ Assure-toi d’avoir dans ton State:
+      // int _lastFitSig = 0;
+      if (sig == _lastFitSig) return;
+      _lastFitSig = sig;
+
       if (_didInitialFit) return;
       _didInitialFit = true;
+
       _fitMapToCountryClusters(_countryClusters);
     });
   }

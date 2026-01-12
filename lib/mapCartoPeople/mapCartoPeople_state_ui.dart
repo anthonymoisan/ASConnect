@@ -1,9 +1,35 @@
-//build + tile layer + attribution
-
 // lib/mapCartoPeople/mapCartoPeople_state_ui.dart
+// Optimisations MapTiler (web + mobile):
+// - maxZoom réduit à 8 (au lieu de 10) => forte baisse de consommation de tuiles
+// - debounce sur onMapEvent (évite rebuild markers en continu)
+// - retinaMode désactivé + maxNativeZoom aligné
+
 part of map_carto_people;
 
 extension _MapPeopleUI on _MapPeopleByCityState {
+  static const double kTilesMinZoom = 1.0;
+  static const double kTilesMaxZoom = 8.0;
+
+  TileLayer _mapTilerTileLayer() => TileLayer(
+    urlTemplate:
+        'https://api.maptiler.com/maps/streets-v2/256/{z}/{x}/{y}.png?key={key}',
+    additionalOptions: {'key': widget.mapTilerApiKey ?? ''},
+    minZoom: kTilesMinZoom,
+    maxZoom: kTilesMaxZoom,
+    maxNativeZoom: kTilesMaxZoom.toInt(),
+    retinaMode: false,
+    tileProvider: NetworkTileProvider(),
+  );
+
+  TileLayer _osmTileLayer() => TileLayer(
+    urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+    userAgentPackageName: kUserAgentPackageName,
+    maxZoom: 19,
+    tileProvider: NetworkTileProvider(
+      headers: {'User-Agent': widget.osmUserAgent},
+    ),
+  );
+
   Widget buildMapPeopleUI(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
 
@@ -14,11 +40,14 @@ extension _MapPeopleUI on _MapPeopleByCityState {
 
     final bool isCityLevel = _level == _MapLevel.city;
 
-    // Badge texte central : "FR • 123" ou juste "123"
     final String bannerText =
         isCityLevel && (_activeCountry?.isNotEmpty ?? false)
         ? '${_activeCountry!.toUpperCase()} • ${l10n.mapPeopleCountBanner(_peopleCount)}'
         : l10n.mapPeopleCountBanner(_peopleCount);
+
+    final safeInitialZoom = _initialZoom
+        .clamp(kTilesMinZoom, kTilesMaxZoom)
+        .toDouble();
 
     return Stack(
       children: [
@@ -26,89 +55,36 @@ extension _MapPeopleUI on _MapPeopleByCityState {
           mapController: _map,
           options: MapOptions(
             initialCenter: _initialCenter,
-            initialZoom: _initialZoom,
-
-            minZoom: 1,
-            maxZoom: 10,
+            initialZoom: safeInitialZoom,
+            minZoom: kTilesMinZoom,
+            maxZoom: kTilesMaxZoom,
             interactionOptions: const InteractionOptions(
               flags: InteractiveFlag.all & ~InteractiveFlag.rotate,
             ),
+
+            // ✅ flutter_map v8: pas de MapEventZoomEnd => debounce cross-version
             onMapEvent: (evt) {
-              final z = evt.camera.zoom;
-              if ((z - _currentZoom).abs() > 0.05) {
-                _currentZoom = z;
+              _mapEventDebounce?.cancel();
+              _mapEventDebounce = Timer(const Duration(milliseconds: 180), () {
+                if (!mounted) return;
+
+                final z = _map.camera.zoom;
+                if ((z - _currentZoom).abs() > 0.10) {
+                  _currentZoom = z;
+                }
                 _rebuildMarkers();
-              }
+              });
             },
           ),
           children: [
-            if (!tilesBlockedInRelease && !_initializing) _buildTileLayer(),
+            if (!tilesBlockedInRelease && !_initializing)
+              _buildTileLayerOptimized(),
             _distanceCircleLayer(),
-
-            MarkerClusterLayerWidget(
-              options: MarkerClusterLayerOptions(
-                markers: _cityMarkers,
-                maxClusterRadius: 50,
-                spiderfyCircleRadius: 36,
-                spiderfySpiralDistanceMultiplier: 2,
-                disableClusteringAtZoom: 12,
-                size: const Size(48, 48),
-                zoomToBoundsOnClick: false,
-                onClusterTap: (cluster) {
-                  final points = cluster.markers.map((m) => m.point).toList();
-                  if (points.isEmpty) return;
-                  if (points.length == 1) {
-                    _map.move(
-                      points.first,
-                      (_currentZoom + 2).clamp(3.0, 18.0),
-                    );
-                    return;
-                  }
-                  final bounds = LatLngBounds.fromPoints(points);
-                  _map.fitCamera(
-                    CameraFit.bounds(
-                      bounds: bounds,
-                      padding: const EdgeInsets.all(24),
-                    ),
-                  );
-                },
-                builder: (context, markers) {
-                  final n = markers.length;
-                  return Container(
-                    width: 46,
-                    height: 46,
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      color: Colors.indigo.withOpacity(0.90),
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white, width: 2),
-                      boxShadow: const [
-                        BoxShadow(
-                          color: Colors.black26,
-                          blurRadius: 6,
-                          offset: Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: Text(
-                      '$n',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ),
-
-            // (tu l'avais déjà : je ne change pas)
-            MarkerLayer(markers: _cityMarkers),
+            if (_cityMarkers.isNotEmpty) MarkerLayer(markers: _cityMarkers),
             _buildAttribution(),
           ],
         ),
 
-        // ✅ Bouton retour (uniquement au niveau ville)
         if (isCityLevel)
           Positioned(
             left: 12,
@@ -123,7 +99,6 @@ extension _MapPeopleUI on _MapPeopleByCityState {
             ),
           ),
 
-        // ✅ Filtres : visibles uniquement au niveau pays
         if (!isCityLevel)
           Positioned(
             left: 12,
@@ -142,7 +117,6 @@ extension _MapPeopleUI on _MapPeopleByCityState {
             ),
           ),
 
-        // ✅ Badge central (avec pays si niveau ville)
         Positioned(
           left: 84,
           right: 84,
@@ -207,19 +181,15 @@ extension _MapPeopleUI on _MapPeopleByCityState {
             right: 12,
             top: 80,
             child: Card(
-              color: Colors.amber.shade50,
+              color: Colors.amberAccent,
               child: Padding(
                 padding: const EdgeInsets.all(12),
-                child: Text(
-                  l10n.mapTilesBlockedInReleaseMessage,
-                  style: TextStyle(color: Colors.amber.shade900),
-                ),
+                child: Text(l10n.mapTilesBlockedInReleaseMessage),
               ),
             ),
           ),
 
         if (_loading) const _PositionedFillLoader(),
-
         if (_initializing)
           _InitOverlay(message: l10n.mapInitializingDataMessage),
 
@@ -245,33 +215,13 @@ extension _MapPeopleUI on _MapPeopleByCityState {
     );
   }
 
-  Widget _buildTileLayer() {
+  Widget _buildTileLayerOptimized() {
     final canUseOsm = !kReleaseMode || widget.allowOsmInRelease;
 
     if (!canUseOsm && (widget.mapTilerApiKey?.isNotEmpty ?? false)) {
-      return TileLayer(
-        urlTemplate:
-            'https://api.maptiler.com/maps/streets-v2/256/{z}/{x}/{y}.png?key={key}',
-        additionalOptions: {'key': widget.mapTilerApiKey!},
-        // ✅ limite la consommation
-        maxZoom: 10, // au lieu de 19
-        minZoom: 1,
-        maxNativeZoom: 10,
-        // ✅ important : pas de retina tiles
-        retinaMode: false,
-
-        tileProvider: NetworkTileProvider(),
-      );
+      return _mapTilerTileLayer();
     }
-
-    return TileLayer(
-      urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-      userAgentPackageName: kUserAgentPackageName,
-      maxZoom: 19,
-      tileProvider: NetworkTileProvider(
-        headers: {'User-Agent': widget.osmUserAgent},
-      ),
-    );
+    return _osmTileLayer();
   }
 
   Widget _buildAttribution() {

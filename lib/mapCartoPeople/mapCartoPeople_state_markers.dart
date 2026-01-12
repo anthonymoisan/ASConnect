@@ -57,6 +57,13 @@ extension _MapPeopleMarkers on _MapPeopleByCityState {
     return _hashFinish(h);
   }
 
+  bool _shouldRebuildForZoom() {
+    final s = _zoomFactor;
+    if ((s - _lastMarkerScale).abs() < 0.08) return false;
+    _lastMarkerScale = s;
+    return true;
+  }
+
   void _rebuildMarkers() {
     final bool countryLevel = _level == _MapLevel.country;
 
@@ -66,8 +73,9 @@ extension _MapPeopleMarkers on _MapPeopleByCityState {
 
     if (countryLevel) {
       if (_countryClusters.isEmpty) {
+        // ✅ IMPORTANT: on remplace la référence de liste (pas de mutation in-place)
         if (_cityMarkers.isNotEmpty && mounted) {
-          setState(() => _cityMarkers.clear());
+          setState(() => _cityMarkers = const <Marker>[]);
         }
         return;
       }
@@ -109,8 +117,9 @@ extension _MapPeopleMarkers on _MapPeopleByCityState {
       }
     } else {
       if (_clusters.isEmpty) {
+        // ✅ IMPORTANT: on remplace la référence de liste (pas de mutation in-place)
         if (_cityMarkers.isNotEmpty && mounted) {
-          setState(() => _cityMarkers.clear());
+          setState(() => _cityMarkers = const <Marker>[]);
         }
         return;
       }
@@ -160,11 +169,9 @@ extension _MapPeopleMarkers on _MapPeopleByCityState {
 
     if (!mounted) return;
 
-    // 3) mise à jour IN-PLACE de la liste final
+    // 3) ✅ IMPORTANT: on remplace la référence de liste (pas de mutation in-place)
     setState(() {
-      _cityMarkers
-        ..clear()
-        ..addAll(next);
+      _cityMarkers = List<Marker>.unmodifiable(next);
     });
   }
 }

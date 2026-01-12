@@ -6,13 +6,19 @@ class _MapPeopleByCityState extends State<MapPeopleByCity>
   @override
   bool get wantKeepAlive => true;
 
-  final _map = MapController();
+  // Controller
+  final MapController _map = MapController();
+
+  // ---------------------------------------------------------------------------
+  // Data sources
+  // ---------------------------------------------------------------------------
 
   // Source filtrée globale (après application des filtres)
   // Sert de base au drilldown pays -> villes
-  List<_CityCluster> _filteredAllClusters = [];
+  List<_CityCluster> _filteredAllClusters = <_CityCluster>[];
 
-  Map<String, String> _countryLabelsByIso2 = {}; // ISO2 -> name translated
+  // i18n country labels (ISO2 -> translated name)
+  Map<String, String> _countryLabelsByIso2 = <String, String>{};
   String? _countryLabelsLocale;
   bool _loadingCountryLabels = false;
 
@@ -22,39 +28,56 @@ class _MapPeopleByCityState extends State<MapPeopleByCity>
   final _initialCenter = const LatLng(48.8566, 2.3522);
   final double _initialZoom = 5.5;
 
-  static const _userAgentPackageName = 'fr.asconnexion.app';
+  double _lastMarkerScale = 1.0;
 
+  // Debounce map events (used by UI)
+  Timer? _mapEventDebounce;
+
+  // Used by TileLayer (must match the constant you use in UI)
+  // If your UI uses `kUserAgentPackageName`, keep it consistent here.
+  static const String kUserAgentPackageName = 'fr.asconnexion.app';
+
+  // UI state
   bool _loading = false;
   String? _error;
 
-  // Pour éviter les appels parallèles
+  // Prevent parallel loads
   bool _loadingInProgress = false;
 
-  // Écran d'initialisation (masque la carte + tuiles grises au tout début)
-  bool _initializing = true; // tant que la 1ère charge n’est pas finie
+  // Init overlay (mask map at first load)
+  bool _initializing = true;
   bool _firstLoadTried = false;
 
-  // Données agrégées par ville (courantes vs source)
-  List<_CityCluster> _clusters = []; // vue courante (après filtres)
-  List<_CityCluster> _allClusters = []; // source (sans filtres)
+  // Clusters: current (filtered view) vs source (no filters)
+  List<_CityCluster> _clusters = <_CityCluster>[];
+  List<_CityCluster> _allClusters = <_CityCluster>[];
 
-  // --- CACHE en mémoire de la structure des clusters ---
+  // Cache in memory (clusters structure)
   List<_CityCluster>? _clustersCache;
   DateTime? _clustersCacheTime;
   static const Duration _cacheTtl = Duration(minutes: 10);
+
   bool get _cacheIsFresh =>
       _clustersCache != null &&
       _clustersCacheTime != null &&
       DateTime.now().difference(_clustersCacheTime!) < _cacheTtl;
 
+  // Markers
   int _markersSignature = 0;
-  // Marqueurs pour clustering
-  final List<Marker> _cityMarkers = [];
 
+  // IMPORTANT: not final because we may replace the list reference
+  // (useful if you go back to MarkerClusterLayerWidget later)
+  List<Marker> _cityMarkers = <Marker>[];
+
+  // Connected-only filter (if you use it server-side)
   bool _connectedOnly = false;
 
+  // ---------------------------------------------------------------------------
+  // Filters
+  // ---------------------------------------------------------------------------
+
   // Filtres (valeurs attendues côté API)
-  static const List<String> _genotypeOptions = <String>[
+  static const List<String> kGenotypeOptions = <String>[
     'Délétion',
     'Mutation',
     'UPD',
@@ -62,49 +85,54 @@ class _MapPeopleByCityState extends State<MapPeopleByCity>
     'Clinique',
     'Mosaïque',
   ];
-  final Set<String> _selectedGenotypes = {}; // tous cochés par défaut
+
+  final Set<String> _selectedGenotypes = <String>{}; // tous cochés par défaut
+
   int? _datasetMinAge;
   int? _datasetMaxAge;
   int? _selectedMinAge;
   int? _selectedMaxAge;
 
-  // Distance (km) depuis position utilisateur
+  // Distance filter (km) from user position
   LatLng? _distanceOrigin;
   double? _maxDistanceKm;
   bool _distanceFilterEnabled = false;
   final Distance _geo = const Distance();
 
-  // Tailles bulles
-  static const double _minSize = 20.0;
-  static const double _maxSize = 52.0;
-  // Courbure taille (gamma) — <1 gonfle petits cercles
-  static const double _sizeCurveGamma = 0.65;
+  // Bubble sizes used by marker builder (make sure markers file uses same consts)
+  // If your markers file uses kMinSize/kMaxSize/kSizeCurveGamma, keep those constants
+  // in a shared place. Here we keep the same names to reduce confusion.
+  static const double kMinSize = 20.0;
+  static const double kMaxSize = 52.0;
+  static const double kSizeCurveGamma = 0.65;
 
-  // Zoom dynamique
-  double _currentZoom = 5.5; // maj via onMapEvent
+  // Zoom dynamic scaling
+  double _currentZoom = 5.5;
+
   double get _zoomFactor {
     final dz = _currentZoom - _initialZoom;
     final f = math.pow(2.0, dz * 0.17).toDouble(); // ~ +12-13% / cran
     return f.clamp(0.6, 2.0);
   }
 
-  // Compteur de personnes (après filtres)
+  int _lastFitSig = 0;
+
+  // Count after filters
   int get _peopleCount {
-    // Au niveau pays : on veut le total sur TOUS les pays filtrés (country clusters visibles)
     if (_level == _MapLevel.country) {
       return _countryClusters.fold<int>(0, (sum, c) => sum + c.count);
     }
-    // Au niveau ville : total sur les villes visibles (clusters de villes)
     return _clusters.fold<int>(0, (sum, c) => sum + c.count);
   }
 
-  // Pays (options dynamiques depuis le dataset)
-  List<String> _countryOptions = [];
-  final Set<String> _selectedCountries = {}; // tous cochés par défaut
+  // Country options from dataset
+  List<String> _countryOptions = <String>[];
+  final Set<String> _selectedCountries = <String>{};
 
+  // Drill-down
   _MapLevel _level = _MapLevel.country;
-  String? _activeCountry; // ISO2 du pays drill-down
-  List<_CountryCluster> _countryClusters = [];
+  String? _activeCountry; // ISO2
+  List<_CountryCluster> _countryClusters = <_CountryCluster>[];
 
   @override
   void initState() {
@@ -119,22 +147,38 @@ class _MapPeopleByCityState extends State<MapPeopleByCity>
     _level = _MapLevel.country;
     _activeCountry = null;
 
-    // Par défaut : TOUS les génotypes cochés
-    _selectedGenotypes.addAll(kGenotypeOptions);
+    // Default: all genotypes selected
+    _selectedGenotypes
+      ..clear()
+      ..addAll(kGenotypeOptions);
+
     _currentZoom = _initialZoom;
 
+    // Country labels: use full locale (ex: pt_BR) when available, not just languageCode.
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) _ensureCountryLabelsForLocale(context);
+      if (!mounted) return;
+      _ensureCountryLabelsForLocale(context);
     });
-    _loadAndBuild(); // première charge (dans state_data.dart)
+
+    // First load
+    _loadAndBuild(); // in state_data.dart
+  }
+
+  @override
+  void dispose() {
+    // ✅ avoid timers firing after widget is gone
+    _mapEventDebounce?.cancel();
+    _mapEventDebounce = null;
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    super.build(context); // IMPORTANT pour keep-alive
-    return buildMapPeopleUI(context); // ✅ dans state_ui.dart
+    super.build(context); // IMPORTANT for keep-alive
+    return buildMapPeopleUI(context);
   }
 
+  // Fit after frame (legacy helper)
   void _fitOnNextFrameOnce(List<_CityCluster> clusters) {
     if (_didInitialFit) return;
     if (clusters.isEmpty) return;
@@ -143,7 +187,7 @@ class _MapPeopleByCityState extends State<MapPeopleByCity>
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      _fitMapToClusters(clusters); // ta fonction déjà créée
+      _fitMapToClusters(clusters);
     });
   }
 }
