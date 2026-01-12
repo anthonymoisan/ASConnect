@@ -598,6 +598,44 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     widget.onBadgeUpdate(0);
     widget.onLogout();
 
+    final uri = Uri.parse('$_publicBase/auth/connection');
+    final headers = <String, String>{
+      'Content-Type': 'application/json',
+      if (_publicAppKey.isNotEmpty) 'X-App-Key': _publicAppKey,
+    };
+
+    final resp = await http
+        .post(
+          uri,
+          headers: headers,
+          body: jsonEncode({'id': widget.personId, 'is_connected': false}),
+        )
+        .timeout(const Duration(seconds: 12));
+
+    if ((resp.statusCode == 400) || (resp.statusCode == 500)) {
+      if (!mounted) return;
+      final sm = ScaffoldMessenger.of(context);
+      sm.hideCurrentSnackBar();
+      sm.showSnackBar(
+        SnackBar(
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 8),
+          backgroundColor: Theme.of(context).colorScheme.error,
+          content: SizedBox(
+            width: double.infinity,
+            child: Text(
+              "Problem with LogOut !",
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onError,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
     if (_scaffoldKey.currentState?.isDrawerOpen ?? false) {
       Navigator.of(context).pop();
     }
