@@ -343,6 +343,7 @@ extension _MapPeopleFilters on _MapPeopleByCityState {
   // BottomSheet filtres
   // ----------------------------
   Future<void> _openSettingsSheet() async {
+    if (_level == _MapLevel.city) return; // ✅ pas de filtres au niveau villes
     // ✅ s'assure qu'on a les libellés pays dans la bonne langue
     await _ensureCountryLabelsForLocale(context);
 

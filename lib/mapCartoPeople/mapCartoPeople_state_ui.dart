@@ -123,23 +123,24 @@ extension _MapPeopleUI on _MapPeopleByCityState {
             ),
           ),
 
-        // ✅ Filtres (décalé si bouton retour affiché)
-        Positioned(
-          left: isCityLevel ? 64 : 12,
-          top: 12,
-          child: SafeArea(
-            child: Tooltip(
-              message: _filtersTooltipText(context),
-              preferBelow: false,
-              child: FloatingActionButton.small(
-                heroTag: 'settingsPeopleCity',
-                onPressed: _openSettingsSheet,
-                tooltip: l10n.mapFiltersButtonTooltip,
-                child: const Icon(Ionicons.options),
+        // ✅ Filtres : visibles uniquement au niveau pays
+        if (!isCityLevel)
+          Positioned(
+            left: 12,
+            top: 12,
+            child: SafeArea(
+              child: Tooltip(
+                message: _filtersTooltipText(context),
+                preferBelow: false,
+                child: FloatingActionButton.small(
+                  heroTag: 'settingsPeopleCity',
+                  onPressed: _openSettingsSheet,
+                  tooltip: l10n.mapFiltersButtonTooltip,
+                  child: const Icon(Ionicons.options),
+                ),
               ),
             ),
           ),
-        ),
 
         // ✅ Badge central (avec pays si niveau ville)
         Positioned(
