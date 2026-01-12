@@ -36,6 +36,50 @@ extension _MapPeopleFilters on _MapPeopleByCityState {
     return (label == null || label.trim().isEmpty) ? code : label;
   }
 
+  // ---------------------------------------------------------------------------
+  // ✅ FIT OPTIM (réduit les appels MapTiler)
+  // - évite les fitCamera/move si les bounds n’ont pas changé (signature quantifiée)
+  // ---------------------------------------------------------------------------
+
+  int _computeCityFitSig(List<_CityCluster> clusters) {
+    if (clusters.isEmpty) return 0;
+    final lats = clusters.map((c) => c.latLng.latitude).toList()..sort();
+    final lngs = clusters.map((c) => c.latLng.longitude).toList()..sort();
+
+    // quantize
+    final minLat = (lats.first * 100).round();
+    final maxLat = (lats.last * 100).round();
+    final minLng = (lngs.first * 100).round();
+    final maxLng = (lngs.last * 100).round();
+
+    return minLat ^
+        (maxLat << 6) ^
+        (minLng << 12) ^
+        (maxLng << 18) ^
+        clusters.length;
+  }
+
+  bool _shouldFitCountries(List<_CountryCluster> clusters) {
+    // _computeFitSig est défini dans state_data.dart
+    final sig = _computeFitSig(clusters);
+
+    // ⚠️ Assure-toi d’avoir dans ton State:
+    // int _lastFitSig = 0;
+    if (sig == _lastFitSig) return false;
+    _lastFitSig = sig;
+    return true;
+  }
+
+  bool _shouldFitCities(List<_CityCluster> clusters) {
+    final sig = _computeCityFitSig(clusters);
+
+    // ⚠️ Assure-toi d’avoir dans ton State:
+    // int _lastCityFitSig = 0;
+    if (sig == _lastCityFitSig) return false;
+    _lastCityFitSig = sig;
+    return true;
+  }
+
   // ----------------------------
   // Drill-down navigation
   // ----------------------------
@@ -46,7 +90,11 @@ extension _MapPeopleFilters on _MapPeopleByCityState {
     });
 
     _rebuildMarkers();
-    if (fit) _fitMapToCountryClusters(_countryClusters);
+
+    // ✅ fit seulement si ça change vraiment les bounds
+    if (fit && _shouldFitCountries(_countryClusters)) {
+      _fitMapToCountryClusters(_countryClusters);
+    }
   }
 
   void _openCountry(String iso2, {bool fit = true}) {
@@ -62,7 +110,11 @@ extension _MapPeopleFilters on _MapPeopleByCityState {
 
     _clusters = cc.first.cities;
     _rebuildMarkers();
-    if (fit) _fitMapToClusters(_clusters);
+
+    // ✅ fit seulement si ça change vraiment les bounds
+    if (fit && _shouldFitCities(_clusters)) {
+      _fitMapToClusters(_clusters);
+    }
   }
 
   // ----------------------------
@@ -87,6 +139,8 @@ extension _MapPeopleFilters on _MapPeopleByCityState {
     _maxDistanceKm = null;
 
     if (rebuild) {
+      final wasCityLevel = _level == _MapLevel.city;
+
       _level = _MapLevel.country;
       _activeCountry = null;
 
@@ -94,8 +148,29 @@ extension _MapPeopleFilters on _MapPeopleByCityState {
       _countryClusters = _buildCountryClustersFromCityClusters(_allClusters);
 
       _rebuildMarkers();
-      _fitMapToCountryClusters(_countryClusters);
+
+      // ✅ IMPORTANT : sur reset, on force le "zoom monde"
+      // 1) reset des signatures pour que le fit ne soit pas bloqué
+      _lastFitSig = 0;
+      _lastCityFitSig = 0;
+
+      // 2) optionnel mais utile : autoriser un nouveau fit initial
+      _didInitialFit = false;
+
+      // 3) fit forcé si on vient du drilldown OU si on est trop zoomé
+      final z = _map.camera.zoom;
+      final mustFit = wasCityLevel || z > 6.2;
+
+      if (mustFit) {
+        _fitMapToCountryClusters(_countryClusters);
+      } else {
+        // sinon, fit "normal" (si tu veux garder l’optim)
+        if (_shouldFitCountries(_countryClusters)) {
+          _fitMapToCountryClusters(_countryClusters);
+        }
+      }
     }
+
     _filteredAllClusters = _allClusters;
   }
 
@@ -191,6 +266,13 @@ extension _MapPeopleFilters on _MapPeopleByCityState {
         _filteredAllClusters,
       );
 
+      // ---------------------------------------------------------------------
+      // ✅ FIT CONTROL (réduit tuiles MapTiler)
+      // - Optionnel: ne pas fitter si déjà trop zoomé (web)
+      // ---------------------------------------------------------------------
+      final currentZ = _map.camera.zoom;
+      final bool allowFit = currentZ < 8.2; // ajustable
+
       // ✅ si on est déjà en drilldown pays -> villes, on garde le même pays
       if (_level == _MapLevel.city && _activeCountry != null) {
         final cc = _countryClusters
@@ -199,19 +281,26 @@ extension _MapPeopleFilters on _MapPeopleByCityState {
 
         if (cc.isEmpty) {
           // pays n'existe plus après filtre -> retour liste pays
-          _backToCountries(fit: doFit);
+          _backToCountries(fit: doFit && allowFit);
         } else {
           // ✅ villes filtrées du pays actif
           _clusters = cc.first.cities;
           _rebuildMarkers();
-          if (doFit) _fitMapToClusters(_clusters);
+
+          if (doFit && allowFit && _shouldFitCities(_clusters)) {
+            _fitMapToClusters(_clusters);
+          }
         }
       } else {
         // ✅ sinon on revient au niveau pays (filtré)
         _level = _MapLevel.country;
         _activeCountry = null;
+
         _rebuildMarkers();
-        if (doFit) _fitMapToCountryClusters(_countryClusters);
+
+        if (doFit && allowFit && _shouldFitCountries(_countryClusters)) {
+          _fitMapToCountryClusters(_countryClusters);
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -347,7 +436,11 @@ extension _MapPeopleFilters on _MapPeopleByCityState {
         .toList();
 
     _rebuildMarkers();
-    _fitMapToClusters(_clusters);
+
+    // ✅ fit uniquement si bounds changent
+    if (_shouldFitCities(_clusters)) {
+      _fitMapToClusters(_clusters);
+    }
   }
 
   // ----------------------------
@@ -355,6 +448,7 @@ extension _MapPeopleFilters on _MapPeopleByCityState {
   // ----------------------------
   Future<void> _openSettingsSheet() async {
     if (_level == _MapLevel.city) return; // ✅ pas de filtres au niveau villes
+
     // ✅ s'assure qu'on a les libellés pays dans la bonne langue
     await _ensureCountryLabelsForLocale(context);
 
@@ -440,14 +534,12 @@ extension _MapPeopleFilters on _MapPeopleByCityState {
       }
 
       setModalState(() {
-        // ✅ on garde la sélection existante si elle existe, sinon on prend le domaine complet
         final prevMin = localMin ?? dom.minAge;
         final prevMax = localMax ?? dom.maxAge;
 
         localMin = prevMin.clamp(dom.minAge, dom.maxAge);
         localMax = prevMax.clamp(dom.minAge, dom.maxAge);
 
-        // ✅ sécurité si le domaine s’est fortement resserré
         if (localMin! > localMax!) {
           localMin = dom.minAge;
           localMax = dom.maxAge;
@@ -462,7 +554,7 @@ extension _MapPeopleFilters on _MapPeopleByCityState {
         if (!distanceOk(c.latLng)) continue;
 
         for (final p in c.people) {
-          if (!tempGenos.contains((p.genotype ?? '').trim())) continue;
+          if (!genotypeOk(p.genotype)) continue;
           if (!countryOk(p.countryCode)) continue;
           if (!connectedOk(p)) continue;
 
@@ -504,7 +596,6 @@ extension _MapPeopleFilters on _MapPeopleByCityState {
                 ? _countModalWithAgeBounds(startI, endI)
                 : 0;
 
-            // ✅ tri par libellé traduit (fallback ISO2)
             final sortedCountryOptions = [..._countryOptions]
               ..sort(
                 (a, b) => _countryLabel(

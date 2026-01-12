@@ -116,6 +116,7 @@ class _MapPeopleByCityState extends State<MapPeopleByCity>
   }
 
   int _lastFitSig = 0;
+  int _lastCityFitSig = 0;
 
   // Count after filters
   int get _peopleCount {
