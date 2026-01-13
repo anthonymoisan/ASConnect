@@ -1,13 +1,12 @@
-import 'dart:typed_data';
+// lib/tabular/view/tabular_view.dart
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 
-import '../../l10n/app_localizations.dart'; // si tu veux traduire, sinon retire
+import '../../l10n/app_localizations.dart';
+import '../../whatsApp/services/conversation_api.dart'
+    show personPhotoUrl, publicAppKey;
 import '../models/listPerson.dart';
 import '../models/person.dart';
 import '../services/tabular_api.dart';
-import '../../whatsApp/services/conversation_api.dart'
-    show personPhotoUrl, publicAppKey;
 
 class TabularView extends StatefulWidget {
   const TabularView({super.key});
@@ -48,9 +47,178 @@ class _TabularViewState extends State<TabularView> {
     }
   }
 
+  // ---------------------------------------------------------------------------
+  // 🧬 Génotype : valeur brute API -> libellé ARB (langue sélectionnée)
+  // ---------------------------------------------------------------------------
+  String _genotypeLabel(BuildContext context, String? raw) {
+    final l10n = AppLocalizations.of(context)!;
+
+    if (raw == null) return '—';
+    final v = raw.trim();
+    if (v.isEmpty) return '—';
+
+    final s = v.toLowerCase();
+
+    // accepte "Délétion", "Deletion", "del", "deletion", etc.
+    if (s.startsWith('dél') || s.startsWith('del'))
+      return l10n.genotypeDeletion;
+    if (s.startsWith('mut')) return l10n.genotypeMutation;
+    if (s == 'upd') return l10n.genotypeUpd;
+    if (s == 'icd') return l10n.genotypeIcd;
+    if (s.startsWith('cli')) return l10n.genotypeClinical;
+    if (s.startsWith('mos')) return l10n.genotypeMosaic;
+
+    // fallback : on affiche la valeur API si inconnue
+    return v;
+  }
+
+  void _openPersonPhotoFullScreen(Person p) {
+    final l10n = AppLocalizations.of(context)!;
+
+    final int id = p.id ?? -1;
+    final String url = personPhotoUrl(id);
+
+    final String pseudo = (p.pseudo?.trim().isNotEmpty == true)
+        ? p.pseudo!.trim()
+        : (p.firstName?.trim().isNotEmpty == true)
+        ? p.firstName!.trim()
+        : '—';
+
+    final String ageLabel = (p.age == null)
+        ? '—'
+        : l10n.mapPersonTileAge(p.age!);
+
+    // ✅ genotype localisé via ARB
+    final String genotype = _genotypeLabel(context, p.genotype);
+
+    final String country = (p.country?.trim().isNotEmpty == true)
+        ? p.country!.trim()
+        : '—';
+    final String city = (p.city?.trim().isNotEmpty == true)
+        ? p.city!.trim()
+        : '—';
+
+    showGeneralDialog(
+      context: context,
+      barrierDismissible: true,
+      barrierLabel: l10n.photo,
+      barrierColor: Colors.black,
+      transitionDuration: const Duration(milliseconds: 180),
+      pageBuilder: (ctx, _, __) {
+        final l10n2 = AppLocalizations.of(ctx)!;
+
+        return Scaffold(
+          backgroundColor: Colors.black,
+          body: SafeArea(
+            child: Stack(
+              children: [
+                Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Expanded(
+                        child: InteractiveViewer(
+                          minScale: 1.0,
+                          maxScale: 4.0,
+                          child: Image.network(
+                            url,
+                            headers: {'X-App-Key': publicAppKey},
+                            fit: BoxFit.contain,
+                            errorBuilder: (_, __, ___) => const Icon(
+                              Icons.person,
+                              size: 120,
+                              color: Colors.white54,
+                            ),
+                            loadingBuilder: (ctx2, child, prog) {
+                              if (prog == null) return child;
+                              return const SizedBox(
+                                width: 36,
+                                height: 36,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: Column(
+                          children: [
+                            Text(
+                              '$pseudo  •  $ageLabel  •  $genotype',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w800,
+                                fontSize: 16,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              '$country  •  $city',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                color: Colors.white70,
+                                fontWeight: FontWeight.w600,
+                                fontSize: 14,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                            const SizedBox(height: 14),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Positioned(
+                  top: 8,
+                  right: 8,
+                  child: IconButton(
+                    icon: const Icon(Icons.close, color: Colors.white),
+                    onPressed: () => Navigator.of(ctx).pop(),
+                    tooltip: l10n2.close,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+      transitionBuilder: (ctx, anim, _, child) {
+        return FadeTransition(opacity: anim, child: child);
+      },
+    );
+  }
+
+  Widget _photoAvatar(Person p, {double radius = 22}) {
+    final int id = p.id ?? -1;
+    final String url = personPhotoUrl(id);
+
+    return GestureDetector(
+      onTap: () => _openPersonPhotoFullScreen(p),
+      child: CircleAvatar(
+        radius: radius,
+        backgroundColor: Colors.grey.shade200,
+        backgroundImage: NetworkImage(
+          url,
+          headers: {'X-App-Key': publicAppKey},
+        ),
+        onBackgroundImageError: (_, __) {},
+        child: const SizedBox.shrink(),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final people = _listPerson?.items ?? const <Person>[];
+    final l10n = AppLocalizations.of(context)!;
 
     if (_loading) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
@@ -58,13 +226,15 @@ class _TabularViewState extends State<TabularView> {
 
     if (_error != null) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Table')),
+        appBar: AppBar(title: const Text('Tabular')),
         body: Center(child: Text('Error: $_error')),
       );
     }
 
+    final people = _listPerson?.items ?? const <Person>[];
+
     return Scaffold(
-      appBar: AppBar(title: Text('Table (${people.length})')),
+      appBar: AppBar(title: const Text('Tabular')),
       body: RefreshIndicator(
         onRefresh: () async {
           setState(() {
@@ -81,162 +251,48 @@ class _TabularViewState extends State<TabularView> {
           itemBuilder: (ctx, i) {
             final p = people[i];
 
-            final pseudo =
-                p.pseudo; // ton getter "firstname + ' ' + initial lastname"
-            final age = (p.age == null) ? '—' : '${p.age}';
-            final city = (p.city == null || p.city!.trim().isEmpty)
-                ? '—'
-                : p.city!.trim();
-            final country = (p.country == null || p.country!.trim().isEmpty)
-                ? ''
-                : p.country!.trim();
+            final pseudo = (p.pseudo?.trim().isNotEmpty == true)
+                ? p.pseudo!.trim()
+                : (p.firstName?.trim().isNotEmpty == true)
+                ? p.firstName!.trim()
+                : '—';
 
-            final location = country.isEmpty ? city : '$city • $country';
+            final ageLabel = (p.age == null)
+                ? '—'
+                : l10n.mapPersonTileAge(p.age!);
+
+            // ✅ genotype localisé via ARB
+            final genotype = _genotypeLabel(context, p.genotype);
+
+            final country = (p.country?.trim().isNotEmpty == true)
+                ? p.country!.trim()
+                : '—';
+            final city = (p.city?.trim().isNotEmpty == true)
+                ? p.city!.trim()
+                : '—';
 
             return ListTile(
               contentPadding: const EdgeInsets.symmetric(
                 horizontal: 16,
                 vertical: 8,
               ),
-              leading: _PeoplePhotoAvatar(
-                peopleId: p.id,
-                radius: 22,
-                onTap: null, // tu pourras ouvrir une photo fullscreen plus tard
-              ),
-              title: Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      pseudo,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontWeight: FontWeight.w700),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    age,
-                    style: TextStyle(
-                      color: Colors.grey.shade700,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
+              leading: _photoAvatar(p, radius: 22),
+              title: Text(
+                '$pseudo  •  $ageLabel  •  $genotype',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontWeight: FontWeight.w700),
               ),
               subtitle: Text(
-                location,
+                '$country  •  $city',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(color: Colors.grey.shade700),
               ),
-              onTap: () {
-                debugPrint('[TABULAR] tap person id=${p.id} pseudo=$pseudo');
-              },
+              onTap: () => _openPersonPhotoFullScreen(p),
             );
           },
         ),
-      ),
-    );
-  }
-}
-
-// ============================================================================
-// ✅ Avatar robuste : fetch bytes avec header X-App-Key => Image.memory
-// (copie identique à ce que tu as déjà dans ConversationsPage)
-// ============================================================================
-
-class _PeoplePhotoAvatar extends StatefulWidget {
-  const _PeoplePhotoAvatar({
-    required this.peopleId,
-    required this.radius,
-    this.onTap,
-  });
-
-  final int? peopleId;
-  final double radius;
-  final VoidCallback? onTap;
-
-  @override
-  State<_PeoplePhotoAvatar> createState() => _PeoplePhotoAvatarState();
-}
-
-class _PeoplePhotoAvatarState extends State<_PeoplePhotoAvatar> {
-  static final Map<int, Uint8List> _memCache = {};
-  Future<Uint8List?>? _future;
-
-  @override
-  void initState() {
-    super.initState();
-    _future = _load();
-  }
-
-  @override
-  void didUpdateWidget(covariant _PeoplePhotoAvatar oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.peopleId != widget.peopleId) {
-      _future = _load();
-    }
-  }
-
-  Future<Uint8List?> _load() async {
-    final id = widget.peopleId;
-    if (id == null) return null;
-
-    final cached = _memCache[id];
-    if (cached != null) return cached;
-
-    final url = personPhotoUrl(id);
-
-    final resp = await http.get(
-      Uri.parse(url),
-      headers: {'X-App-Key': publicAppKey},
-    );
-
-    if (resp.statusCode == 200 && resp.bodyBytes.isNotEmpty) {
-      _memCache[id] = resp.bodyBytes;
-      return resp.bodyBytes;
-    }
-
-    return null;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final r = widget.radius;
-
-    Widget avatarFallback({Widget? child}) => CircleAvatar(
-      radius: r,
-      backgroundColor: Colors.grey.shade200,
-      child: child ?? const Icon(Icons.person, color: Colors.black54),
-    );
-
-    final id = widget.peopleId;
-    if (id == null) return avatarFallback(child: const Icon(Icons.group));
-
-    return GestureDetector(
-      onTap: widget.onTap,
-      child: FutureBuilder<Uint8List?>(
-        future: _future,
-        builder: (ctx, snap) {
-          if (snap.connectionState != ConnectionState.done) {
-            return avatarFallback(
-              child: const SizedBox(
-                width: 16,
-                height: 16,
-                child: CircularProgressIndicator(strokeWidth: 2),
-              ),
-            );
-          }
-
-          final bytes = snap.data;
-          if (bytes == null) return avatarFallback();
-
-          return CircleAvatar(
-            radius: r,
-            backgroundColor: Colors.grey.shade200,
-            backgroundImage: MemoryImage(bytes),
-          );
-        },
       ),
     );
   }
