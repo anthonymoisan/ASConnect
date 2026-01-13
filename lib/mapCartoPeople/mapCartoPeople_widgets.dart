@@ -85,14 +85,17 @@ class _PersonAvatar extends StatelessWidget {
 
 // ---------- Widgets ----------
 class _Bubble extends StatelessWidget {
-  const _Bubble({required this.count, required this.size});
+  const _Bubble({required this.count, required this.size, this.tooltipLabel});
   final int count;
   final double size;
+  final String? tooltipLabel;
 
   @override
   Widget build(BuildContext context) {
     return Tooltip(
-      message: '$count',
+      message: tooltipLabel?.trim().isNotEmpty == true
+          ? tooltipLabel!
+          : '$count',
       child: Container(
         width: size,
         height: size,

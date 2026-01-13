@@ -98,7 +98,12 @@ extension _MapPeopleMarkers on _MapPeopleByCityState {
             alignment: Alignment.center,
             child: GestureDetector(
               onTap: () => _enterCountry(c),
-              child: _Bubble(count: c.count, size: scaled),
+              child: _Bubble(
+                count: c.count,
+                size: scaled,
+                tooltipLabel:
+                    _countryLabelsByIso2[c.countryCode] ?? c.countryCode,
+              ),
             ),
           ),
         );
@@ -142,7 +147,11 @@ extension _MapPeopleMarkers on _MapPeopleByCityState {
             alignment: Alignment.center,
             child: GestureDetector(
               onTap: () => _openCitySheet(c),
-              child: _Bubble(count: c.count, size: scaled),
+              child: _Bubble(
+                count: c.count,
+                size: scaled,
+                tooltipLabel: c.city,
+              ),
             ),
           ),
         );
