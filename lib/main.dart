@@ -520,6 +520,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       osmUserAgent: 'ASConnexion/1.0 (mobile; contact: contact@fastfrance.org)',
     ),
     ConversationsPage(personId: widget.personId),
+
+    const TabularView(),
   ];
 
   void _setIndex(int i) => setState(() => _currentIndex = i);
@@ -689,7 +691,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   List<String> _titles(BuildContext context) {
     final t = AppLocalizations.of(context)!;
-    return <String>[t.tabCommunity, t.tabChats];
+    return <String>[t.tabCommunity, t.tabChats, t.tableTabular];
   }
 
   @override
@@ -833,14 +835,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
                         const SizedBox(width: 28),
 
-                        // ✅ NOUVELLE ICÔNE TABLE
                         _NavIcon(
                           icon: Ionicons
-                              .grid_outline, // ou table_outline si dispo
-                          selected: false, // ce n’est PAS un tab
-                          onTap: () {
-                            Navigator.of(context).pushNamed('/tabular');
-                          },
+                              .grid_outline, // ou Ionicons.list / Ionicons.table
+                          selected: _currentIndex == 2,
+                          onTap: () => _setIndex(2),
                         ),
                       ],
                     ),

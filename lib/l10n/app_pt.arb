@@ -594,5 +594,6 @@
   "mapConnectedOnlyHint": "Oculta perfis offline.",
   "mapConnectedOnlyChip": "Conectados",
   "statusOnline": "Online",
-  "statusOffline": "Offline"
+  "statusOffline": "Offline",
+  "tableTabular" : "Tabela"
 }

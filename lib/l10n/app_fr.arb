@@ -597,5 +597,6 @@
   "mapConnectedOnlyHint": "Masque les profils hors ligne.",
   "mapConnectedOnlyChip": "Connectés",
   "statusOnline": "En ligne",
-  "statusOffline": "Hors ligne"
+  "statusOffline": "Hors ligne",
+  "tableTabular" : "Table"
 }

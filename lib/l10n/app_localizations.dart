@@ -2180,6 +2180,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Offline'**
   String get statusOffline;
+
+  /// No description provided for @tableTabular.
+  ///
+  /// In en, this message translates to:
+  /// **'Table'**
+  String get tableTabular;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

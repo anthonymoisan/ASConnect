@@ -1177,4 +1177,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get statusOffline => 'Desconectado';
+
+  @override
+  String get tableTabular => 'Tabla';
 }

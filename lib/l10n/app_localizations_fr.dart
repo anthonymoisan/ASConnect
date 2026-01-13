@@ -1177,4 +1177,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get statusOffline => 'Hors ligne';
+
+  @override
+  String get tableTabular => 'Table';
 }
