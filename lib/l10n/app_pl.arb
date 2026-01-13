@@ -595,5 +595,10 @@
   "mapConnectedOnlyChip": "Połączeni",
   "statusOnline": "Online",
   "statusOffline": "Offline",
-  "tableTabular" : "Tabela"
+  "tableTabular" : "Tabela",
+  "tableColumnPseudo": "Pseudonim",
+  "tableColumnAge": "Wiek",
+  "tableColumnGenotype": "Genotyp",
+  "tableColumnCountry": "Kraj",
+  "tableColumnCity": "Miasto"
 }

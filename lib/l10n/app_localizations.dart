@@ -2186,6 +2186,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Table'**
   String get tableTabular;
+
+  /// No description provided for @tableColumnPseudo.
+  ///
+  /// In en, this message translates to:
+  /// **'Username'**
+  String get tableColumnPseudo;
+
+  /// No description provided for @tableColumnAge.
+  ///
+  /// In en, this message translates to:
+  /// **'Age'**
+  String get tableColumnAge;
+
+  /// No description provided for @tableColumnGenotype.
+  ///
+  /// In en, this message translates to:
+  /// **'Genotype'**
+  String get tableColumnGenotype;
+
+  /// No description provided for @tableColumnCountry.
+  ///
+  /// In en, this message translates to:
+  /// **'Country'**
+  String get tableColumnCountry;
+
+  /// No description provided for @tableColumnCity.
+  ///
+  /// In en, this message translates to:
+  /// **'City'**
+  String get tableColumnCity;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

@@ -598,5 +598,10 @@
   "mapConnectedOnlyChip": "Connectés",
   "statusOnline": "En ligne",
   "statusOffline": "Hors ligne",
-  "tableTabular" : "Table"
+  "tableTabular" : "Table",
+  "tableColumnPseudo": "Pseudo",
+  "tableColumnAge": "Âge",
+  "tableColumnGenotype": "Génotype",
+  "tableColumnCountry": "Pays",
+  "tableColumnCity": "Ville"
 }

@@ -359,24 +359,24 @@ class _TabularViewState extends State<TabularView> {
                   columns: [
                     const DataColumn(label: Text('')), // photo (pas de tri)
                     DataColumn(
-                      label: const Text('Pseudo'),
+                      label: Text(l10n.tableColumnPseudo),
                       onSort: (i, asc) => _applySort(i, asc),
                     ),
                     DataColumn(
-                      label: const Text('Âge'),
+                      label: Text(l10n.tableColumnAge),
                       numeric: true,
                       onSort: (i, asc) => _applySort(i, asc),
                     ),
                     DataColumn(
-                      label: const Text('Génotype'),
+                      label: Text(l10n.tableColumnGenotype),
                       onSort: (i, asc) => _applySort(i, asc),
                     ),
                     DataColumn(
-                      label: const Text('Pays'),
+                      label: Text(l10n.tableColumnCountry),
                       onSort: (i, asc) => _applySort(i, asc),
                     ),
                     DataColumn(
-                      label: const Text('Ville'),
+                      label: Text(l10n.tableColumnCity),
                       onSort: (i, asc) => _applySort(i, asc),
                     ),
                   ],
@@ -395,7 +395,7 @@ class _TabularViewState extends State<TabularView> {
                         DataCell(_photoCell(p)),
                         DataCell(
                           SizedBox(
-                            width: 160,
+                            width: 100,
                             child: Text(
                               pseudo,
                               maxLines: 1,

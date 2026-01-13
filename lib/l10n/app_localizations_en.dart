@@ -1180,4 +1180,19 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get tableTabular => 'Table';
+
+  @override
+  String get tableColumnPseudo => 'Username';
+
+  @override
+  String get tableColumnAge => 'Age';
+
+  @override
+  String get tableColumnGenotype => 'Genotype';
+
+  @override
+  String get tableColumnCountry => 'Country';
+
+  @override
+  String get tableColumnCity => 'City';
 }
