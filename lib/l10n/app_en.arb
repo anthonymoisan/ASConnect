@@ -600,5 +600,15 @@
   "tableColumnAge": "Age",
   "tableColumnGenotype": "Genotype",
   "tableColumnCountry": "Country",
-  "tableColumnCity": "City"
+  "tableColumnCity": "City",
+  "tabularColPseudo": "Username",
+  "tabularColAge": "Age",
+  "tabularColGenotype": "Genotype",
+  "tabularColCountry": "Country",
+  "tabularColCity": "City",
+  "tabularColAction": "Action",
+
+  "tabularSendMessageTooltip": "Send a message",
+  "tabularSendMessageErrorNoId": "Unable to send message: missing identifier.",
+  "tabularSendMessageActionStub": "Messaging feature not yet connected."
 }

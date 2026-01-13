@@ -1195,4 +1195,31 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get tableColumnCity => 'Città';
+
+  @override
+  String get tabularColPseudo => 'Nome utente';
+
+  @override
+  String get tabularColAge => 'Età';
+
+  @override
+  String get tabularColGenotype => 'Genotipo';
+
+  @override
+  String get tabularColCountry => 'Paese';
+
+  @override
+  String get tabularColCity => 'Città';
+
+  @override
+  String get tabularColAction => 'Azione';
+
+  @override
+  String get tabularSendMessageTooltip => 'Invia un messaggio';
+
+  @override
+  String get tabularSendMessageErrorNoId => 'Impossibile inviare il messaggio: identificatore mancante.';
+
+  @override
+  String get tabularSendMessageActionStub => 'Funzionalità di messaggistica da collegare.';
 }

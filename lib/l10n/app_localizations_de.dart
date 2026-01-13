@@ -1195,4 +1195,31 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get tableColumnCity => 'Stadt';
+
+  @override
+  String get tabularColPseudo => 'Benutzername';
+
+  @override
+  String get tabularColAge => 'Alter';
+
+  @override
+  String get tabularColGenotype => 'Genotyp';
+
+  @override
+  String get tabularColCountry => 'Land';
+
+  @override
+  String get tabularColCity => 'Stadt';
+
+  @override
+  String get tabularColAction => 'Aktion';
+
+  @override
+  String get tabularSendMessageTooltip => 'Nachricht senden';
+
+  @override
+  String get tabularSendMessageErrorNoId => 'Nachricht kann nicht gesendet werden: Kennung fehlt.';
+
+  @override
+  String get tabularSendMessageActionStub => 'Nachrichtenfunktion noch nicht verbunden.';
 }

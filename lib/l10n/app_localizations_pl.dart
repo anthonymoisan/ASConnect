@@ -1195,4 +1195,31 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get tableColumnCity => 'Miasto';
+
+  @override
+  String get tabularColPseudo => 'Pseudonim';
+
+  @override
+  String get tabularColAge => 'Wiek';
+
+  @override
+  String get tabularColGenotype => 'Genotyp';
+
+  @override
+  String get tabularColCountry => 'Kraj';
+
+  @override
+  String get tabularColCity => 'Miasto';
+
+  @override
+  String get tabularColAction => 'Akcja';
+
+  @override
+  String get tabularSendMessageTooltip => 'Wyślij wiadomość';
+
+  @override
+  String get tabularSendMessageErrorNoId => 'Nie można wysłać wiadomości: brak identyfikatora.';
+
+  @override
+  String get tabularSendMessageActionStub => 'Funkcja wiadomości nie jest jeszcze podłączona.';
 }

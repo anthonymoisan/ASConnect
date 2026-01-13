@@ -600,5 +600,15 @@
   "tableColumnAge": "Edad",
   "tableColumnGenotype": "Genotipo",
   "tableColumnCountry": "País",
-  "tableColumnCity": "Ciudad"
+  "tableColumnCity": "Ciudad",
+  "tabularColPseudo": "Usuario",
+  "tabularColAge": "Edad",
+  "tabularColGenotype": "Genotipo",
+  "tabularColCountry": "País",
+  "tabularColCity": "Ciudad",
+  "tabularColAction": "Acción",
+
+  "tabularSendMessageTooltip": "Enviar un mensaje",
+  "tabularSendMessageErrorNoId": "No se puede enviar el mensaje: falta el identificador.",
+  "tabularSendMessageActionStub": "Función de mensajería pendiente de conexión."
 }

@@ -1195,4 +1195,31 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get tableColumnCity => 'City';
+
+  @override
+  String get tabularColPseudo => 'Username';
+
+  @override
+  String get tabularColAge => 'Age';
+
+  @override
+  String get tabularColGenotype => 'Genotype';
+
+  @override
+  String get tabularColCountry => 'Country';
+
+  @override
+  String get tabularColCity => 'City';
+
+  @override
+  String get tabularColAction => 'Action';
+
+  @override
+  String get tabularSendMessageTooltip => 'Send a message';
+
+  @override
+  String get tabularSendMessageErrorNoId => 'Unable to send message: missing identifier.';
+
+  @override
+  String get tabularSendMessageActionStub => 'Messaging feature not yet connected.';
 }

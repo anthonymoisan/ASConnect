@@ -2216,6 +2216,60 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'City'**
   String get tableColumnCity;
+
+  /// No description provided for @tabularColPseudo.
+  ///
+  /// In en, this message translates to:
+  /// **'Username'**
+  String get tabularColPseudo;
+
+  /// No description provided for @tabularColAge.
+  ///
+  /// In en, this message translates to:
+  /// **'Age'**
+  String get tabularColAge;
+
+  /// No description provided for @tabularColGenotype.
+  ///
+  /// In en, this message translates to:
+  /// **'Genotype'**
+  String get tabularColGenotype;
+
+  /// No description provided for @tabularColCountry.
+  ///
+  /// In en, this message translates to:
+  /// **'Country'**
+  String get tabularColCountry;
+
+  /// No description provided for @tabularColCity.
+  ///
+  /// In en, this message translates to:
+  /// **'City'**
+  String get tabularColCity;
+
+  /// No description provided for @tabularColAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Action'**
+  String get tabularColAction;
+
+  /// No description provided for @tabularSendMessageTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Send a message'**
+  String get tabularSendMessageTooltip;
+
+  /// No description provided for @tabularSendMessageErrorNoId.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to send message: missing identifier.'**
+  String get tabularSendMessageErrorNoId;
+
+  /// No description provided for @tabularSendMessageActionStub.
+  ///
+  /// In en, this message translates to:
+  /// **'Messaging feature not yet connected.'**
+  String get tabularSendMessageActionStub;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

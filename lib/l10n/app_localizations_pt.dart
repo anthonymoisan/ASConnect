@@ -1195,4 +1195,31 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get tableColumnCity => 'Cidade';
+
+  @override
+  String get tabularColPseudo => 'Utilizador';
+
+  @override
+  String get tabularColAge => 'Idade';
+
+  @override
+  String get tabularColGenotype => 'Genótipo';
+
+  @override
+  String get tabularColCountry => 'País';
+
+  @override
+  String get tabularColCity => 'Cidade';
+
+  @override
+  String get tabularColAction => 'Ação';
+
+  @override
+  String get tabularSendMessageTooltip => 'Enviar mensagem';
+
+  @override
+  String get tabularSendMessageErrorNoId => 'Não é possível enviar a mensagem: identificador ausente.';
+
+  @override
+  String get tabularSendMessageActionStub => 'Funcionalidade de mensagens ainda não ligada.';
 }

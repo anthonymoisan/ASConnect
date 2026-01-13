@@ -1195,4 +1195,31 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get tableColumnCity => 'Ville';
+
+  @override
+  String get tabularColPseudo => 'Pseudo';
+
+  @override
+  String get tabularColAge => 'Âge';
+
+  @override
+  String get tabularColGenotype => 'Génotype';
+
+  @override
+  String get tabularColCountry => 'Pays';
+
+  @override
+  String get tabularColCity => 'Ville';
+
+  @override
+  String get tabularColAction => 'Action';
+
+  @override
+  String get tabularSendMessageTooltip => 'Envoyer un message';
+
+  @override
+  String get tabularSendMessageErrorNoId => 'Impossible d’envoyer un message : identifiant manquant.';
+
+  @override
+  String get tabularSendMessageActionStub => 'Fonctionnalité de messagerie à connecter.';
 }

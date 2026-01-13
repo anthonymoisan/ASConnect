@@ -600,5 +600,15 @@
   "tableColumnAge": "Alter",
   "tableColumnGenotype": "Genotyp",
   "tableColumnCountry": "Land",
-  "tableColumnCity": "Stadt"
+  "tableColumnCity": "Stadt",
+  "tabularColPseudo": "Benutzername",
+  "tabularColAge": "Alter",
+  "tabularColGenotype": "Genotyp",
+  "tabularColCountry": "Land",
+  "tabularColCity": "Stadt",
+  "tabularColAction": "Aktion",
+
+  "tabularSendMessageTooltip": "Nachricht senden",
+  "tabularSendMessageErrorNoId": "Nachricht kann nicht gesendet werden: Kennung fehlt.",
+  "tabularSendMessageActionStub": "Nachrichtenfunktion noch nicht verbunden."
 }

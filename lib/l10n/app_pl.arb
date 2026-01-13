@@ -600,5 +600,15 @@
   "tableColumnAge": "Wiek",
   "tableColumnGenotype": "Genotyp",
   "tableColumnCountry": "Kraj",
-  "tableColumnCity": "Miasto"
+  "tableColumnCity": "Miasto",
+  "tabularColPseudo": "Pseudonim",
+  "tabularColAge": "Wiek",
+  "tabularColGenotype": "Genotyp",
+  "tabularColCountry": "Kraj",
+  "tabularColCity": "Miasto",
+  "tabularColAction": "Akcja",
+
+  "tabularSendMessageTooltip": "Wyślij wiadomość",
+  "tabularSendMessageErrorNoId": "Nie można wysłać wiadomości: brak identyfikatora.",
+  "tabularSendMessageActionStub": "Funkcja wiadomości nie jest jeszcze podłączona."
 }

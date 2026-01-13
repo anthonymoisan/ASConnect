@@ -600,5 +600,15 @@
   "tableColumnAge": "Età",
   "tableColumnGenotype": "Genotipo",
   "tableColumnCountry": "Paese",
-  "tableColumnCity": "Città"
+  "tableColumnCity": "Città",
+  "tabularColPseudo": "Nome utente",
+  "tabularColAge": "Età",
+  "tabularColGenotype": "Genotipo",
+  "tabularColCountry": "Paese",
+  "tabularColCity": "Città",
+  "tabularColAction": "Azione",
+
+  "tabularSendMessageTooltip": "Invia un messaggio",
+  "tabularSendMessageErrorNoId": "Impossibile inviare il messaggio: identificatore mancante.",
+  "tabularSendMessageActionStub": "Funzionalità di messaggistica da collegare."
 }

@@ -49,7 +49,7 @@ class _TabularViewState extends State<TabularView> {
     final w = MediaQuery.of(context).size.width;
     if (w < 360) return 90;
     if (w < 600) return 110;
-    return 130; // desktop/tablet
+    return 130;
   }
 
   double _maxGenotypeWidth(BuildContext context) {
@@ -109,7 +109,6 @@ class _TabularViewState extends State<TabularView> {
         _error = null;
       });
 
-      // applique le tri courant si déjà choisi
       if (_sortColumnIndex != null) {
         _applySort(_sortColumnIndex!, _sortAscending);
       }
@@ -134,12 +133,11 @@ class _TabularViewState extends State<TabularView> {
         _countriesByCode = map;
       });
 
-      // si on est déjà trié par pays, on retrie avec les nouveaux libellés
       if (_sortColumnIndex == 4) {
         _applySort(4, _sortAscending);
       }
     } catch (_) {
-      // fallback silencieux : on affichera p.country
+      // fallback silencieux
     }
   }
 
@@ -191,7 +189,7 @@ class _TabularViewState extends State<TabularView> {
 
     int cmpNullable<T extends Comparable>(T? a, T? b) {
       if (a == null && b == null) return 0;
-      if (a == null) return 1; // nulls à la fin
+      if (a == null) return 1;
       if (b == null) return -1;
       return a.compareTo(b);
     }
@@ -207,19 +205,19 @@ class _TabularViewState extends State<TabularView> {
         int res = 0;
 
         switch (columnIndex) {
-          case 1: // pseudo
+          case 1:
             res = cmpString(_pseudo(a), _pseudo(b));
             break;
-          case 2: // age
+          case 2:
             res = cmpNullable<int>(a.age, b.age);
             break;
-          case 3: // genotype
+          case 3:
             res = cmpString(_genotypeLabel(l10n, a), _genotypeLabel(l10n, b));
             break;
-          case 4: // country (traduit)
+          case 4:
             res = cmpString(_countryLabel(a), _countryLabel(b));
             break;
-          case 5: // city
+          case 5:
             res = cmpString(_cityLabel(a), _cityLabel(b));
             break;
           default:
@@ -229,6 +227,32 @@ class _TabularViewState extends State<TabularView> {
         return ascending ? res : -res;
       });
     });
+  }
+
+  // ---------------------------------------------------------------------------
+  // ✉️ Action "Envoyer un message"
+  // ---------------------------------------------------------------------------
+
+  void _sendMessage(Person p) {
+    final l10n = AppLocalizations.of(context)!;
+
+    final id = p.id;
+    if (id == null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(l10n.tabularSendMessageErrorNoId)));
+      return;
+    }
+
+    // ✅ À brancher sur ton écran / flow de conversation.
+    // Exemple (à adapter à ton projet) :
+    // Navigator.of(context).push(
+    //   MaterialPageRoute(builder: (_) => ConversationView(personId: id)),
+    // );
+
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(l10n.tabularSendMessageActionStub)));
   }
 
   // ---------------------------------------------------------------------------
@@ -341,9 +365,8 @@ class _TabularViewState extends State<TabularView> {
           ),
         );
       },
-      transitionBuilder: (ctx, anim, _, child) {
-        return FadeTransition(opacity: anim, child: child);
-      },
+      transitionBuilder: (ctx, anim, _, child) =>
+          FadeTransition(opacity: anim, child: child),
     );
   }
 
@@ -373,24 +396,15 @@ class _TabularViewState extends State<TabularView> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
 
-    if (_loading) {
-      return const Center(child: CircularProgressIndicator());
-    }
-
-    if (_error != null) {
-      return Center(child: Text('Error: $_error'));
-    }
-
-    if (_view.isEmpty) {
-      return const Center(child: Text('—'));
-    }
+    if (_loading) return const Center(child: CircularProgressIndicator());
+    if (_error != null) return Center(child: Text('Error: $_error'));
+    if (_view.isEmpty) return const Center(child: Text('—'));
 
     final pseudoMax = _maxPseudoWidth(context);
     final genotypeMax = _maxGenotypeWidth(context);
     final countryMax = _maxCountryWidth(context);
     final cityMax = _maxCityWidth(context);
 
-    // ⚠️ RefreshIndicator a besoin d’un scrollable
     return RefreshIndicator(
       onRefresh: () async {
         setState(() {
@@ -409,35 +423,39 @@ class _TabularViewState extends State<TabularView> {
               child: ConstrainedBox(
                 constraints: BoxConstraints(minWidth: constraints.maxWidth),
                 child: DataTable(
+                  // ✅ IMPORTANT : supprime la colonne checkbox
+                  showCheckboxColumn: false,
+
                   sortColumnIndex: _sortColumnIndex,
                   sortAscending: _sortAscending,
-                  columnSpacing: 16,
+                  columnSpacing: 14,
                   headingRowHeight: 44,
                   dataRowMinHeight: 54,
                   dataRowMaxHeight: 64,
                   columns: [
-                    const DataColumn(label: Text('')), // photo (pas de tri)
+                    const DataColumn(label: Text('')), // photo
                     DataColumn(
-                      label: Text(l10n.tableColumnPseudo),
+                      label: Text(l10n.tabularColPseudo),
                       onSort: (i, asc) => _applySort(i, asc),
                     ),
                     DataColumn(
-                      label: Text(l10n.tableColumnAge),
+                      label: Text(l10n.tabularColAge),
                       numeric: true,
                       onSort: (i, asc) => _applySort(i, asc),
                     ),
                     DataColumn(
-                      label: Text(l10n.tableColumnGenotype),
+                      label: Text(l10n.tabularColGenotype),
                       onSort: (i, asc) => _applySort(i, asc),
                     ),
                     DataColumn(
-                      label: Text(l10n.tableColumnCountry),
+                      label: Text(l10n.tabularColCountry),
                       onSort: (i, asc) => _applySort(i, asc),
                     ),
                     DataColumn(
-                      label: Text(l10n.tableColumnCity),
+                      label: Text(l10n.tabularColCity),
                       onSort: (i, asc) => _applySort(i, asc),
                     ),
+                    DataColumn(label: Text(l10n.tabularColAction)),
                   ],
                   rows: _view.map((p) {
                     final pseudo = _pseudo(p);
@@ -449,6 +467,7 @@ class _TabularViewState extends State<TabularView> {
                     final city = _cityLabel(p);
 
                     return DataRow(
+                      // ✅ tap ligne : photo
                       onSelectChanged: (_) => _openPersonPhotoFullScreen(p),
                       cells: [
                         DataCell(_photoCell(p)),
@@ -465,6 +484,13 @@ class _TabularViewState extends State<TabularView> {
                         ),
                         DataCell(_ellipsisCell(country, maxWidth: countryMax)),
                         DataCell(_ellipsisCell(city, maxWidth: cityMax)),
+                        DataCell(
+                          IconButton(
+                            tooltip: l10n.tabularSendMessageTooltip,
+                            icon: const Icon(Icons.send),
+                            onPressed: () => _sendMessage(p),
+                          ),
+                        ),
                       ],
                     );
                   }).toList(),

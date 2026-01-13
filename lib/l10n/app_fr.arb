@@ -603,5 +603,15 @@
   "tableColumnAge": "Âge",
   "tableColumnGenotype": "Génotype",
   "tableColumnCountry": "Pays",
-  "tableColumnCity": "Ville"
+  "tableColumnCity": "Ville",
+  "tabularColPseudo": "Pseudo",
+  "tabularColAge": "Âge",
+  "tabularColGenotype": "Génotype",
+  "tabularColCountry": "Pays",
+  "tabularColCity": "Ville",
+  "tabularColAction": "Action",
+
+  "tabularSendMessageTooltip": "Envoyer un message",
+  "tabularSendMessageErrorNoId": "Impossible d’envoyer un message : identifiant manquant.",
+  "tabularSendMessageActionStub": "Fonctionnalité de messagerie à connecter."
 }

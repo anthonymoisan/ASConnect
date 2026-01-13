@@ -600,5 +600,15 @@
   "tableColumnAge": "Idade",
   "tableColumnGenotype": "Genótipo",
   "tableColumnCountry": "País",
-  "tableColumnCity": "Cidade"
+  "tableColumnCity": "Cidade",
+  "tabularColPseudo": "Utilizador",
+  "tabularColAge": "Idade",
+  "tabularColGenotype": "Genótipo",
+  "tabularColCountry": "País",
+  "tabularColCity": "Cidade",
+  "tabularColAction": "Ação",
+
+  "tabularSendMessageTooltip": "Enviar mensagem",
+  "tabularSendMessageErrorNoId": "Não é possível enviar a mensagem: identificador ausente.",
+  "tabularSendMessageActionStub": "Funcionalidade de mensagens ainda não ligada."
 }
