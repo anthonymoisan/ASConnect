@@ -91,10 +91,11 @@ extension _MapPeopleFilters on _MapPeopleByCityState {
 
     _rebuildMarkers();
 
+    _fitMapToCountryClusters(_countryClusters);
     // ✅ fit seulement si ça change vraiment les bounds
-    if (fit && _shouldFitCountries(_countryClusters)) {
-      _fitMapToCountryClusters(_countryClusters);
-    }
+    //if (fit && _shouldFitCountries(_countryClusters)) {
+    //  _fitMapToCountryClusters(_countryClusters);
+    //}
   }
 
   void _openCountry(String iso2, {bool fit = true}) {
@@ -410,12 +411,13 @@ extension _MapPeopleFilters on _MapPeopleByCityState {
   }
 
   void _enterCountry(_CountryCluster country) {
+    // 1) bascule de niveau
     setState(() {
       _level = _MapLevel.city;
       _activeCountry = country.countryCode;
     });
 
-    // ✅ drilldown SUR LA SOURCE FILTRÉE (sinon tu perds les filtres)
+    // 2) drilldown SUR LA SOURCE FILTRÉE (sinon tu perds les filtres)
     final base = _filteredAllClusters.isNotEmpty
         ? _filteredAllClusters
         : _allClusters;
@@ -435,12 +437,53 @@ extension _MapPeopleFilters on _MapPeopleByCityState {
         .whereType<_CityCluster>()
         .toList();
 
+    // 3) rebuild markers (sans fit immédiat)
     _rebuildMarkers();
 
-    // ✅ fit uniquement si bounds changent
-    if (_shouldFitCities(_clusters)) {
-      _fitMapToClusters(_clusters);
-    }
+    // 4) Fit "anti-pic de tuiles"
+    //    - si 1 seule ville => zoom contrôlé
+    //    - sinon fit bounds MAIS plafonné à ~7.2 (ou 7.0 si tu veux)
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (_clusters.isEmpty) return;
+
+      // ⚙️ paramètres anti-consommation
+      const double maxCityZoomAfterEnter =
+          7.2; // ↓ baisse encore si tu veux (6.8–7.2)
+      const double minCityZoomAfterEnter = 4.5;
+
+      final points = _clusters.map((c) => c.latLng).toList();
+
+      // Cas 1 point : pas besoin de bounds => move direct
+      if (points.length == 1) {
+        final p = points.first;
+        final nextZoom = (_map.camera.zoom + 1.2)
+            .clamp(minCityZoomAfterEnter, maxCityZoomAfterEnter)
+            .toDouble();
+
+        _map.move(p, nextZoom);
+        _currentZoom = nextZoom;
+        return;
+      }
+
+      // Cas bounds : fitCamera puis clamp zoom
+      final bounds = LatLngBounds.fromPoints(points);
+
+      _map.fitCamera(
+        CameraFit.bounds(bounds: bounds, padding: const EdgeInsets.all(36)),
+      );
+
+      // ✅ clamp zoom après fit pour éviter que fit monte trop haut (tuiles ++)
+      final z = _map.camera.zoom;
+      final clamped = z
+          .clamp(minCityZoomAfterEnter, maxCityZoomAfterEnter)
+          .toDouble();
+
+      if ((clamped - z).abs() > 0.01) {
+        _map.move(_map.camera.center, clamped);
+      }
+      _currentZoom = clamped;
+    });
   }
 
   // ----------------------------

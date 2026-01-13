@@ -1,22 +1,52 @@
 // lib/mapCartoPeople/mapCartoPeople_state_ui.dart
-// Optimisations MapTiler (web + mobile):
-// - maxZoom réduit à 8 (au lieu de 10) => forte baisse de consommation de tuiles
-// - debounce sur onMapEvent (évite rebuild markers en continu)
-// - retinaMode désactivé + maxNativeZoom aligné
+// Stratégie MapTiler par niveau (Pays vs Villes):
+// - PAYS  : basic-v2, maxZoom=6  (moins de tuiles, suffisant pour bulles pays)
+// - VILLES: basic-v2, maxZoom=8  (plus précis pour drill-down)
+// - MapOptions.maxZoom dynamique (évite zoom inutile => tuiles inutiles)
+// - debounce onMapEvent (évite rebuild markers en continu)
+// - retinaMode=false + maxNativeZoom aligné
 
 part of map_carto_people;
 
 extension _MapPeopleUI on _MapPeopleByCityState {
   static const double kTilesMinZoom = 1.0;
-  static const double kTilesMaxZoom = 8.0;
 
-  TileLayer _mapTilerTileLayer() => TileLayer(
+  // ✅ plafonds zoom par niveau
+  static const double kMaxZoomCountry = 6.0;
+  static const double kMaxZoomCity = 8.0;
+
+  double get _levelMaxZoom =>
+      _level == _MapLevel.city ? kMaxZoomCity : kMaxZoomCountry;
+
+  // ----------------------------
+  // Tile layers
+  // ----------------------------
+
+  TileLayer _mapTilerBasic256({
+    required double minZoom,
+    required double maxZoom,
+  }) => TileLayer(
+    urlTemplate:
+        'https://api.maptiler.com/maps/basic-v2/256/{z}/{x}/{y}.png?key={key}',
+    additionalOptions: {'key': widget.mapTilerApiKey ?? ''},
+    minZoom: minZoom,
+    maxZoom: maxZoom,
+    maxNativeZoom: maxZoom.toInt(),
+    retinaMode: false,
+    tileProvider: NetworkTileProvider(),
+  );
+
+  // Option si tu veux streets au niveau ville (plus “joli” mais + lourd):
+  TileLayer _mapTilerStreets256({
+    required double minZoom,
+    required double maxZoom,
+  }) => TileLayer(
     urlTemplate:
         'https://api.maptiler.com/maps/streets-v2/256/{z}/{x}/{y}.png?key={key}',
     additionalOptions: {'key': widget.mapTilerApiKey ?? ''},
-    minZoom: kTilesMinZoom,
-    maxZoom: kTilesMaxZoom,
-    maxNativeZoom: kTilesMaxZoom.toInt(),
+    minZoom: minZoom,
+    maxZoom: maxZoom,
+    maxNativeZoom: maxZoom.toInt(),
     retinaMode: false,
     tileProvider: NetworkTileProvider(),
   );
@@ -29,6 +59,10 @@ extension _MapPeopleUI on _MapPeopleByCityState {
       headers: {'User-Agent': widget.osmUserAgent},
     ),
   );
+
+  // ----------------------------
+  // UI
+  // ----------------------------
 
   Widget buildMapPeopleUI(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
@@ -45,8 +79,9 @@ extension _MapPeopleUI on _MapPeopleByCityState {
         ? '${_activeCountry!.toUpperCase()} • ${l10n.mapPeopleCountBanner(_peopleCount)}'
         : l10n.mapPeopleCountBanner(_peopleCount);
 
+    // ✅ clamp l'initialZoom selon le niveau courant
     final safeInitialZoom = _initialZoom
-        .clamp(kTilesMinZoom, kTilesMaxZoom)
+        .clamp(kTilesMinZoom, _levelMaxZoom)
         .toDouble();
 
     return Stack(
@@ -56,21 +91,36 @@ extension _MapPeopleUI on _MapPeopleByCityState {
           options: MapOptions(
             initialCenter: _initialCenter,
             initialZoom: safeInitialZoom,
+
+            // ✅ minZoom global
             minZoom: kTilesMinZoom,
-            maxZoom: kTilesMaxZoom,
+
+            // ✅ maxZoom dynamique (pays/villes)
+            maxZoom: _levelMaxZoom,
+
             interactionOptions: const InteractionOptions(
               flags: InteractiveFlag.all & ~InteractiveFlag.rotate,
             ),
 
-            // ✅ flutter_map v8: pas de MapEventZoomEnd => debounce cross-version
+            // ✅ debounce cross-version (flutter_map v8)
             onMapEvent: (evt) {
               _mapEventDebounce?.cancel();
               _mapEventDebounce = Timer(const Duration(milliseconds: 180), () {
                 if (!mounted) return;
 
                 final z = _map.camera.zoom;
-                if ((z - _currentZoom).abs() > 0.10) {
-                  _currentZoom = z;
+
+                // ✅ si on est au niveau PAYS, on empêche le zoom de dépasser le plafond
+                // (utile si un ancien état avait un maxZoom plus haut)
+                final clampedZ = z
+                    .clamp(kTilesMinZoom, _levelMaxZoom)
+                    .toDouble();
+                if ((clampedZ - z).abs() > 0.001) {
+                  _map.move(_map.camera.center, clampedZ);
+                }
+
+                if ((clampedZ - _currentZoom).abs() > 0.10) {
+                  _currentZoom = clampedZ;
                 }
                 _rebuildMarkers();
               });
@@ -78,13 +128,14 @@ extension _MapPeopleUI on _MapPeopleByCityState {
           ),
           children: [
             if (!tilesBlockedInRelease && !_initializing)
-              _buildTileLayerOptimized(),
+              _buildTileLayerByLevel(),
             _distanceCircleLayer(),
             if (_cityMarkers.isNotEmpty) MarkerLayer(markers: _cityMarkers),
             _buildAttribution(),
           ],
         ),
 
+        // ✅ Bouton retour (uniquement au niveau ville)
         if (isCityLevel)
           Positioned(
             left: 12,
@@ -99,6 +150,7 @@ extension _MapPeopleUI on _MapPeopleByCityState {
             ),
           ),
 
+        // ✅ Filtres : visibles uniquement au niveau pays
         if (!isCityLevel)
           Positioned(
             left: 12,
@@ -117,6 +169,7 @@ extension _MapPeopleUI on _MapPeopleByCityState {
             ),
           ),
 
+        // ✅ Badge central
         Positioned(
           left: 84,
           right: 84,
@@ -162,6 +215,7 @@ extension _MapPeopleUI on _MapPeopleByCityState {
           ),
         ),
 
+        // ✅ Refresh
         Positioned(
           right: 12,
           top: 12,
@@ -215,15 +269,46 @@ extension _MapPeopleUI on _MapPeopleByCityState {
     );
   }
 
-  Widget _buildTileLayerOptimized() {
+  // ----------------------------
+  // Tile strategy by level
+  // ----------------------------
+  Widget _buildTileLayerByLevel() {
     final canUseOsm = !kReleaseMode || widget.allowOsmInRelease;
 
-    if (!canUseOsm && (widget.mapTilerApiKey?.isNotEmpty ?? false)) {
-      return _mapTilerTileLayer();
+    // Release + OSM interdit -> MapTiler obligatoire (si key)
+    final mustUseMapTiler = !canUseOsm;
+
+    // 🟢 si OSM autorisé (debug / allowOsmInRelease), on peut rester en OSM
+    if (!mustUseMapTiler) {
+      return _osmTileLayer();
     }
-    return _osmTileLayer();
+
+    // 🔑 si pas de clé -> couche vide (mais ce cas est géré par tilesBlockedInRelease)
+    if (!(widget.mapTilerApiKey?.isNotEmpty ?? false)) {
+      return const SizedBox.shrink();
+    }
+
+    // ✅ Niveau PAYS : basic-v2 + maxZoomCountry
+    if (_level == _MapLevel.country) {
+      return _mapTilerBasic256(
+        minZoom: kTilesMinZoom,
+        maxZoom: kMaxZoomCountry,
+      );
+    }
+
+    // ✅ Niveau VILLES :
+    // - basic-v2 (le moins cher) recommandé
+    // - ou streets-v2 si tu veux + de détail (plus de poids)
+    const bool useStreetsAtCityLevel = false; // ← mets true si tu veux
+    if (useStreetsAtCityLevel) {
+      return _mapTilerStreets256(minZoom: kTilesMinZoom, maxZoom: kMaxZoomCity);
+    }
+    return _mapTilerBasic256(minZoom: kTilesMinZoom, maxZoom: kMaxZoomCity);
   }
 
+  // ----------------------------
+  // Attribution
+  // ----------------------------
   Widget _buildAttribution() {
     final usingMapTiler =
         kReleaseMode &&
