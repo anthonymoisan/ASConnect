@@ -1171,4 +1171,10 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get mapConnectedOnlyChip => 'Connectés';
+
+  @override
+  String get statusOnline => 'En ligne';
+
+  @override
+  String get statusOffline => 'Hors ligne';
 }

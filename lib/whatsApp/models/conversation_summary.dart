@@ -10,6 +10,7 @@ class ConversationSummary {
   final int unreadCount; // ✅ nombre de messages non lus (pour le viewer)
 
   final int? otherPeopleId; // ✅ utile pour avatar en 1–1
+  final bool? otherIsConnected;
 
   final LastMessageSummary? lastMessage;
 
@@ -21,6 +22,7 @@ class ConversationSummary {
     required this.lastMessageAt,
     required this.unreadCount,
     required this.otherPeopleId,
+    required this.otherIsConnected,
     required this.lastMessage,
   });
 
@@ -37,6 +39,9 @@ class ConversationSummary {
           : DateTime.parse(json['last_message_at']),
       unreadCount: (json['unread_count'] as int?) ?? 0,
       otherPeopleId: json['other_people_id'] as int?,
+      otherIsConnected:
+          (json['is_connected'] as bool?) ??
+          ((json['is_connected'] as int?) == 1 ? true : null),
       lastMessage: (json['last_message'] == null)
           ? null
           : LastMessageSummary.fromJson(

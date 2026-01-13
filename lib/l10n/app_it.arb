@@ -592,5 +592,7 @@
   "mapConnectionSectionTitle": "Connessione",
   "mapConnectedOnlyLabel": "Mostra solo le persone connesse",
   "mapConnectedOnlyHint": "Nasconde i profili offline.",
-  "mapConnectedOnlyChip": "Connessi"
+  "mapConnectedOnlyChip": "Connessi",
+  "statusOnline": "Disponibile",
+  "statusOffline": "Non disponibile"
 }

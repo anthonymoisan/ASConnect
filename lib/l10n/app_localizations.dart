@@ -2168,6 +2168,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Connected'**
   String get mapConnectedOnlyChip;
+
+  /// No description provided for @statusOnline.
+  ///
+  /// In en, this message translates to:
+  /// **'Online'**
+  String get statusOnline;
+
+  /// No description provided for @statusOffline.
+  ///
+  /// In en, this message translates to:
+  /// **'Offline'**
+  String get statusOffline;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

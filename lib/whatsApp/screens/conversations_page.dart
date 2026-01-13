@@ -29,6 +29,8 @@ class _ConversationsPageState extends State<ConversationsPage>
   bool _pollingEnabled = true;
   bool _reloading = false;
 
+  final Set<int> _loggedConvIds = {};
+
   static const Duration _pollInterval = Duration(seconds: 10);
 
   void _onRefreshTick() => _reload(silent: true);
@@ -100,6 +102,8 @@ class _ConversationsPageState extends State<ConversationsPage>
       s = (s * 31) ^ c.id;
       s = (s * 31) ^ (c.unreadCount);
       s = (s * 31) ^ (c.lastMessageAt?.millisecondsSinceEpoch ?? 0);
+
+      s = (s * 31) ^ ((c.otherIsConnected == true) ? 1 : 0);
 
       final lm = c.lastMessage;
       if (lm != null) {
@@ -409,14 +413,22 @@ class _ConversationsPageState extends State<ConversationsPage>
       itemBuilder: (context, index) {
         final conv = _items[index];
 
+        if (_loggedConvIds.add(conv.id)) {
+          debugPrint(
+            "[CONV] id=${conv.id} otherPeopleId=${conv.otherPeopleId} "
+            "otherIsConnected=${conv.otherIsConnected} (${conv.otherIsConnected.runtimeType})",
+          );
+        }
+
         return ListTile(
           contentPadding: const EdgeInsets.symmetric(
             horizontal: 16,
             vertical: 8,
           ),
-          leading: _PeoplePhotoAvatar(
+          leading: _PeoplePhotoAvatarWithStatus(
             peopleId: conv.otherPeopleId,
             radius: 22,
+            isOnline: conv.otherIsConnected, // à adapter selon ton modèle
             onTap: () {
               final id = conv.otherPeopleId;
               if (id != null) _openAvatarFullScreen(id);
@@ -630,6 +642,124 @@ class _LastLine extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _OnlineDot extends StatelessWidget {
+  const _OnlineDot({required this.isOnline, this.size = 10});
+
+  final bool isOnline;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        color: isOnline ? Colors.green : Colors.red,
+        shape: BoxShape.circle,
+        border: Border.all(color: Colors.white, width: 2),
+        boxShadow: const [
+          BoxShadow(color: Colors.black26, blurRadius: 3, offset: Offset(0, 1)),
+        ],
+      ),
+    );
+  }
+}
+
+class _StatusDot extends StatelessWidget {
+  const _StatusDot({
+    required this.isOnline,
+    required this.tooltipOnline,
+    required this.tooltipOffline,
+    this.size = 12,
+  });
+
+  final bool isOnline;
+  final String tooltipOnline;
+  final String tooltipOffline;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: isOnline ? tooltipOnline : tooltipOffline,
+      child: Container(
+        width: size,
+        height: size,
+        decoration: BoxDecoration(
+          color: isOnline ? Colors.green : Colors.red,
+          shape: BoxShape.circle,
+          border: Border.all(color: Colors.white, width: 2),
+          boxShadow: const [
+            BoxShadow(
+              color: Colors.black26,
+              blurRadius: 3,
+              offset: Offset(0, 1),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PeoplePhotoAvatarWithStatus extends StatelessWidget {
+  const _PeoplePhotoAvatarWithStatus({
+    required this.peopleId,
+    required this.radius,
+    required this.isOnline,
+    this.onTap,
+  });
+
+  final int? peopleId;
+  final double radius;
+  final bool? isOnline; // null => pas d’info => pas de dot
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    // ✅ Reserve de la place dans le leading du ListTile
+    final box = radius * 2;
+
+    final dotSize = (radius * 0.55).clamp(10.0, 14.0).toDouble();
+    final dotPadding = (radius * 0.12).clamp(1.0, 4.0).toDouble();
+
+    final l10n = AppLocalizations.of(context)!;
+    final tooltipOnline = l10n.statusOnline;
+    final tooltipOffline = l10n.statusOffline;
+
+    return SizedBox(
+      width: box,
+      height: box,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Align(
+            alignment: Alignment.center,
+            child: _PeoplePhotoAvatar(
+              peopleId: peopleId,
+              radius: radius,
+              onTap: onTap,
+            ),
+          ),
+
+          if (isOnline != null)
+            Positioned(
+              // ✅ pas de valeurs négatives => visible même si le parent clippe
+              right: dotPadding,
+              top: dotPadding,
+              child: _StatusDot(
+                isOnline: isOnline!,
+                size: dotSize,
+                tooltipOnline: tooltipOnline,
+                tooltipOffline: tooltipOffline,
+              ),
+            ),
+        ],
+      ),
     );
   }
 }
