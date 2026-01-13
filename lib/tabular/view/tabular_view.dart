@@ -1,4 +1,3 @@
-// lib/tabular/view/tabular_view.dart
 import 'package:flutter/material.dart';
 
 import '../../l10n/app_localizations.dart';
@@ -20,13 +19,22 @@ class _TabularViewState extends State<TabularView> {
   bool _loading = true;
   Object? _error;
 
+  Map<String, String> _countriesByCode = {};
+  String? _countriesLocale; // pour recharger si la langue change
+
   @override
   void initState() {
     super.initState();
-    _load();
+    _loadPeople(); // people peut charger tout de suite
   }
 
-  Future<void> _load() async {
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _loadCountriesIfNeeded(); // dépend de la locale => ici
+  }
+
+  Future<void> _loadPeople() async {
     try {
       final data = await TabularApi.fetchPeopleMapRepresentation();
       if (!mounted) return;
@@ -47,56 +55,69 @@ class _TabularViewState extends State<TabularView> {
     }
   }
 
-  // ---------------------------------------------------------------------------
-  // 🧬 Génotype : valeur brute API -> libellé ARB (langue sélectionnée)
-  // ---------------------------------------------------------------------------
-  String _genotypeLabel(BuildContext context, String? raw) {
-    final l10n = AppLocalizations.of(context)!;
+  Future<void> _loadCountriesIfNeeded() async {
+    final loc = Localizations.localeOf(context).languageCode.toLowerCase();
+    if (_countriesLocale == loc && _countriesByCode.isNotEmpty) return;
 
-    if (raw == null) return '—';
-    final v = raw.trim();
-    if (v.isEmpty) return '—';
+    try {
+      final map = await TabularApi.fetchCountriesTranslated(locale: loc);
+      if (!mounted) return;
+      setState(() {
+        _countriesLocale = loc;
+        _countriesByCode = map;
+      });
+    } catch (_) {
+      // on n'empêche pas l'écran de fonctionner : fallback sur p.country
+    }
+  }
 
-    final s = v.toLowerCase();
+  String _countryLabel(Person p) {
+    final code = (p.countryCode ?? '').trim();
+    if (code.isNotEmpty) {
+      final translated = _countriesByCode[code];
+      if (translated != null && translated.trim().isNotEmpty) {
+        return translated.trim();
+      }
+    }
+    final raw = p.country?.trim();
+    return (raw?.isNotEmpty == true) ? raw! : '—';
+  }
 
-    // accepte "Délétion", "Deletion", "del", "deletion", etc.
-    if (s.startsWith('dél') || s.startsWith('del'))
+  String _pseudo(Person p) {
+    final raw = p.pseudo.trim();
+    return raw.isNotEmpty ? raw : '—';
+  }
+
+  // ✅ Genotype localisé via ARB
+  String _genotypeLabel(AppLocalizations l10n, Person p) {
+    final g = (p.genotype ?? '').trim().toLowerCase();
+    if (g.isEmpty) return '—';
+
+    if (g.contains('dél') || g.contains('del') || g.contains('deletion')) {
       return l10n.genotypeDeletion;
-    if (s.startsWith('mut')) return l10n.genotypeMutation;
-    if (s == 'upd') return l10n.genotypeUpd;
-    if (s == 'icd') return l10n.genotypeIcd;
-    if (s.startsWith('cli')) return l10n.genotypeClinical;
-    if (s.startsWith('mos')) return l10n.genotypeMosaic;
+    }
+    if (g.contains('mut')) return l10n.genotypeMutation;
+    if (g.contains('upd')) return l10n.genotypeUpd;
+    if (g.contains('icd')) return l10n.genotypeIcd;
+    if (g.contains('clin')) return l10n.genotypeClinical;
+    if (g.contains('mosa')) return l10n.genotypeMosaic;
 
-    // fallback : on affiche la valeur API si inconnue
-    return v;
+    // fallback : on affiche le texte brut si inconnu
+    return p.genotype!.trim();
   }
 
   void _openPersonPhotoFullScreen(Person p) {
     final l10n = AppLocalizations.of(context)!;
 
-    final int id = p.id ?? -1;
-    final String url = personPhotoUrl(id);
+    final id = p.id ?? -1;
+    final url = personPhotoUrl(id);
 
-    final String pseudo = (p.pseudo?.trim().isNotEmpty == true)
-        ? p.pseudo!.trim()
-        : (p.firstName?.trim().isNotEmpty == true)
-        ? p.firstName!.trim()
-        : '—';
+    final pseudo = _pseudo(p);
+    final ageLabel = (p.age == null) ? '—' : l10n.mapPersonTileAge(p.age!);
+    final genotype = _genotypeLabel(l10n, p);
 
-    final String ageLabel = (p.age == null)
-        ? '—'
-        : l10n.mapPersonTileAge(p.age!);
-
-    // ✅ genotype localisé via ARB
-    final String genotype = _genotypeLabel(context, p.genotype);
-
-    final String country = (p.country?.trim().isNotEmpty == true)
-        ? p.country!.trim()
-        : '—';
-    final String city = (p.city?.trim().isNotEmpty == true)
-        ? p.city!.trim()
-        : '—';
+    final country = _countryLabel(p);
+    final city = (p.city?.trim().isNotEmpty == true) ? p.city!.trim() : '—';
 
     showGeneralDialog(
       context: context,
@@ -198,8 +219,8 @@ class _TabularViewState extends State<TabularView> {
   }
 
   Widget _photoAvatar(Person p, {double radius = 22}) {
-    final int id = p.id ?? -1;
-    final String url = personPhotoUrl(id);
+    final id = p.id ?? -1;
+    final url = personPhotoUrl(id);
 
     return GestureDetector(
       onTap: () => _openPersonPhotoFullScreen(p),
@@ -241,7 +262,8 @@ class _TabularViewState extends State<TabularView> {
             _loading = true;
             _error = null;
           });
-          await _load();
+          await _loadCountriesIfNeeded();
+          await _loadPeople();
         },
         child: ListView.separated(
           physics: const AlwaysScrollableScrollPhysics(),
@@ -251,22 +273,13 @@ class _TabularViewState extends State<TabularView> {
           itemBuilder: (ctx, i) {
             final p = people[i];
 
-            final pseudo = (p.pseudo?.trim().isNotEmpty == true)
-                ? p.pseudo!.trim()
-                : (p.firstName?.trim().isNotEmpty == true)
-                ? p.firstName!.trim()
-                : '—';
-
+            final pseudo = _pseudo(p);
             final ageLabel = (p.age == null)
                 ? '—'
                 : l10n.mapPersonTileAge(p.age!);
+            final genotype = _genotypeLabel(l10n, p);
 
-            // ✅ genotype localisé via ARB
-            final genotype = _genotypeLabel(context, p.genotype);
-
-            final country = (p.country?.trim().isNotEmpty == true)
-                ? p.country!.trim()
-                : '—';
+            final country = _countryLabel(p);
             final city = (p.city?.trim().isNotEmpty == true)
                 ? p.city!.trim()
                 : '—';
