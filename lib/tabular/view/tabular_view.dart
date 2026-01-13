@@ -1,3 +1,4 @@
+// lib/tabular/view/tabular_view.dart
 import 'package:flutter/material.dart';
 
 import '../../l10n/app_localizations.dart';
@@ -20,18 +21,24 @@ class _TabularViewState extends State<TabularView> {
   Object? _error;
 
   Map<String, String> _countriesByCode = {};
-  String? _countriesLocale; // pour recharger si la langue change
+  String? _countriesLocale;
+
+  // ✅ Tri
+  int? _sortColumnIndex;
+  bool _sortAscending = true;
+
+  List<Person> _view = const <Person>[];
 
   @override
   void initState() {
     super.initState();
-    _loadPeople(); // people peut charger tout de suite
+    _loadPeople();
   }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    _loadCountriesIfNeeded(); // dépend de la locale => ici
+    _loadCountriesIfNeeded();
   }
 
   Future<void> _loadPeople() async {
@@ -43,9 +50,15 @@ class _TabularViewState extends State<TabularView> {
 
       setState(() {
         _listPerson = data;
+        _view = List<Person>.from(data.items);
         _loading = false;
         _error = null;
       });
+
+      // applique le tri courant si déjà choisi
+      if (_sortColumnIndex != null) {
+        _applySort(_sortColumnIndex!, _sortAscending);
+      }
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -66,8 +79,13 @@ class _TabularViewState extends State<TabularView> {
         _countriesLocale = loc;
         _countriesByCode = map;
       });
+
+      // si on est déjà trié par pays, on retrie avec les nouveaux libellés
+      if (_sortColumnIndex == 4) {
+        _applySort(4, _sortAscending);
+      }
     } catch (_) {
-      // on n'empêche pas l'écran de fonctionner : fallback sur p.country
+      // fallback silencieux : on affichera p.country
     }
   }
 
@@ -88,6 +106,11 @@ class _TabularViewState extends State<TabularView> {
     return raw.isNotEmpty ? raw : '—';
   }
 
+  String _cityLabel(Person p) {
+    final raw = p.city?.trim();
+    return (raw?.isNotEmpty == true) ? raw! : '—';
+  }
+
   // ✅ Genotype localisé via ARB
   String _genotypeLabel(AppLocalizations l10n, Person p) {
     final g = (p.genotype ?? '').trim().toLowerCase();
@@ -102,9 +125,61 @@ class _TabularViewState extends State<TabularView> {
     if (g.contains('clin')) return l10n.genotypeClinical;
     if (g.contains('mosa')) return l10n.genotypeMosaic;
 
-    // fallback : on affiche le texte brut si inconnu
     return p.genotype!.trim();
   }
+
+  // ---------------------------------------------------------------------------
+  // 🔽 TRI
+  // ---------------------------------------------------------------------------
+
+  void _applySort(int columnIndex, bool ascending) {
+    final l10n = AppLocalizations.of(context)!;
+
+    int cmpNullable<T extends Comparable>(T? a, T? b) {
+      if (a == null && b == null) return 0;
+      if (a == null) return 1; // nulls à la fin
+      if (b == null) return -1;
+      return a.compareTo(b);
+    }
+
+    int cmpString(String a, String b) =>
+        a.toLowerCase().compareTo(b.toLowerCase());
+
+    setState(() {
+      _sortColumnIndex = columnIndex;
+      _sortAscending = ascending;
+
+      _view.sort((a, b) {
+        int res = 0;
+
+        switch (columnIndex) {
+          case 1: // pseudo
+            res = cmpString(_pseudo(a), _pseudo(b));
+            break;
+          case 2: // age
+            res = cmpNullable<int>(a.age, b.age);
+            break;
+          case 3: // genotype
+            res = cmpString(_genotypeLabel(l10n, a), _genotypeLabel(l10n, b));
+            break;
+          case 4: // country (traduit)
+            res = cmpString(_countryLabel(a), _countryLabel(b));
+            break;
+          case 5: // city
+            res = cmpString(_cityLabel(a), _cityLabel(b));
+            break;
+          default:
+            res = 0;
+        }
+
+        return ascending ? res : -res;
+      });
+    });
+  }
+
+  // ---------------------------------------------------------------------------
+  // 🖼️ Photo plein écran (inchangé)
+  // ---------------------------------------------------------------------------
 
   void _openPersonPhotoFullScreen(Person p) {
     final l10n = AppLocalizations.of(context)!;
@@ -117,7 +192,7 @@ class _TabularViewState extends State<TabularView> {
     final genotype = _genotypeLabel(l10n, p);
 
     final country = _countryLabel(p);
-    final city = (p.city?.trim().isNotEmpty == true) ? p.city!.trim() : '—';
+    final city = _cityLabel(p);
 
     showGeneralDialog(
       context: context,
@@ -218,94 +293,158 @@ class _TabularViewState extends State<TabularView> {
     );
   }
 
-  Widget _photoAvatar(Person p, {double radius = 22}) {
+  Widget _photoCell(Person p) {
     final id = p.id ?? -1;
     final url = personPhotoUrl(id);
 
     return GestureDetector(
       onTap: () => _openPersonPhotoFullScreen(p),
       child: CircleAvatar(
-        radius: radius,
+        radius: 18,
         backgroundColor: Colors.grey.shade200,
         backgroundImage: NetworkImage(
           url,
           headers: {'X-App-Key': publicAppKey},
         ),
         onBackgroundImageError: (_, __) {},
-        child: const SizedBox.shrink(),
       ),
     );
   }
+
+  // ---------------------------------------------------------------------------
+  // UI
+  // ---------------------------------------------------------------------------
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
 
     if (_loading) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      return const Center(child: CircularProgressIndicator());
     }
 
     if (_error != null) {
-      return Scaffold(
-        appBar: AppBar(title: const Text('Tabular')),
-        body: Center(child: Text('Error: $_error')),
-      );
+      return Center(child: Text('Error: $_error'));
     }
 
-    final people = _listPerson?.items ?? const <Person>[];
+    if (_view.isEmpty) {
+      return const Center(child: Text('—'));
+    }
 
-    return Scaffold(
-      appBar: AppBar(title: const Text('Tabular')),
-      body: RefreshIndicator(
-        onRefresh: () async {
-          setState(() {
-            _loading = true;
-            _error = null;
-          });
-          await _loadCountriesIfNeeded();
-          await _loadPeople();
+    // ⚠️ RefreshIndicator a besoin d’un scrollable
+    return RefreshIndicator(
+      onRefresh: () async {
+        setState(() {
+          _loading = true;
+          _error = null;
+        });
+        await _loadCountriesIfNeeded();
+        await _loadPeople();
+      },
+      child: LayoutBuilder(
+        builder: (ctx, constraints) {
+          return SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minWidth: constraints.maxWidth),
+                child: DataTable(
+                  sortColumnIndex: _sortColumnIndex,
+                  sortAscending: _sortAscending,
+                  columnSpacing: 18,
+                  headingRowHeight: 44,
+                  dataRowMinHeight: 54,
+                  dataRowMaxHeight: 64,
+                  columns: [
+                    const DataColumn(label: Text('')), // photo (pas de tri)
+                    DataColumn(
+                      label: const Text('Pseudo'),
+                      onSort: (i, asc) => _applySort(i, asc),
+                    ),
+                    DataColumn(
+                      label: const Text('Âge'),
+                      numeric: true,
+                      onSort: (i, asc) => _applySort(i, asc),
+                    ),
+                    DataColumn(
+                      label: const Text('Génotype'),
+                      onSort: (i, asc) => _applySort(i, asc),
+                    ),
+                    DataColumn(
+                      label: const Text('Pays'),
+                      onSort: (i, asc) => _applySort(i, asc),
+                    ),
+                    DataColumn(
+                      label: const Text('Ville'),
+                      onSort: (i, asc) => _applySort(i, asc),
+                    ),
+                  ],
+                  rows: _view.map((p) {
+                    final pseudo = _pseudo(p);
+                    final ageLabel = (p.age == null)
+                        ? '—'
+                        : l10n.mapPersonTileAge(p.age!);
+                    final genotype = _genotypeLabel(l10n, p);
+                    final country = _countryLabel(p);
+                    final city = _cityLabel(p);
+
+                    return DataRow(
+                      onSelectChanged: (_) => _openPersonPhotoFullScreen(p),
+                      cells: [
+                        DataCell(_photoCell(p)),
+                        DataCell(
+                          SizedBox(
+                            width: 160,
+                            child: Text(
+                              pseudo,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                        ),
+                        DataCell(Text(ageLabel)),
+                        DataCell(
+                          SizedBox(
+                            width: 140,
+                            child: Text(
+                              genotype,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ),
+                        DataCell(
+                          SizedBox(
+                            width: 160,
+                            child: Text(
+                              country,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ),
+                        DataCell(
+                          SizedBox(
+                            width: 160,
+                            child: Text(
+                              city,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ),
+                      ],
+                    );
+                  }).toList(),
+                ),
+              ),
+            ),
+          );
         },
-        child: ListView.separated(
-          physics: const AlwaysScrollableScrollPhysics(),
-          itemCount: people.length,
-          separatorBuilder: (_, __) =>
-              Divider(height: 1, color: Colors.grey.shade200),
-          itemBuilder: (ctx, i) {
-            final p = people[i];
-
-            final pseudo = _pseudo(p);
-            final ageLabel = (p.age == null)
-                ? '—'
-                : l10n.mapPersonTileAge(p.age!);
-            final genotype = _genotypeLabel(l10n, p);
-
-            final country = _countryLabel(p);
-            final city = (p.city?.trim().isNotEmpty == true)
-                ? p.city!.trim()
-                : '—';
-
-            return ListTile(
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 16,
-                vertical: 8,
-              ),
-              leading: _photoAvatar(p, radius: 22),
-              title: Text(
-                '$pseudo  •  $ageLabel  •  $genotype',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontWeight: FontWeight.w700),
-              ),
-              subtitle: Text(
-                '$country  •  $city',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(color: Colors.grey.shade700),
-              ),
-              onTap: () => _openPersonPhotoFullScreen(p),
-            );
-          },
-        ),
       ),
     );
   }
