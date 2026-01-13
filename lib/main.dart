@@ -24,6 +24,8 @@ import 'profil/edit_profile_page.dart';
 import 'component/version.dart';
 import 'whatsApp/screens/conversations_page.dart';
 
+import 'tabular/view/tabular_view.dart';
+
 // L10n
 import 'l10n/app_localizations.dart';
 import 'package:flutter_localized_locales/flutter_localized_locales.dart';
@@ -311,6 +313,9 @@ class _ASConnexionState extends State<ASConnexion> {
     Widget page;
 
     switch (name) {
+      case '/tabular':
+        page = const TabularView();
+        break;
       case '/login':
         page = LoginPage(
           currentLocale: _locale,
@@ -774,7 +779,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           elevation: 0,
           child: Center(
             child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 150),
+              constraints: const BoxConstraints(maxWidth: 210),
               child: Container(
                 margin: const EdgeInsets.only(bottom: 6),
                 decoration: BoxDecoration(
@@ -808,7 +813,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                           selected: _currentIndex == 0,
                           onTap: () => _setIndex(0),
                         ),
-                        const SizedBox(width: 32),
+
+                        const SizedBox(width: 28),
+
                         Stack(
                           clipBehavior: Clip.none,
                           children: [
@@ -822,6 +829,18 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                             ),
                             _Badge(count: _unreadMessagesTotal),
                           ],
+                        ),
+
+                        const SizedBox(width: 28),
+
+                        // ✅ NOUVELLE ICÔNE TABLE
+                        _NavIcon(
+                          icon: Ionicons
+                              .grid_outline, // ou table_outline si dispo
+                          selected: false, // ce n’est PAS un tab
+                          onTap: () {
+                            Navigator.of(context).pushNamed('/tabular');
+                          },
                         ),
                       ],
                     ),
