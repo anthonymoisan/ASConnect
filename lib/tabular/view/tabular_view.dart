@@ -41,6 +41,60 @@ class _TabularViewState extends State<TabularView> {
     _loadCountriesIfNeeded();
   }
 
+  // ---------------------------------------------------------------------------
+  // Width strategy (auto + plafonds)
+  // ---------------------------------------------------------------------------
+
+  double _maxPseudoWidth(BuildContext context) {
+    final w = MediaQuery.of(context).size.width;
+    if (w < 360) return 90;
+    if (w < 600) return 110;
+    return 130; // desktop/tablet
+  }
+
+  double _maxGenotypeWidth(BuildContext context) {
+    final w = MediaQuery.of(context).size.width;
+    if (w < 360) return 120;
+    if (w < 600) return 140;
+    return 170;
+  }
+
+  double _maxCountryWidth(BuildContext context) {
+    final w = MediaQuery.of(context).size.width;
+    if (w < 360) return 120;
+    if (w < 600) return 150;
+    return 190;
+  }
+
+  double _maxCityWidth(BuildContext context) {
+    final w = MediaQuery.of(context).size.width;
+    if (w < 360) return 120;
+    if (w < 600) return 150;
+    return 190;
+  }
+
+  Widget _ellipsisCell(
+    String text, {
+    required double maxWidth,
+    TextStyle? style,
+    TextAlign? textAlign,
+  }) {
+    return ConstrainedBox(
+      constraints: BoxConstraints(maxWidth: maxWidth),
+      child: Text(
+        text,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: style,
+        textAlign: textAlign,
+      ),
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // Data loading
+  // ---------------------------------------------------------------------------
+
   Future<void> _loadPeople() async {
     try {
       final data = await TabularApi.fetchPeopleMapRepresentation();
@@ -331,6 +385,11 @@ class _TabularViewState extends State<TabularView> {
       return const Center(child: Text('—'));
     }
 
+    final pseudoMax = _maxPseudoWidth(context);
+    final genotypeMax = _maxGenotypeWidth(context);
+    final countryMax = _maxCountryWidth(context);
+    final cityMax = _maxCityWidth(context);
+
     // ⚠️ RefreshIndicator a besoin d’un scrollable
     return RefreshIndicator(
       onRefresh: () async {
@@ -352,7 +411,7 @@ class _TabularViewState extends State<TabularView> {
                 child: DataTable(
                   sortColumnIndex: _sortColumnIndex,
                   sortAscending: _sortAscending,
-                  columnSpacing: 18,
+                  columnSpacing: 16,
                   headingRowHeight: 44,
                   dataRowMinHeight: 54,
                   dataRowMaxHeight: 64,
@@ -394,49 +453,18 @@ class _TabularViewState extends State<TabularView> {
                       cells: [
                         DataCell(_photoCell(p)),
                         DataCell(
-                          SizedBox(
-                            width: 100,
-                            child: Text(
-                              pseudo,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
+                          _ellipsisCell(
+                            pseudo,
+                            maxWidth: pseudoMax,
+                            style: const TextStyle(fontWeight: FontWeight.w700),
                           ),
                         ),
                         DataCell(Text(ageLabel)),
                         DataCell(
-                          SizedBox(
-                            width: 140,
-                            child: Text(
-                              genotype,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
+                          _ellipsisCell(genotype, maxWidth: genotypeMax),
                         ),
-                        DataCell(
-                          SizedBox(
-                            width: 160,
-                            child: Text(
-                              country,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        ),
-                        DataCell(
-                          SizedBox(
-                            width: 160,
-                            child: Text(
-                              city,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        ),
+                        DataCell(_ellipsisCell(country, maxWidth: countryMax)),
+                        DataCell(_ellipsisCell(city, maxWidth: cityMax)),
                       ],
                     );
                   }).toList(),
