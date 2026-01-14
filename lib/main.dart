@@ -313,9 +313,6 @@ class _ASConnexionState extends State<ASConnexion> {
     Widget page;
 
     switch (name) {
-      case '/tabular':
-        page = const TabularView();
-        break;
       case '/login':
         page = LoginPage(
           currentLocale: _locale,
@@ -521,7 +518,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     ),
     ConversationsPage(personId: widget.personId),
 
-    const TabularView(),
+    TabularView(currentPersonId: widget.personId),
   ];
 
   void _setIndex(int i) => setState(() => _currentIndex = i);

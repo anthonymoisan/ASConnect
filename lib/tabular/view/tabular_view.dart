@@ -13,14 +13,15 @@ import '../models/person.dart';
 import '../services/tabular_api.dart';
 
 class TabularView extends StatefulWidget {
-  const TabularView({super.key});
+  final int currentPersonId;
+  const TabularView({super.key, required this.currentPersonId});
 
   @override
   State<TabularView> createState() => _TabularViewState();
 }
 
 class _TabularViewState extends State<TabularView> with WidgetsBindingObserver {
-  ListPerson? _listPerson;
+  //ListPerson? _listPerson;
   bool _loading = true;
   Object? _error;
 
@@ -150,8 +151,10 @@ class _TabularViewState extends State<TabularView> with WidgetsBindingObserver {
       if (!mounted) return;
 
       setState(() {
-        _listPerson = data;
-        _view = List<Person>.from(data.items);
+        //_listPerson = data;
+        _view = data.items
+            .where((p) => p.id != widget.currentPersonId)
+            .toList();
         _loading = false;
         _error = null;
       });
@@ -192,12 +195,17 @@ class _TabularViewState extends State<TabularView> with WidgetsBindingObserver {
       final data = await TabularApi.fetchPeopleMapRepresentation(force: true);
       if (!mounted) return;
 
-      final newView = List<Person>.from(data.items);
+      final int currentPersonId = widget.currentPersonId;
+
+      final newView = data.items.where((p) => p.id != currentPersonId).toList();
 
       // ✅ logs utiles
       final onlineCount = newView.where((p) => p.isConnected).length;
       debugPrint(
         '[TABULAR] reload: online=$onlineCount / total=${newView.length}',
+      );
+      debugPrint(
+        '[TABULAR] visible=${newView.length} (excluding me=$currentPersonId)',
       );
 
       final oldSig = _sig(_view);
@@ -205,7 +213,7 @@ class _TabularViewState extends State<TabularView> with WidgetsBindingObserver {
 
       if (oldSig != newSig) {
         setState(() {
-          _listPerson = data;
+          //_listPerson = data;
           _view = newView;
           _error = null;
           _loading = false;
