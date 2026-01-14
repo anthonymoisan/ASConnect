@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import '../../l10n/app_localizations.dart';
 import '../../whatsApp/services/conversation_api.dart'
     show personPhotoUrl, publicAppKey, ConversationApi;
+import '../../whatsApp/services/conversation_events.dart';
+import '../../whatsApp/screens/chat_page.dart';
 import '../models/listPerson.dart';
 import '../models/person.dart';
 import '../services/tabular_api.dart';
@@ -605,39 +607,65 @@ class _ComposeMessageSheetState extends State<_ComposeMessageSheet> {
 
   Future<void> _send() async {
     if (_sending) return;
+
     final msg = _controller.text.trim();
     if (msg.isEmpty) return;
 
     setState(() => _sending = true);
 
     try {
-      final p1 = widget.currentPersonId; // toi
-      final p2 = widget.person.id; // personne de la ligne
-
-      final payload = <String, dynamic>{
-        "p1_id": p1,
-        "p2_id": p2,
-        "title": "Conversation ${widget.displayName}",
-      };
+      final meId = widget.currentPersonId;
+      final otherId = widget.person.id; // dans Tabular c’est non-null
 
       final conv = await TabularApi.createOrGetPrivateConversation(
-        payload: payload,
+        payload: {
+          "p1_id": meId,
+          "p2_id": otherId,
+          "title": "Conversation ${widget.displayName}",
+        },
       );
 
+      final convId = conv.id;
+
       await ConversationApi.sendMessage(
-        conversationId: conv.id,
-        senderPeopleId: p1,
+        conversationId: convId,
+        senderPeopleId: meId,
         bodyText: msg,
       );
 
       if (!mounted) return;
-      Navigator.of(context).pop();
+
+      _controller.clear();
+
+      // Si tu as le même système d’events que la cartographie
+      ConversationEvents.bump();
+
+      // ✅ Ferme le BottomSheet (rootNavigator car tu l’ouvres avec useRootNavigator: true)
+      final nav = Navigator.of(context, rootNavigator: true);
+      nav.pop();
+
+      // ✅ Puis ouvre le chat
+      Future.microtask(() {
+        nav.push(
+          MaterialPageRoute(
+            builder: (_) =>
+                ChatPage(conversationId: convId, currentPersonId: meId),
+          ),
+        );
+      });
     } catch (e) {
       if (!mounted) return;
+      final l10n = AppLocalizations.of(context)!;
+
       ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Erreur envoi: $e')));
-      setState(() => _sending = false);
+        Navigator.of(context, rootNavigator: true).context,
+      ).showSnackBar(
+        SnackBar(content: Text('Erreur envoi: $e')),
+        // ou si tu as une string l10n dédiée:
+        // SnackBar(content: Text(l10n.tabularSendFailed(e.toString()))),
+      );
+    } finally {
+      if (mounted) setState(() => _sending = false);
     }
   }
 
