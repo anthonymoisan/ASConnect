@@ -1,7 +1,9 @@
 // lib/tabular/view/tabular_view.dart
 import 'dart:async';
+import 'dart:math';
 
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../../whatsApp/services/conversation_api.dart'
@@ -59,6 +61,12 @@ class _TabularViewState extends State<TabularView> with WidgetsBindingObserver {
   int? _datasetMinAge;
   int? _datasetMaxAge;
 
+  // ✅ Distance filter (mobile + web)
+  bool _distanceFilterEnabled = false;
+  double? _distanceOriginLat;
+  double? _distanceOriginLng;
+  double? _maxDistanceKm; // ex 100.0
+
   // ✅ Poll refresh status
   Timer? _pollTimer;
   bool _reloading = false;
@@ -115,6 +123,75 @@ class _TabularViewState extends State<TabularView> with WidgetsBindingObserver {
   String _tableResultsLabel(AppLocalizations l10n) {
     final n = _view.length;
     return '${l10n.tableTabular} • $n';
+  }
+
+  // ---------------------------------------------------------------------------
+  // ✅ Location / Distance helpers (mobile + web)
+  // ---------------------------------------------------------------------------
+
+  Future<bool> _ensureLocation() async {
+    try {
+      // Sur web, certains appels peuvent throw -> on reste permissif.
+      try {
+        final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+        if (!serviceEnabled) return false;
+      } catch (_) {
+        // ignore (web)
+      }
+
+      try {
+        var perm = await Geolocator.checkPermission();
+        if (perm == LocationPermission.denied) {
+          perm = await Geolocator.requestPermission();
+        }
+        if (perm == LocationPermission.denied ||
+            perm == LocationPermission.deniedForever) {
+          return false;
+        }
+      } catch (_) {
+        // Sur web, le navigateur gère le prompt; on continue.
+      }
+
+      final pos = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.low,
+        timeLimit: const Duration(seconds: 8),
+      );
+
+      _distanceOriginLat = pos.latitude;
+      _distanceOriginLng = pos.longitude;
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  double _degToRad(double deg) => deg * (pi / 180.0);
+
+  double _haversineKm(double lat1, double lon1, double lat2, double lon2) {
+    const r = 6371.0;
+    final dLat = _degToRad(lat2 - lat1);
+    final dLon = _degToRad(lon2 - lon1);
+    final a =
+        (sin(dLat / 2) * sin(dLat / 2)) +
+        cos(_degToRad(lat1)) *
+            cos(_degToRad(lat2)) *
+            (sin(dLon / 2) * sin(dLon / 2));
+    final c = 2 * atan2(sqrt(a), sqrt(1 - a));
+    return r * c;
+  }
+
+  bool _matchesDistance(Person p) {
+    if (!_distanceFilterEnabled) return true;
+
+    final maxKm = _maxDistanceKm;
+    final oLat = _distanceOriginLat;
+    final oLng = _distanceOriginLng;
+    if (maxKm == null || oLat == null || oLng == null) return true;
+
+    if (p.latitude == null || p.longitude == null) return false;
+
+    final d = _haversineKm(oLat, oLng, p.latitude!, p.longitude!);
+    return d <= maxKm;
   }
 
   // ---------------------------------------------------------------------------
@@ -220,17 +297,13 @@ class _TabularViewState extends State<TabularView> with WidgetsBindingObserver {
         _loading = false;
       });
 
-      // ✅ met à jour domaines + applique filtres
       _recomputeAgeDomainFromAllPeople();
 
-      // ✅ si on n’avait pas encore init pays (rare), on init.
       if (_selectedCountries.isEmpty) {
         _selectedCountries.addAll(_countryOptions);
       } else {
-        // ✅ optionnel : retire les pays qui n’existent plus dans le dataset
         final opts = _countryOptions.toSet();
         _selectedCountries.removeWhere((c) => !opts.contains(c));
-        // ✅ si tout est devenu vide, on remet tout (pour éviter 0 résultat “involontaire”)
         if (_selectedCountries.isEmpty) {
           _selectedCountries.addAll(opts);
         }
@@ -262,7 +335,6 @@ class _TabularViewState extends State<TabularView> with WidgetsBindingObserver {
         _countriesByCode = map;
       });
 
-      // Si on trie sur pays, re-trier sur libellé traduit
       if (_sortColumnIndex == 4) {
         _applySort(4, _sortAscending);
       }
@@ -363,7 +435,7 @@ class _TabularViewState extends State<TabularView> with WidgetsBindingObserver {
   }
 
   // ---------------------------------------------------------------------------
-  // ✅ Compose modal ROBUSTE (controller géré dans un StatefulWidget dédié)
+  // Compose modal (envoie + ouvre chat)
   // ---------------------------------------------------------------------------
 
   Future<void> _openComposeMessageSheet(Person p) async {
@@ -505,7 +577,7 @@ class _TabularViewState extends State<TabularView> with WidgetsBindingObserver {
   }
 
   // ---------------------------------------------------------------------------
-  // ✅ Filtres (bar + sheet)
+  // ✅ Filtres
   // ---------------------------------------------------------------------------
 
   List<String> get _countryOptions {
@@ -555,15 +627,12 @@ class _TabularViewState extends State<TabularView> with WidgetsBindingObserver {
       for (final sel in _selectedGenotypes) {
         final s = sel.trim().toLowerCase();
 
-        // matching “souple”
         if (norm.contains('deletion') &&
-            (s.contains('dél') || s.contains('del'))) {
+            (s.contains('dél') || s.contains('del')))
           return true;
-        }
-        if ((norm.contains('dél') || norm.contains('del')) &&
-            s.contains('dél')) {
+
+        if ((norm.contains('dél') || norm.contains('del')) && s.contains('dél'))
           return true;
-        }
 
         if (norm.contains(s) || s.contains(norm)) return true;
       }
@@ -593,7 +662,8 @@ class _TabularViewState extends State<TabularView> with WidgetsBindingObserver {
       return matchesGenotype(p) &&
           matchesCountry(p) &&
           matchesConnected(p) &&
-          matchesAge(p);
+          matchesAge(p) &&
+          _matchesDistance(p);
     }).toList();
 
     setState(() {
@@ -618,6 +688,12 @@ class _TabularViewState extends State<TabularView> with WidgetsBindingObserver {
 
     _selectedMinAge = _datasetMinAge;
     _selectedMaxAge = _datasetMaxAge;
+
+    // ✅ reset distance
+    _distanceFilterEnabled = false;
+    _distanceOriginLat = null;
+    _distanceOriginLng = null;
+    _maxDistanceKm = null;
 
     _applyTabularFilters();
   }
@@ -656,10 +732,20 @@ class _TabularViewState extends State<TabularView> with WidgetsBindingObserver {
 
     final connectedPart = _connectedOnly ? l10n.mapConnectedOnlyChip : null;
 
+    final distActive =
+        _distanceFilterEnabled &&
+        _distanceOriginLat != null &&
+        _distanceOriginLng != null &&
+        _maxDistanceKm != null;
+    final distPart = distActive
+        ? l10n.mapDistanceMaxKm(_maxDistanceKm!.toStringAsFixed(0))
+        : null;
+
     final parts = [
       genoPart,
       countryPart,
       agePart,
+      distPart,
       connectedPart,
     ].whereType<String>().toList();
 
@@ -690,6 +776,12 @@ class _TabularViewState extends State<TabularView> with WidgetsBindingObserver {
 
     int? localMin = _selectedMinAge ?? _datasetMinAge;
     int? localMax = _selectedMaxAge ?? _datasetMaxAge;
+
+    // ✅ local distance
+    bool localDistanceEnabled = _distanceFilterEnabled;
+    double? localOriginLat = _distanceOriginLat;
+    double? localOriginLng = _distanceOriginLng;
+    double localMaxKm = _maxDistanceKm ?? 100.0;
 
     int countResultsWithLocalFilters() {
       int count = 0;
@@ -727,12 +819,24 @@ class _TabularViewState extends State<TabularView> with WidgetsBindingObserver {
         if (localConnectedOnly && !p.isConnected) continue;
 
         // age
-        // age
         final minA = localMin;
         final maxA = localMax;
         if (minA != null && maxA != null) {
           final a = p.age;
           if (a == null || a < minA || a > maxA) continue;
+        }
+
+        // ✅ distance (local preview)
+        if (localDistanceEnabled) {
+          if (localOriginLat == null || localOriginLng == null) continue;
+          if (p.latitude == null || p.longitude == null) continue;
+          final d = _haversineKm(
+            localOriginLat!,
+            localOriginLng!,
+            p.latitude!,
+            p.longitude!,
+          );
+          if (d > localMaxKm) continue;
         }
 
         count++;
@@ -833,6 +937,94 @@ class _TabularViewState extends State<TabularView> with WidgetsBindingObserver {
                           ],
                         ),
                       ),
+
+                      // ✅ Distance (comme carto)
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          l10n.mapDistanceTitle,
+                          style: const TextStyle(fontWeight: FontWeight.w700),
+                        ),
+                      ),
+                      SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: Text(l10n.mapEnableDistanceFilter),
+                        value: localDistanceEnabled,
+                        onChanged: (v) async {
+                          if (v) {
+                            setModalState(() => localDistanceEnabled = true);
+                            final ok = await _ensureLocation();
+                            if (ok &&
+                                _distanceOriginLat != null &&
+                                _distanceOriginLng != null) {
+                              setModalState(() {
+                                localOriginLat = _distanceOriginLat;
+                                localOriginLng = _distanceOriginLng;
+                              });
+                            } else {
+                              setModalState(() => localDistanceEnabled = false);
+                            }
+                          } else {
+                            setModalState(() => localDistanceEnabled = false);
+                          }
+                        },
+                      ),
+                      ListTile(
+                        dense: true,
+                        contentPadding: EdgeInsets.zero,
+                        title: Text(
+                          (localOriginLat != null && localOriginLng != null)
+                              ? l10n.mapOriginDefined(
+                                  localOriginLat!.toStringAsFixed(4),
+                                  localOriginLng!.toStringAsFixed(4),
+                                )
+                              : l10n.mapOriginUndefined,
+                        ),
+                        trailing: TextButton.icon(
+                          icon: const Icon(Icons.my_location),
+                          label: Text(l10n.mapMyPosition),
+                          onPressed: () async {
+                            final ok = await _ensureLocation();
+                            if (ok &&
+                                _distanceOriginLat != null &&
+                                _distanceOriginLng != null) {
+                              setModalState(() {
+                                localDistanceEnabled = true;
+                                localOriginLat = _distanceOriginLat;
+                                localOriginLng = _distanceOriginLng;
+                              });
+                            }
+                          },
+                        ),
+                      ),
+                      if (localDistanceEnabled) ...[
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Slider(
+                                value: localMaxKm.clamp(1, 1000),
+                                min: 1,
+                                max: 1000,
+                                divisions: 999,
+                                label: l10n.mapKmLabel(
+                                  localMaxKm.toStringAsFixed(0),
+                                ),
+                                onChanged: (v) {
+                                  setModalState(() => localMaxKm = v);
+                                },
+                              ),
+                            ),
+                            SizedBox(
+                              width: 72,
+                              child: Text(
+                                l10n.mapKmLabel(localMaxKm.toStringAsFixed(0)),
+                                textAlign: TextAlign.right,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                      const SizedBox(height: 16),
 
                       // Connectés
                       Align(
@@ -1017,6 +1209,11 @@ class _TabularViewState extends State<TabularView> with WidgetsBindingObserver {
                                 localMin = null;
                                 localMax = null;
                               }
+
+                              localDistanceEnabled = false;
+                              localOriginLat = null;
+                              localOriginLng = null;
+                              localMaxKm = 100.0;
                             }),
                           ),
                           const SizedBox(width: 8),
@@ -1041,6 +1238,14 @@ class _TabularViewState extends State<TabularView> with WidgetsBindingObserver {
 
                               _selectedMinAge = localMin;
                               _selectedMaxAge = localMax;
+
+                              // ✅ persist distance
+                              _distanceFilterEnabled = localDistanceEnabled;
+                              _distanceOriginLat = localOriginLat;
+                              _distanceOriginLng = localOriginLng;
+                              _maxDistanceKm = localDistanceEnabled
+                                  ? localMaxKm
+                                  : null;
 
                               Navigator.of(ctx).pop();
                               _applyTabularFilters();
@@ -1072,7 +1277,6 @@ class _TabularViewState extends State<TabularView> with WidgetsBindingObserver {
     if (_loading) return const Center(child: CircularProgressIndicator());
     if (_error != null) return Center(child: Text('Error: $_error'));
     if (_view.isEmpty) {
-      // ✅ même quand vide, on laisse pull-to-refresh + filtres
       return RefreshIndicator(
         onRefresh: () async {
           await _loadCountriesIfNeeded();
@@ -1210,7 +1414,6 @@ class _TabularViewState extends State<TabularView> with WidgetsBindingObserver {
             ),
           ),
           const SizedBox(width: 10),
-
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -1238,7 +1441,6 @@ class _TabularViewState extends State<TabularView> with WidgetsBindingObserver {
               ],
             ),
           ),
-
           IconButton(
             tooltip: l10n.mapReset,
             onPressed: _resetTabularFiltersToDefault,

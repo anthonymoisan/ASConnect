@@ -2,9 +2,9 @@
 part of 'tabular_view.dart';
 
 extension _TabularFilters on _TabularViewState {
-  // ----------------------------
-  // State filtres (à ajouter dans _TabularViewState via "late"/init ci-dessous)
-  // ----------------------------
+  // ---------------------------------------------------------------------------
+  // State filtres (DOIT exister dans _TabularViewState)
+  // ---------------------------------------------------------------------------
   // Set<String> _selectedGenotypes;
   // Set<String> _selectedCountries;
   // bool _connectedOnly;
@@ -13,6 +13,12 @@ extension _TabularFilters on _TabularViewState {
   // int? _datasetMinAge;
   // int? _datasetMaxAge;
   // List<Person> _allPeople;
+  //
+  // + Distance (DOIT exister dans _TabularViewState)
+  // bool _distanceFilterEnabled;
+  // LatLng? _distanceOrigin;
+  // double? _maxDistanceKm;
+  // Future<bool> _ensureLocation();
 
   // ----------------------------
   // Options
@@ -25,6 +31,52 @@ extension _TabularFilters on _TabularViewState {
     'clinique',
     'mosaïque',
   ];
+
+  // ---------------------------------------------------------------------------
+  // Distance helper (Haversine) — km
+  // ---------------------------------------------------------------------------
+  double _haversineKm({
+    required double lat1,
+    required double lon1,
+    required double lat2,
+    required double lon2,
+  }) {
+    const double r = 6371.0; // Earth radius (km)
+    const double degToRad = 0.017453292519943295;
+
+    final dLat = (lat2 - lat1) * degToRad;
+    final dLon = (lon2 - lon1) * degToRad;
+
+    final a =
+        (sin(dLat / 2) * sin(dLat / 2)) +
+        cos(lat1 * degToRad) *
+            cos(lat2 * degToRad) *
+            (sin(dLon / 2) * sin(dLon / 2));
+
+    final c = 2 * atan2(sqrt(a), sqrt(1 - a));
+    return r * c;
+  }
+
+  bool _matchesDistance(Person p) {
+    if (!_distanceFilterEnabled ||
+        _distanceOrigin == null ||
+        _maxDistanceKm == null) {
+      return true;
+    }
+
+    final lat = p.latitude;
+    final lng = p.longitude;
+    if (lat == null || lng == null) return false;
+
+    final d = _haversineKm(
+      lat1: _distanceOrigin!.latitude,
+      lon1: _distanceOrigin!.longitude,
+      lat2: lat,
+      lon2: lng,
+    );
+
+    return d <= _maxDistanceKm!;
+  }
 
   // ----------------------------
   // Labels (mêmes règles que tabular)
@@ -64,7 +116,6 @@ extension _TabularFilters on _TabularViewState {
     _datasetMinAge = ages.first;
     _datasetMaxAge = ages.last;
 
-    // init si jamais
     _selectedMinAge ??= _datasetMinAge;
     _selectedMaxAge ??= _datasetMaxAge;
   }
@@ -81,7 +132,7 @@ extension _TabularFilters on _TabularViewState {
       final norm = g.toLowerCase();
       for (final sel in _selectedGenotypes) {
         final s = sel.trim().toLowerCase();
-        // matching “souple” comme tes labels
+        // matching “souple”
         if (norm.contains('del') && s.contains('dél')) return true;
         if (norm.contains('dél') && s.contains('del')) return true;
         if (norm.contains(s)) return true;
@@ -113,7 +164,8 @@ extension _TabularFilters on _TabularViewState {
       return matchesGenotype(p) &&
           matchesCountry(p) &&
           matchesConnected(p) &&
-          matchesAge(p);
+          matchesAge(p) &&
+          _matchesDistance(p);
     }).toList();
 
     setState(() {
@@ -161,10 +213,19 @@ extension _TabularFilters on _TabularViewState {
 
     final connectedPart = _connectedOnly ? l10n.mapConnectedOnlyChip : null;
 
-    final parts = [
+    final distActive =
+        _distanceFilterEnabled &&
+        _distanceOrigin != null &&
+        _maxDistanceKm != null;
+    final distPart = distActive
+        ? l10n.mapDistanceMaxKm(_maxDistanceKm!.toStringAsFixed(0))
+        : null;
+
+    final parts = <String?>[
       genoPart,
       countryPart,
       agePart,
+      distPart,
       connectedPart,
     ].whereType<String>().toList();
 
@@ -206,17 +267,18 @@ extension _TabularFilters on _TabularViewState {
     _selectedMinAge = _datasetMinAge;
     _selectedMaxAge = _datasetMaxAge;
 
+    _distanceFilterEnabled = false;
+    _distanceOrigin = null;
+    _maxDistanceKm = null;
+
     _applyTabularFilters();
   }
 
   // ----------------------------
-  // BottomSheet filtres (même style “carto”)
+  // BottomSheet filtres (même style “carto” + Distance)
   // ----------------------------
   Future<void> _openTabularFiltersSheet() async {
-    // assure-toi d’avoir les labels pays dans la bonne langue
     await _loadCountriesIfNeeded();
-
-    // domain âge
     _recomputeAgeDomainFromAllPeople();
 
     bool localConnectedOnly = _connectedOnly;
@@ -226,10 +288,36 @@ extension _TabularFilters on _TabularViewState {
     int? localMin = _selectedMinAge ?? _datasetMinAge;
     int? localMax = _selectedMaxAge ?? _datasetMaxAge;
 
+    bool localDistanceEnabled = _distanceFilterEnabled;
+    LatLng? localOrigin = _distanceOrigin;
+    double localMaxKm = _maxDistanceKm ?? 100.0;
+
+    bool _distanceOkForPerson(Person p) {
+      if (!localDistanceEnabled || localOrigin == null || localMaxKm <= 0)
+        return true;
+      final lat = p.latitude;
+      final lng = p.longitude;
+      if (lat == null || lng == null) return false;
+
+      final d = _haversineKm(
+        lat1: localOrigin!.latitude,
+        lon1: localOrigin!.longitude,
+        lat2: lat,
+        lon2: lng,
+      );
+      return d <= localMaxKm;
+    }
+
     int countResultsWithLocalFilters() {
       int count = 0;
 
+      final minA = localMin;
+      final maxA = localMax;
+
       for (final p in _allPeople) {
+        // distance
+        if (!_distanceOkForPerson(p)) continue;
+
         // geno
         if (tempGenos.isNotEmpty) {
           final g = (p.genotype ?? '').trim();
@@ -257,9 +345,9 @@ extension _TabularFilters on _TabularViewState {
         if (localConnectedOnly && !p.isConnected) continue;
 
         // age
-        if (localMin != null && localMax != null) {
+        if (minA != null && maxA != null) {
           final a = p.age;
-          if (a == null || a < localMin || a > localMax) continue;
+          if (a == null || a < minA || a > maxA) continue;
         }
 
         count++;
@@ -294,7 +382,6 @@ extension _TabularFilters on _TabularViewState {
             }
 
             final resultsCount = countResultsWithLocalFilters();
-
             final sortedCountryOptions = _countryOptions;
 
             return SafeArea(
@@ -335,19 +422,117 @@ extension _TabularFilters on _TabularViewState {
                         padding: const EdgeInsets.only(top: 6, bottom: 12),
                         child: Row(
                           children: [
-                            const Icon(Icons.people, size: 18),
+                            Icon(
+                              resultsCount > 0
+                                  ? Icons.people
+                                  : Icons.warning_amber_rounded,
+                              size: 18,
+                              color: resultsCount > 0
+                                  ? Colors.black54
+                                  : Colors.orange,
+                            ),
                             const SizedBox(width: 6),
                             Expanded(
                               child: Text(
-                                l10n.mapResultsCount(resultsCount),
-                                style: const TextStyle(
+                                resultsCount > 0
+                                    ? l10n.mapResultsCount(resultsCount)
+                                    : l10n.mapNoResultsWithTheseFilters,
+                                style: TextStyle(
                                   fontWeight: FontWeight.w600,
+                                  color: resultsCount > 0
+                                      ? Colors.black87
+                                      : Colors.orange,
                                 ),
                               ),
                             ),
                           ],
                         ),
                       ),
+
+                      // -----------------------------------------------------------------
+                      // ✅ Distance (comme carto)
+                      // -----------------------------------------------------------------
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          l10n.mapDistanceTitle,
+                          style: const TextStyle(fontWeight: FontWeight.w700),
+                        ),
+                      ),
+                      SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: Text(l10n.mapEnableDistanceFilter),
+                        value: localDistanceEnabled,
+                        onChanged: (v) async {
+                          if (v) {
+                            setModalState(() => localDistanceEnabled = true);
+
+                            final ok = await _ensureLocation();
+                            if (ok && _distanceOrigin != null) {
+                              setModalState(() {
+                                localOrigin = _distanceOrigin;
+                              });
+                            } else {
+                              setModalState(() => localDistanceEnabled = false);
+                            }
+                          } else {
+                            setModalState(() => localDistanceEnabled = false);
+                          }
+                        },
+                      ),
+                      ListTile(
+                        dense: true,
+                        contentPadding: EdgeInsets.zero,
+                        title: Text(
+                          localOrigin != null
+                              ? l10n.mapOriginDefined(
+                                  localOrigin!.latitude.toStringAsFixed(4),
+                                  localOrigin!.longitude.toStringAsFixed(4),
+                                )
+                              : l10n.mapOriginUndefined,
+                        ),
+                        trailing: TextButton.icon(
+                          icon: const Icon(Icons.my_location),
+                          label: Text(l10n.mapMyPosition),
+                          onPressed: () async {
+                            final ok = await _ensureLocation();
+                            if (ok && _distanceOrigin != null) {
+                              setModalState(() {
+                                localDistanceEnabled = true;
+                                localOrigin = _distanceOrigin;
+                              });
+                            }
+                          },
+                        ),
+                      ),
+                      if (localDistanceEnabled) ...[
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Slider(
+                                value: localMaxKm.clamp(1, 1000),
+                                min: 1,
+                                max: 1000,
+                                divisions: 999,
+                                label: l10n.mapKmLabel(
+                                  localMaxKm.toStringAsFixed(0),
+                                ),
+                                onChanged: (v) =>
+                                    setModalState(() => localMaxKm = v),
+                              ),
+                            ),
+                            SizedBox(
+                              width: 72,
+                              child: Text(
+                                l10n.mapKmLabel(localMaxKm.toStringAsFixed(0)),
+                                textAlign: TextAlign.right,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+
+                      const SizedBox(height: 16),
 
                       // Connectés
                       Align(
@@ -518,12 +703,18 @@ extension _TabularFilters on _TabularViewState {
                             child: Text(l10n.mapReset),
                             onPressed: () => setModalState(() {
                               localConnectedOnly = false;
+
                               tempGenos
                                 ..clear()
                                 ..addAll(kGenotypeOptions);
+
                               tempCountries
                                 ..clear()
                                 ..addAll(sortedCountryOptions);
+
+                              localDistanceEnabled = false;
+                              localOrigin = null;
+                              localMaxKm = 100.0;
 
                               if (hasAges) {
                                 localMin = minAge;
@@ -556,6 +747,12 @@ extension _TabularFilters on _TabularViewState {
 
                               _selectedMinAge = localMin;
                               _selectedMaxAge = localMax;
+
+                              _distanceFilterEnabled = localDistanceEnabled;
+                              _distanceOrigin = localOrigin;
+                              _maxDistanceKm = localDistanceEnabled
+                                  ? localMaxKm
+                                  : null;
 
                               Navigator.of(ctx).pop();
                               _applyTabularFilters();
