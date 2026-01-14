@@ -1222,4 +1222,21 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get tabularSendMessageActionStub => 'Funzionalità di messaggistica da collegare.';
+
+  @override
+  String tabularSendMessageTitle(Object name) {
+    return 'Messaggio a $name';
+  }
+
+  @override
+  String get tabularSendMessageHint => 'Scrivi un messaggio…';
+
+  @override
+  String get tabularSendMessageSend => 'Invia';
+
+  @override
+  String get tabularSendMessageSentStub => 'Messaggio pronto per l’invio (da collegare).';
+
+  @override
+  String get tabularSendMessageCancel => 'Annulla';
 }

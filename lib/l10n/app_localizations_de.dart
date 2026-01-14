@@ -1222,4 +1222,21 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get tabularSendMessageActionStub => 'Nachrichtenfunktion noch nicht verbunden.';
+
+  @override
+  String tabularSendMessageTitle(Object name) {
+    return 'Nachricht an $name';
+  }
+
+  @override
+  String get tabularSendMessageHint => 'Nachricht eingeben…';
+
+  @override
+  String get tabularSendMessageSend => 'Senden';
+
+  @override
+  String get tabularSendMessageSentStub => 'Nachricht bereit zum Senden (noch nicht verbunden).';
+
+  @override
+  String get tabularSendMessageCancel => 'Abbrechen';
 }

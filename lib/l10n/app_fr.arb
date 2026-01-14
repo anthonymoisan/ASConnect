@@ -613,5 +613,13 @@
 
   "tabularSendMessageTooltip": "Envoyer un message",
   "tabularSendMessageErrorNoId": "Impossible d’envoyer un message : identifiant manquant.",
-  "tabularSendMessageActionStub": "Fonctionnalité de messagerie à connecter."
+  "tabularSendMessageActionStub": "Fonctionnalité de messagerie à connecter.",
+  "tabularSendMessageTitle": "Message à {name}",
+  "@tabularSendMessageTitle": { "placeholders": { "name": {} } },
+  "tabularSendMessageHint": "Écrire un message…",
+  "tabularSendMessageSend": "Envoyer",
+  "tabularSendMessageTooltip": "Envoyer un message",
+  "tabularSendMessageSentStub": "Message prêt à être envoyé (à brancher).",
+  "tabularSendMessageCancel": "Annuler"
+
 }

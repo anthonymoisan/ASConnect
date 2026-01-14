@@ -610,5 +610,14 @@
 
   "tabularSendMessageTooltip": "Enviar un mensaje",
   "tabularSendMessageErrorNoId": "No se puede enviar el mensaje: falta el identificador.",
-  "tabularSendMessageActionStub": "Función de mensajería pendiente de conexión."
+  "tabularSendMessageActionStub": "Función de mensajería pendiente de conexión.",
+  "tabularSendMessageTitle": "Mensaje a {name}",
+  "@tabularSendMessageTitle": {
+    "placeholders": { "name": {} }
+  },
+  "tabularSendMessageHint": "Escribe un mensaje…",
+  "tabularSendMessageSend": "Enviar",
+  "tabularSendMessageTooltip": "Enviar un mensaje",
+  "tabularSendMessageSentStub": "Mensaje listo para enviarse (pendiente de conexión).",
+  "tabularSendMessageCancel": "Cancelar"
 }

@@ -1222,4 +1222,21 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get tabularSendMessageActionStub => 'Funkcja wiadomości nie jest jeszcze podłączona.';
+
+  @override
+  String tabularSendMessageTitle(Object name) {
+    return 'Wiadomość do $name';
+  }
+
+  @override
+  String get tabularSendMessageHint => 'Napisz wiadomość…';
+
+  @override
+  String get tabularSendMessageSend => 'Wyślij';
+
+  @override
+  String get tabularSendMessageSentStub => 'Wiadomość gotowa do wysłania (do podłączenia).';
+
+  @override
+  String get tabularSendMessageCancel => 'Anuluj';
 }

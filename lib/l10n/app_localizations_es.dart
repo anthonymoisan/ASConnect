@@ -1222,4 +1222,21 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get tabularSendMessageActionStub => 'Función de mensajería pendiente de conexión.';
+
+  @override
+  String tabularSendMessageTitle(Object name) {
+    return 'Mensaje a $name';
+  }
+
+  @override
+  String get tabularSendMessageHint => 'Escribe un mensaje…';
+
+  @override
+  String get tabularSendMessageSend => 'Enviar';
+
+  @override
+  String get tabularSendMessageSentStub => 'Mensaje listo para enviarse (pendiente de conexión).';
+
+  @override
+  String get tabularSendMessageCancel => 'Cancelar';
 }

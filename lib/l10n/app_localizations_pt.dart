@@ -1222,4 +1222,21 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get tabularSendMessageActionStub => 'Funcionalidade de mensagens ainda não ligada.';
+
+  @override
+  String tabularSendMessageTitle(Object name) {
+    return 'Mensagem para $name';
+  }
+
+  @override
+  String get tabularSendMessageHint => 'Escreva uma mensagem…';
+
+  @override
+  String get tabularSendMessageSend => 'Enviar';
+
+  @override
+  String get tabularSendMessageSentStub => 'Mensagem pronta para envio (a ligar).';
+
+  @override
+  String get tabularSendMessageCancel => 'Cancelar';
 }

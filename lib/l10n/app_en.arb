@@ -610,5 +610,12 @@
 
   "tabularSendMessageTooltip": "Send a message",
   "tabularSendMessageErrorNoId": "Unable to send message: missing identifier.",
-  "tabularSendMessageActionStub": "Messaging feature not yet connected."
+  "tabularSendMessageActionStub": "Messaging feature not yet connected.",
+  "tabularSendMessageTitle": "Message to {name}",
+  "@tabularSendMessageTitle": { "placeholders": { "name": {} } },
+  "tabularSendMessageHint": "Type a message…",
+  "tabularSendMessageSend": "Send",
+  "tabularSendMessageTooltip": "Send a message",
+  "tabularSendMessageSentStub": "Message ready to send (to be wired).",
+  "tabularSendMessageCancel": "Cancel"
 }

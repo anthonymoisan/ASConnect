@@ -1,9 +1,6 @@
-// lib/tabular/view/tabular_view.dart
 import 'dart:async';
-import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 
 import '../../l10n/app_localizations.dart';
 import '../../whatsApp/services/conversation_api.dart'
@@ -14,6 +11,7 @@ import '../services/tabular_api.dart';
 
 class TabularView extends StatefulWidget {
   final int currentPersonId;
+
   const TabularView({super.key, required this.currentPersonId});
 
   @override
@@ -21,7 +19,7 @@ class TabularView extends StatefulWidget {
 }
 
 class _TabularViewState extends State<TabularView> with WidgetsBindingObserver {
-  //ListPerson? _listPerson;
+  ListPerson? _listPerson;
   bool _loading = true;
   Object? _error;
 
@@ -34,16 +32,15 @@ class _TabularViewState extends State<TabularView> with WidgetsBindingObserver {
 
   List<Person> _view = const <Person>[];
 
-  // ✅ polling (refresh régulier des statuts)
+  // ✅ Poll refresh status
   Timer? _pollTimer;
-  bool _pollingEnabled = true;
   bool _reloading = false;
-  static const Duration _pollInterval = Duration(seconds: 15);
+  static const Duration _pollInterval = Duration(seconds: 10);
 
   @override
   void initState() {
     super.initState();
-    //WidgetsBinding.instance.addObserver(this);
+    WidgetsBinding.instance.addObserver(this);
 
     _loadPeople();
     _startPolling();
@@ -52,7 +49,7 @@ class _TabularViewState extends State<TabularView> with WidgetsBindingObserver {
   @override
   void dispose() {
     _stopPolling();
-    //WidgetsBinding.instance.removeObserver(this);
+    WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
 
@@ -65,19 +62,16 @@ class _TabularViewState extends State<TabularView> with WidgetsBindingObserver {
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
-      _pollingEnabled = true;
       _startPolling();
       _reload(silent: true);
     } else if (state == AppLifecycleState.paused ||
         state == AppLifecycleState.inactive ||
         state == AppLifecycleState.hidden) {
-      _pollingEnabled = false;
       _stopPolling();
     }
   }
 
   void _startPolling() {
-    if (!_pollingEnabled) return;
     if (_pollTimer != null) return;
 
     _pollTimer = Timer.periodic(_pollInterval, (_) async {
@@ -147,14 +141,15 @@ class _TabularViewState extends State<TabularView> with WidgetsBindingObserver {
 
   Future<void> _loadPeople() async {
     try {
-      final data = await TabularApi.fetchPeopleMapRepresentation(force: false);
+      final data = await TabularApi.fetchPeopleMapRepresentation();
       if (!mounted) return;
 
+      final meId = widget.currentPersonId;
+      final newView = data.items.where((p) => p.id != meId).toList();
+
       setState(() {
-        //_listPerson = data;
-        _view = data.items
-            .where((p) => p.id != widget.currentPersonId)
-            .toList();
+        _listPerson = data;
+        _view = List<Person>.from(newView);
         _loading = false;
         _error = null;
       });
@@ -171,22 +166,6 @@ class _TabularViewState extends State<TabularView> with WidgetsBindingObserver {
     }
   }
 
-  // signature pour éviter setState si rien n’a changé (ex: dots)
-  int _sig(List<Person> list) {
-    int s = list.length;
-    for (final p in list) {
-      s = (s * 31) ^ p.id;
-      s = (s * 31) ^ (p.age ?? 0);
-      s = (s * 31) ^ ((p.city ?? '').hashCode);
-      s = (s * 31) ^ ((p.countryCode ?? '').hashCode);
-      s = (s * 31) ^ ((p.genotype ?? '').hashCode);
-
-      // ✅ TRÈS IMPORTANT : inclure le statut
-      s = (s * 31) ^ (p.isConnected ? 1 : 0);
-    }
-    return s;
-  }
-
   Future<void> _reload({bool silent = false}) async {
     if (_reloading) return;
     _reloading = true;
@@ -195,34 +174,18 @@ class _TabularViewState extends State<TabularView> with WidgetsBindingObserver {
       final data = await TabularApi.fetchPeopleMapRepresentation(force: true);
       if (!mounted) return;
 
-      final int currentPersonId = widget.currentPersonId;
+      final meId = widget.currentPersonId;
+      final newView = data.items.where((p) => p.id != meId).toList();
 
-      final newView = data.items.where((p) => p.id != currentPersonId).toList();
+      setState(() {
+        _listPerson = data;
+        _view = List<Person>.from(newView);
+        _error = null;
+        _loading = false;
+      });
 
-      // ✅ logs utiles
-      final onlineCount = newView.where((p) => p.isConnected).length;
-      debugPrint(
-        '[TABULAR] reload: online=$onlineCount / total=${newView.length}',
-      );
-      debugPrint(
-        '[TABULAR] visible=${newView.length} (excluding me=$currentPersonId)',
-      );
-
-      final oldSig = _sig(_view);
-      final newSig = _sig(newView);
-
-      if (oldSig != newSig) {
-        setState(() {
-          //_listPerson = data;
-          _view = newView;
-          _error = null;
-          _loading = false;
-        });
-
-        // si tri actif, retrier après refresh
-        if (_sortColumnIndex != null) {
-          _applySort(_sortColumnIndex!, _sortAscending);
-        }
+      if (_sortColumnIndex != null) {
+        _applySort(_sortColumnIndex!, _sortAscending);
       }
     } catch (e) {
       if (!mounted) return;
@@ -256,6 +219,10 @@ class _TabularViewState extends State<TabularView> with WidgetsBindingObserver {
       // fallback silencieux
     }
   }
+
+  // ---------------------------------------------------------------------------
+  // Labels
+  // ---------------------------------------------------------------------------
 
   String _countryLabel(Person p) {
     final code = (p.countryCode ?? '').trim();
@@ -296,7 +263,7 @@ class _TabularViewState extends State<TabularView> with WidgetsBindingObserver {
   }
 
   // ---------------------------------------------------------------------------
-  // 🔽 TRI
+  // TRI
   // ---------------------------------------------------------------------------
 
   void _applySort(int columnIndex, bool ascending) {
@@ -345,35 +312,27 @@ class _TabularViewState extends State<TabularView> with WidgetsBindingObserver {
   }
 
   // ---------------------------------------------------------------------------
-  // ✉️ Action "Envoyer un message"
+  // ✅ Compose modal ROBUSTE (controller géré dans un StatefulWidget dédié)
   // ---------------------------------------------------------------------------
 
-  void _sendMessage(Person p) {
-    final l10n = AppLocalizations.of(context)!;
-
-    final id = p.id;
-    if (id == null) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(l10n.tabularSendMessageErrorNoId)));
-      return;
-    }
-
-    // ✅ À brancher sur ton flow conversation
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(l10n.tabularSendMessageActionStub)));
+  Future<void> _openComposeMessageSheet(Person p) async {
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      useRootNavigator: true,
+      builder: (_) => _ComposeMessageSheet(person: p, displayName: _pseudo(p)),
+    );
   }
 
   // ---------------------------------------------------------------------------
-  // 🖼️ Photo plein écran
+  // Photo plein écran
   // ---------------------------------------------------------------------------
 
   void _openPersonPhotoFullScreen(Person p) {
     final l10n = AppLocalizations.of(context)!;
 
-    final id = p.id ?? -1;
-    final url = personPhotoUrl(id);
+    final url = personPhotoUrl(p.id);
 
     final pseudo = _pseudo(p);
     final ageLabel = (p.age == null) ? '—' : l10n.mapPersonTileAge(p.age!);
@@ -406,7 +365,7 @@ class _TabularViewState extends State<TabularView> with WidgetsBindingObserver {
                           maxScale: 4.0,
                           child: Image.network(
                             url,
-                            headers: {'X-App-Key': publicAppKey},
+                            headers: const {'X-App-Key': publicAppKey},
                             fit: BoxFit.contain,
                             errorBuilder: (_, __, ___) => const Icon(
                               Icons.person,
@@ -480,17 +439,12 @@ class _TabularViewState extends State<TabularView> with WidgetsBindingObserver {
     );
   }
 
-  // ---------------------------------------------------------------------------
-  // 🧩 Avatar photo + dot (TOP RIGHT) rouge/vert
-  // ---------------------------------------------------------------------------
-
+  // Avatar + dot
   Widget _photoCell(Person p) {
-    final isOnline = (p.isConnected == true);
-
+    final url = personPhotoUrl(p.id);
     return _PeoplePhotoAvatarWithStatus(
-      peopleId: p.id,
-      radius: 18,
-      isOnline: isOnline, // rouge/vert
+      url: url,
+      isConnected: p.isConnected,
       onTap: () => _openPersonPhotoFullScreen(p),
     );
   }
@@ -514,10 +468,6 @@ class _TabularViewState extends State<TabularView> with WidgetsBindingObserver {
 
     return RefreshIndicator(
       onRefresh: () async {
-        setState(() {
-          _loading = true;
-          _error = null;
-        });
         await _loadCountriesIfNeeded();
         await _reload(silent: false);
       },
@@ -538,7 +488,7 @@ class _TabularViewState extends State<TabularView> with WidgetsBindingObserver {
                   dataRowMinHeight: 54,
                   dataRowMaxHeight: 64,
                   columns: [
-                    const DataColumn(label: Text('')), // photo
+                    const DataColumn(label: Text('')),
                     DataColumn(
                       label: Text(l10n.tabularColPseudo),
                       onSort: (i, asc) => _applySort(i, asc),
@@ -572,7 +522,7 @@ class _TabularViewState extends State<TabularView> with WidgetsBindingObserver {
                     final city = _cityLabel(p);
 
                     return DataRow(
-                      onSelectChanged: (_) => _openPersonPhotoFullScreen(p),
+                      onSelectChanged: (_) => _openComposeMessageSheet(p),
                       cells: [
                         DataCell(_photoCell(p)),
                         DataCell(
@@ -592,7 +542,7 @@ class _TabularViewState extends State<TabularView> with WidgetsBindingObserver {
                           IconButton(
                             tooltip: l10n.tabularSendMessageTooltip,
                             icon: const Icon(Icons.send),
-                            onPressed: () => _sendMessage(p),
+                            onPressed: () => _openComposeMessageSheet(p),
                           ),
                         ),
                       ],
@@ -609,105 +559,148 @@ class _TabularViewState extends State<TabularView> with WidgetsBindingObserver {
 }
 
 // ============================================================================
-// ✅ Avatar robuste : fetch bytes avec header X-App-Key => Image.memory (comme conv)
+// ✅ BottomSheet dédiée => controller dispose uniquement au bon moment
+// + scroll + constraints => plus d’overflow clavier
 // ============================================================================
 
-class _PeoplePhotoAvatar extends StatefulWidget {
-  const _PeoplePhotoAvatar({
-    required this.peopleId,
-    required this.radius,
-    this.onTap,
-  });
+class _ComposeMessageSheet extends StatefulWidget {
+  final Person person;
+  final String displayName;
 
-  final int? peopleId;
-  final double radius;
-  final VoidCallback? onTap;
+  const _ComposeMessageSheet({required this.person, required this.displayName});
 
   @override
-  State<_PeoplePhotoAvatar> createState() => _PeoplePhotoAvatarState();
+  State<_ComposeMessageSheet> createState() => _ComposeMessageSheetState();
 }
 
-class _PeoplePhotoAvatarState extends State<_PeoplePhotoAvatar> {
-  static final Map<int, Uint8List> _memCache = {};
-  Future<Uint8List?>? _future;
+class _ComposeMessageSheetState extends State<_ComposeMessageSheet> {
+  late final TextEditingController _controller;
+  bool _sending = false;
 
   @override
   void initState() {
     super.initState();
-    _future = _load();
+    _controller = TextEditingController();
   }
 
   @override
-  void didUpdateWidget(covariant _PeoplePhotoAvatar oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.peopleId != widget.peopleId) {
-      _future = _load();
-    }
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
   }
 
-  Future<Uint8List?> _load() async {
-    final id = widget.peopleId;
-    if (id == null) return null;
+  void _cancel() {
+    if (_sending) return;
+    Navigator.of(context).pop();
+  }
 
-    final cached = _memCache[id];
-    if (cached != null) return cached;
+  void _send() {
+    if (_sending) return;
+    final msg = _controller.text.trim();
+    if (msg.isEmpty) return;
 
-    final url = personPhotoUrl(id);
+    setState(() => _sending = true);
 
-    final resp = await http.get(
-      Uri.parse(url),
-      headers: {'X-App-Key': publicAppKey},
-    );
+    // ✅ Pour l’instant: debug + close (pas d’API ici)
+    debugPrint('[TABULAR] compose->send to ${widget.person.id}: "$msg"');
 
-    if (resp.statusCode == 200 && resp.bodyBytes.isNotEmpty) {
-      _memCache[id] = resp.bodyBytes;
-      return resp.bodyBytes;
-    }
-
-    return null;
+    // IMPORTANT: on ferme, puis on laisse le widget se disposer proprement
+    Navigator.of(context).pop();
   }
 
   @override
   Widget build(BuildContext context) {
-    final r = widget.radius;
+    final l10n = AppLocalizations.of(context)!;
+    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
 
-    Widget avatarFallback({Widget? child}) => CircleAvatar(
-      radius: r,
-      backgroundColor: Colors.grey.shade200,
-      child: child ?? const Icon(Icons.person, color: Colors.black54),
-    );
+    return SafeArea(
+      top: false,
+      child: AnimatedPadding(
+        duration: const Duration(milliseconds: 150),
+        padding: EdgeInsets.only(bottom: bottomInset),
+        child: LayoutBuilder(
+          builder: (ctx, c) {
+            final maxH = MediaQuery.of(ctx).size.height * 0.60;
 
-    final id = widget.peopleId;
-    if (id == null) return avatarFallback(child: const Icon(Icons.group));
-
-    return GestureDetector(
-      onTap: widget.onTap,
-      child: FutureBuilder<Uint8List?>(
-        future: _future,
-        builder: (ctx, snap) {
-          if (snap.connectionState != ConnectionState.done) {
-            return avatarFallback(
-              child: const SizedBox(
-                width: 16,
-                height: 16,
-                child: CircularProgressIndicator(strokeWidth: 2),
+            return ConstrainedBox(
+              constraints: BoxConstraints(maxHeight: maxH),
+              child: Material(
+                color: Colors.transparent,
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              l10n.tabularSendMessageTitle(widget.displayName),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                          ),
+                          IconButton(
+                            tooltip: l10n.close,
+                            icon: const Icon(Icons.close),
+                            onPressed: _sending ? null : _cancel,
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      TextField(
+                        controller: _controller,
+                        autofocus: true,
+                        minLines: 2,
+                        maxLines: 8,
+                        textInputAction: TextInputAction.newline,
+                        decoration: InputDecoration(
+                          hintText: l10n.tabularSendMessageHint,
+                          border: const OutlineInputBorder(),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          TextButton(
+                            onPressed: _sending ? null : _cancel,
+                            child: Text(l10n.tabularSendMessageCancel),
+                          ),
+                          const Spacer(),
+                          ElevatedButton.icon(
+                            onPressed: _sending ? null : _send,
+                            icon: _sending
+                                ? const SizedBox(
+                                    width: 16,
+                                    height: 16,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                : const Icon(Icons.send),
+                            label: Text(l10n.tabularSendMessageSend),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
               ),
             );
-          }
-
-          final bytes = snap.data;
-          if (bytes == null) return avatarFallback();
-
-          return CircleAvatar(
-            radius: r,
-            backgroundColor: Colors.grey.shade200,
-            backgroundImage: MemoryImage(bytes),
-          );
-        },
+          },
+        ),
       ),
     );
   }
 }
+
+// -----------------------------------------------------------------------------
+// Dot + avatar
+// -----------------------------------------------------------------------------
 
 class _StatusDot extends StatelessWidget {
   const _StatusDot({
@@ -747,20 +740,19 @@ class _StatusDot extends StatelessWidget {
 }
 
 class _PeoplePhotoAvatarWithStatus extends StatelessWidget {
+  final String url;
+  final bool isConnected;
+  final VoidCallback? onTap;
+
   const _PeoplePhotoAvatarWithStatus({
-    required this.peopleId,
-    required this.radius,
-    required this.isOnline,
+    required this.url,
+    required this.isConnected,
     this.onTap,
   });
 
-  final int? peopleId;
-  final double radius;
-  final bool isOnline;
-  final VoidCallback? onTap;
-
   @override
   Widget build(BuildContext context) {
+    const double radius = 18;
     final box = radius * 2;
 
     final dotSize = (radius * 0.55).clamp(10.0, 14.0).toDouble();
@@ -776,17 +768,50 @@ class _PeoplePhotoAvatarWithStatus extends StatelessWidget {
         children: [
           Align(
             alignment: Alignment.center,
-            child: _PeoplePhotoAvatar(
-              peopleId: peopleId,
-              radius: radius,
+            child: InkWell(
               onTap: onTap,
+              customBorder: const CircleBorder(),
+              child: ClipOval(
+                child: Image.network(
+                  url,
+                  headers: const {'X-App-Key': publicAppKey},
+                  width: box,
+                  height: box,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => Container(
+                    width: box,
+                    height: box,
+                    color: Colors.grey.shade200,
+                    alignment: Alignment.center,
+                    child: const Icon(
+                      Icons.person,
+                      size: 20,
+                      color: Colors.black45,
+                    ),
+                  ),
+                  loadingBuilder: (ctx, child, prog) {
+                    if (prog == null) return child;
+                    return Container(
+                      width: box,
+                      height: box,
+                      color: Colors.grey.shade200,
+                      alignment: Alignment.center,
+                      child: const SizedBox(
+                        width: 14,
+                        height: 14,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                    );
+                  },
+                ),
+              ),
             ),
           ),
           Positioned(
             right: dotPadding,
             top: dotPadding,
             child: _StatusDot(
-              isOnline: isOnline,
+              isOnline: isConnected,
               size: dotSize,
               tooltipOnline: l10n.statusOnline,
               tooltipOffline: l10n.statusOffline,

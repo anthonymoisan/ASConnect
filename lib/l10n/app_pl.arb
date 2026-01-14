@@ -610,5 +610,15 @@
 
   "tabularSendMessageTooltip": "Wyślij wiadomość",
   "tabularSendMessageErrorNoId": "Nie można wysłać wiadomości: brak identyfikatora.",
-  "tabularSendMessageActionStub": "Funkcja wiadomości nie jest jeszcze podłączona."
+  "tabularSendMessageActionStub": "Funkcja wiadomości nie jest jeszcze podłączona.",
+  "tabularSendMessageTitle": "Wiadomość do {name}",
+  "@tabularSendMessageTitle": {
+    "placeholders": { "name": {} }
+  },
+  "tabularSendMessageHint": "Napisz wiadomość…",
+  "tabularSendMessageSend": "Wyślij",
+  "tabularSendMessageTooltip": "Wyślij wiadomość",
+  "tabularSendMessageSentStub": "Wiadomość gotowa do wysłania (do podłączenia).",
+  "tabularSendMessageCancel": "Anuluj"
+
 }

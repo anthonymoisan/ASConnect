@@ -610,5 +610,14 @@
 
   "tabularSendMessageTooltip": "Invia un messaggio",
   "tabularSendMessageErrorNoId": "Impossibile inviare il messaggio: identificatore mancante.",
-  "tabularSendMessageActionStub": "Funzionalità di messaggistica da collegare."
+  "tabularSendMessageActionStub": "Funzionalità di messaggistica da collegare.",
+  "tabularSendMessageTitle": "Messaggio a {name}",
+  "@tabularSendMessageTitle": {
+    "placeholders": { "name": {} }
+  },
+  "tabularSendMessageHint": "Scrivi un messaggio…",
+  "tabularSendMessageSend": "Invia",
+  "tabularSendMessageTooltip": "Invia un messaggio",
+  "tabularSendMessageSentStub": "Messaggio pronto per l’invio (da collegare).",
+  "tabularSendMessageCancel": "Annulla"
 }

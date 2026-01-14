@@ -608,7 +608,18 @@
   "tabularColCity": "Cidade",
   "tabularColAction": "Ação",
 
+	
   "tabularSendMessageTooltip": "Enviar mensagem",
   "tabularSendMessageErrorNoId": "Não é possível enviar a mensagem: identificador ausente.",
-  "tabularSendMessageActionStub": "Funcionalidade de mensagens ainda não ligada."
+  "tabularSendMessageActionStub": "Funcionalidade de mensagens ainda não ligada.",
+  "tabularSendMessageTitle": "Mensagem para {name}",
+  "@tabularSendMessageTitle": {
+    "placeholders": { "name": {} }
+  },
+  "tabularSendMessageHint": "Escreva uma mensagem…",
+  "tabularSendMessageSend": "Enviar",
+  "tabularSendMessageTooltip": "Enviar mensagem",
+  "tabularSendMessageSentStub": "Mensagem pronta para envio (a ligar).",
+  "tabularSendMessageCancel": "Cancelar"
+
 }

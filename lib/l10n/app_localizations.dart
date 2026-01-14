@@ -2270,6 +2270,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Messaging feature not yet connected.'**
   String get tabularSendMessageActionStub;
+
+  /// No description provided for @tabularSendMessageTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Message to {name}'**
+  String tabularSendMessageTitle(Object name);
+
+  /// No description provided for @tabularSendMessageHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Type a message…'**
+  String get tabularSendMessageHint;
+
+  /// No description provided for @tabularSendMessageSend.
+  ///
+  /// In en, this message translates to:
+  /// **'Send'**
+  String get tabularSendMessageSend;
+
+  /// No description provided for @tabularSendMessageSentStub.
+  ///
+  /// In en, this message translates to:
+  /// **'Message ready to send (to be wired).'**
+  String get tabularSendMessageSentStub;
+
+  /// No description provided for @tabularSendMessageCancel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get tabularSendMessageCancel;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

@@ -610,5 +610,15 @@
 
   "tabularSendMessageTooltip": "Nachricht senden",
   "tabularSendMessageErrorNoId": "Nachricht kann nicht gesendet werden: Kennung fehlt.",
-  "tabularSendMessageActionStub": "Nachrichtenfunktion noch nicht verbunden."
+  "tabularSendMessageActionStub": "Nachrichtenfunktion noch nicht verbunden.",
+  "tabularSendMessageTitle": "Nachricht an {name}",
+  "@tabularSendMessageTitle": {
+    "placeholders": { "name": {} }
+  },
+  "tabularSendMessageHint": "Nachricht eingeben…",
+  "tabularSendMessageSend": "Senden",
+  "tabularSendMessageTooltip": "Nachricht senden",
+  "tabularSendMessageSentStub": "Nachricht bereit zum Senden (noch nicht verbunden).",
+  "tabularSendMessageCancel": "Abbrechen"
+
 }
