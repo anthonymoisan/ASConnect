@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import '../models/listPerson.dart';
 import '../../whatsApp/services/conversation_api.dart' show publicAppKey;
+import '../../whatsApp/models/conversation.dart';
 
 const String _base = 'https://anthonymoisan.pythonanywhere.com/api/public';
 
@@ -198,5 +199,57 @@ class TabularApi {
         rethrow;
       }
     });
+  }
+
+  /// ✅ POST /conversations/private
+  /// Le backend crée OU retrouve une conversation privée selon le contenu du payload.
+  /// Retour attendu:
+  /// {
+  ///   "created_at": "...",
+  ///   "id": 1,
+  ///   "is_group": false,
+  ///   "last_message_at": "...",
+  ///   "title": "Conversation 1-2"
+  /// }
+  static Future<Conversation> createOrGetPrivateConversation({
+    required Map<String, dynamic> payload,
+    bool dedup = true,
+  }) async {
+    final uri = Uri.https(
+      'anthonymoisan.pythonanywhere.com',
+      '/api/public/conversations/private',
+    );
+
+    final headers = <String, String>{
+      ..._headers,
+      'Content-Type': 'application/json',
+    };
+
+    // Optionnel: dédup "inFlight" pour éviter double POST si l’UI déclenche 2 fois.
+    // On calcule une clé stable à partir du JSON.
+    final bodyString = jsonEncode(payload);
+    final key = 'conversations:private:${bodyString.hashCode}';
+
+    Future<Conversation> run() async {
+      final resp = await _client
+          .post(uri, headers: headers, body: bodyString)
+          .timeout(const Duration(seconds: 60));
+
+      if (resp.statusCode != 200 && resp.statusCode != 201) {
+        throw Exception(
+          'Erreur createOrGetPrivateConversation (${resp.statusCode}) : ${resp.body}',
+        );
+      }
+
+      final decoded = jsonDecode(resp.body);
+      if (decoded is! Map<String, dynamic>) {
+        throw Exception('Format inattendu conversations/private: ${resp.body}');
+      }
+
+      return Conversation.fromJson(decoded);
+    }
+
+    if (!dedup) return run();
+    return _dedup<Conversation>(key, run);
   }
 }

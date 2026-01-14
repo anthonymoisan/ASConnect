@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../../whatsApp/services/conversation_api.dart'
-    show personPhotoUrl, publicAppKey;
+    show personPhotoUrl, publicAppKey, ConversationApi;
 import '../models/listPerson.dart';
 import '../models/person.dart';
 import '../services/tabular_api.dart';
@@ -321,7 +321,11 @@ class _TabularViewState extends State<TabularView> with WidgetsBindingObserver {
       isScrollControlled: true,
       useSafeArea: true,
       useRootNavigator: true,
-      builder: (_) => _ComposeMessageSheet(person: p, displayName: _pseudo(p)),
+      builder: (_) => _ComposeMessageSheet(
+        person: p,
+        displayName: _pseudo(p),
+        currentPersonId: widget.currentPersonId, // ✅ AJOUT
+      ),
     );
   }
 
@@ -566,8 +570,13 @@ class _TabularViewState extends State<TabularView> with WidgetsBindingObserver {
 class _ComposeMessageSheet extends StatefulWidget {
   final Person person;
   final String displayName;
+  final int currentPersonId;
 
-  const _ComposeMessageSheet({required this.person, required this.displayName});
+  const _ComposeMessageSheet({
+    required this.person,
+    required this.displayName,
+    required this.currentPersonId,
+  });
 
   @override
   State<_ComposeMessageSheet> createState() => _ComposeMessageSheetState();
@@ -594,18 +603,42 @@ class _ComposeMessageSheetState extends State<_ComposeMessageSheet> {
     Navigator.of(context).pop();
   }
 
-  void _send() {
+  Future<void> _send() async {
     if (_sending) return;
     final msg = _controller.text.trim();
     if (msg.isEmpty) return;
 
     setState(() => _sending = true);
 
-    // ✅ Pour l’instant: debug + close (pas d’API ici)
-    debugPrint('[TABULAR] compose->send to ${widget.person.id}: "$msg"');
+    try {
+      final p1 = widget.currentPersonId; // toi
+      final p2 = widget.person.id; // personne de la ligne
 
-    // IMPORTANT: on ferme, puis on laisse le widget se disposer proprement
-    Navigator.of(context).pop();
+      final payload = <String, dynamic>{
+        "p1_id": p1,
+        "p2_id": p2,
+        "title": "Conversation ${widget.displayName}",
+      };
+
+      final conv = await TabularApi.createOrGetPrivateConversation(
+        payload: payload,
+      );
+
+      await ConversationApi.sendMessage(
+        conversationId: conv.id,
+        senderPeopleId: p1,
+        bodyText: msg,
+      );
+
+      if (!mounted) return;
+      Navigator.of(context).pop();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Erreur envoi: $e')));
+      setState(() => _sending = false);
+    }
   }
 
   @override

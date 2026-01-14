@@ -4,8 +4,6 @@ class Conversation {
   final bool isGroup;
   final DateTime createdAt;
   final DateTime lastMessageAt;
-
-  // ✅ NEW
   final int unreadCount;
 
   Conversation({
@@ -17,16 +15,28 @@ class Conversation {
     this.unreadCount = 0,
   });
 
+  static DateTime _parseDateOrNow(dynamic v) {
+    if (v == null) return DateTime.now();
+    final s = v.toString().trim();
+    final dt = DateTime.tryParse(s);
+    return dt ?? DateTime.now();
+  }
+
+  static int _parseInt(dynamic v) {
+    if (v is int) return v;
+    return int.tryParse(v?.toString() ?? '') ?? 0;
+  }
+
   factory Conversation.fromJson(Map<String, dynamic> json) {
     return Conversation(
-      id: json['id'] as int,
-      title: (json['title'] ?? '') as String,
-      isGroup: (json['is_group'] ?? false) as bool,
-      createdAt: DateTime.parse(json['created_at'] as String),
-      lastMessageAt: DateTime.parse(json['last_message_at'] as String),
-
-      // ✅ NEW
-      unreadCount: (json['unread_count'] ?? 0) as int,
+      id: _parseInt(json['id']),
+      title: (json['title'] ?? '').toString(),
+      isGroup: (json['is_group'] ?? json['isGroup'] ?? false) == true,
+      createdAt: _parseDateOrNow(json['created_at'] ?? json['createdAt']),
+      lastMessageAt: _parseDateOrNow(
+        json['last_message_at'] ?? json['lastMessageAt'],
+      ),
+      unreadCount: _parseInt(json['unread_count'] ?? json['unreadCount'] ?? 0),
     );
   }
 }
