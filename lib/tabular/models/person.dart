@@ -35,6 +35,13 @@ class Person {
   // ---------------------------------------------------------------------------
   // JSON
   // ---------------------------------------------------------------------------
+  static bool _parseIsConnected(dynamic v) {
+    if (v == null) return false;
+    if (v is bool) return v;
+    if (v is num) return v != 0;
+    final s = v.toString().trim().toLowerCase();
+    return s == '1' || s == 'true' || s == 'yes';
+  }
 
   factory Person.fromJson(Map<String, dynamic> json) {
     return Person(
@@ -54,8 +61,7 @@ class Person {
       latitude: (json['latitude'] as num?)?.toDouble(),
       longitude: (json['longitude'] as num?)?.toDouble(),
 
-      // API: 0 / 1  → Dart bool
-      isConnected: json['is_connected'] == 1,
+      isConnected: _parseIsConnected(json['is_connected']),
     );
   }
 

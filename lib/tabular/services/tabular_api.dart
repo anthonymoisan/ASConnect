@@ -62,7 +62,13 @@ class TabularApi {
   static Future<dynamic> fetchPeopleMapRepresentationRaw({
     bool force = false,
   }) async {
-    final uri = Uri.parse('$_baseUrl/peopleMapRepresentation');
+    // ✅ cache-buster pour éviter caches intermédiaires (proxy/CDN/navigateur)
+    final uri = Uri.parse('$_baseUrl/peopleMapRepresentation').replace(
+      queryParameters: force
+          ? {'t': DateTime.now().millisecondsSinceEpoch.toString()}
+          : null,
+    );
+
     const cacheKey = 'people:mapRepresentationRaw';
 
     if (!force) {
@@ -72,9 +78,17 @@ class TabularApi {
       _cache.remove(cacheKey);
     }
 
-    return _dedup<dynamic>(cacheKey, () async {
+    // ✅ IMPORTANT : si force==true, on évite la dédup inFlight du cacheKey
+    final key = force ? '$cacheKey:force' : cacheKey;
+
+    return _dedup<dynamic>(key, () async {
+      final headers = <String, String>{
+        ..._headers,
+        if (force) ...{'Cache-Control': 'no-cache', 'Pragma': 'no-cache'},
+      };
+
       final resp = await _client
-          .get(uri, headers: _headers)
+          .get(uri, headers: headers)
           .timeout(const Duration(seconds: 60));
 
       if (resp.statusCode != 200) {
@@ -84,7 +98,12 @@ class TabularApi {
       }
 
       final decoded = jsonDecode(resp.body);
-      _setCache(cacheKey, decoded, _ttlPeople);
+
+      // ✅ on ne met en cache que si pas "force"
+      if (!force) {
+        _setCache(cacheKey, decoded, _ttlPeople);
+      }
+
       return decoded;
     });
   }

@@ -1,5 +1,9 @@
 // lib/tabular/view/tabular_view.dart
+import 'dart:async';
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 
 import '../../l10n/app_localizations.dart';
 import '../../whatsApp/services/conversation_api.dart'
@@ -15,7 +19,7 @@ class TabularView extends StatefulWidget {
   State<TabularView> createState() => _TabularViewState();
 }
 
-class _TabularViewState extends State<TabularView> {
+class _TabularViewState extends State<TabularView> with WidgetsBindingObserver {
   ListPerson? _listPerson;
   bool _loading = true;
   Object? _error;
@@ -29,16 +33,61 @@ class _TabularViewState extends State<TabularView> {
 
   List<Person> _view = const <Person>[];
 
+  // ✅ polling (refresh régulier des statuts)
+  Timer? _pollTimer;
+  bool _pollingEnabled = true;
+  bool _reloading = false;
+  static const Duration _pollInterval = Duration(seconds: 15);
+
   @override
   void initState() {
     super.initState();
+    //WidgetsBinding.instance.addObserver(this);
+
     _loadPeople();
+    _startPolling();
+  }
+
+  @override
+  void dispose() {
+    _stopPolling();
+    //WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
   }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     _loadCountriesIfNeeded();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _pollingEnabled = true;
+      _startPolling();
+      _reload(silent: true);
+    } else if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.inactive ||
+        state == AppLifecycleState.hidden) {
+      _pollingEnabled = false;
+      _stopPolling();
+    }
+  }
+
+  void _startPolling() {
+    if (!_pollingEnabled) return;
+    if (_pollTimer != null) return;
+
+    _pollTimer = Timer.periodic(_pollInterval, (_) async {
+      if (!mounted) return;
+      await _reload(silent: true);
+    });
+  }
+
+  void _stopPolling() {
+    _pollTimer?.cancel();
+    _pollTimer = null;
   }
 
   // ---------------------------------------------------------------------------
@@ -97,10 +146,8 @@ class _TabularViewState extends State<TabularView> {
 
   Future<void> _loadPeople() async {
     try {
-      final data = await TabularApi.fetchPeopleMapRepresentation();
+      final data = await TabularApi.fetchPeopleMapRepresentation(force: false);
       if (!mounted) return;
-
-      debugPrint('[TABULAR] people count = ${data.count}');
 
       setState(() {
         _listPerson = data;
@@ -118,6 +165,67 @@ class _TabularViewState extends State<TabularView> {
         _error = e;
         _loading = false;
       });
+    }
+  }
+
+  // signature pour éviter setState si rien n’a changé (ex: dots)
+  int _sig(List<Person> list) {
+    int s = list.length;
+    for (final p in list) {
+      s = (s * 31) ^ p.id;
+      s = (s * 31) ^ (p.age ?? 0);
+      s = (s * 31) ^ ((p.city ?? '').hashCode);
+      s = (s * 31) ^ ((p.countryCode ?? '').hashCode);
+      s = (s * 31) ^ ((p.genotype ?? '').hashCode);
+
+      // ✅ TRÈS IMPORTANT : inclure le statut
+      s = (s * 31) ^ (p.isConnected ? 1 : 0);
+    }
+    return s;
+  }
+
+  Future<void> _reload({bool silent = false}) async {
+    if (_reloading) return;
+    _reloading = true;
+
+    try {
+      final data = await TabularApi.fetchPeopleMapRepresentation(force: true);
+      if (!mounted) return;
+
+      final newView = List<Person>.from(data.items);
+
+      // ✅ logs utiles
+      final onlineCount = newView.where((p) => p.isConnected).length;
+      debugPrint(
+        '[TABULAR] reload: online=$onlineCount / total=${newView.length}',
+      );
+
+      final oldSig = _sig(_view);
+      final newSig = _sig(newView);
+
+      if (oldSig != newSig) {
+        setState(() {
+          _listPerson = data;
+          _view = newView;
+          _error = null;
+          _loading = false;
+        });
+
+        // si tri actif, retrier après refresh
+        if (_sortColumnIndex != null) {
+          _applySort(_sortColumnIndex!, _sortAscending);
+        }
+      }
+    } catch (e) {
+      if (!mounted) return;
+      if (!silent) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error: $e')));
+      }
+      _error = e;
+    } finally {
+      _reloading = false;
     }
   }
 
@@ -163,7 +271,6 @@ class _TabularViewState extends State<TabularView> {
     return (raw?.isNotEmpty == true) ? raw! : '—';
   }
 
-  // ✅ Genotype localisé via ARB
   String _genotypeLabel(AppLocalizations l10n, Person p) {
     final g = (p.genotype ?? '').trim().toLowerCase();
     if (g.isEmpty) return '—';
@@ -244,19 +351,14 @@ class _TabularViewState extends State<TabularView> {
       return;
     }
 
-    // ✅ À brancher sur ton écran / flow de conversation.
-    // Exemple (à adapter à ton projet) :
-    // Navigator.of(context).push(
-    //   MaterialPageRoute(builder: (_) => ConversationView(personId: id)),
-    // );
-
+    // ✅ À brancher sur ton flow conversation
     ScaffoldMessenger.of(
       context,
     ).showSnackBar(SnackBar(content: Text(l10n.tabularSendMessageActionStub)));
   }
 
   // ---------------------------------------------------------------------------
-  // 🖼️ Photo plein écran (inchangé)
+  // 🖼️ Photo plein écran
   // ---------------------------------------------------------------------------
 
   void _openPersonPhotoFullScreen(Person p) {
@@ -370,21 +472,18 @@ class _TabularViewState extends State<TabularView> {
     );
   }
 
-  Widget _photoCell(Person p) {
-    final id = p.id ?? -1;
-    final url = personPhotoUrl(id);
+  // ---------------------------------------------------------------------------
+  // 🧩 Avatar photo + dot (TOP RIGHT) rouge/vert
+  // ---------------------------------------------------------------------------
 
-    return GestureDetector(
+  Widget _photoCell(Person p) {
+    final isOnline = (p.isConnected == true);
+
+    return _PeoplePhotoAvatarWithStatus(
+      peopleId: p.id,
+      radius: 18,
+      isOnline: isOnline, // rouge/vert
       onTap: () => _openPersonPhotoFullScreen(p),
-      child: CircleAvatar(
-        radius: 18,
-        backgroundColor: Colors.grey.shade200,
-        backgroundImage: NetworkImage(
-          url,
-          headers: {'X-App-Key': publicAppKey},
-        ),
-        onBackgroundImageError: (_, __) {},
-      ),
     );
   }
 
@@ -412,7 +511,7 @@ class _TabularViewState extends State<TabularView> {
           _error = null;
         });
         await _loadCountriesIfNeeded();
-        await _loadPeople();
+        await _reload(silent: false);
       },
       child: LayoutBuilder(
         builder: (ctx, constraints) {
@@ -423,9 +522,7 @@ class _TabularViewState extends State<TabularView> {
               child: ConstrainedBox(
                 constraints: BoxConstraints(minWidth: constraints.maxWidth),
                 child: DataTable(
-                  // ✅ IMPORTANT : supprime la colonne checkbox
                   showCheckboxColumn: false,
-
                   sortColumnIndex: _sortColumnIndex,
                   sortAscending: _sortAscending,
                   columnSpacing: 14,
@@ -467,7 +564,6 @@ class _TabularViewState extends State<TabularView> {
                     final city = _cityLabel(p);
 
                     return DataRow(
-                      // ✅ tap ligne : photo
                       onSelectChanged: (_) => _openPersonPhotoFullScreen(p),
                       cells: [
                         DataCell(_photoCell(p)),
@@ -499,6 +595,196 @@ class _TabularViewState extends State<TabularView> {
             ),
           );
         },
+      ),
+    );
+  }
+}
+
+// ============================================================================
+// ✅ Avatar robuste : fetch bytes avec header X-App-Key => Image.memory (comme conv)
+// ============================================================================
+
+class _PeoplePhotoAvatar extends StatefulWidget {
+  const _PeoplePhotoAvatar({
+    required this.peopleId,
+    required this.radius,
+    this.onTap,
+  });
+
+  final int? peopleId;
+  final double radius;
+  final VoidCallback? onTap;
+
+  @override
+  State<_PeoplePhotoAvatar> createState() => _PeoplePhotoAvatarState();
+}
+
+class _PeoplePhotoAvatarState extends State<_PeoplePhotoAvatar> {
+  static final Map<int, Uint8List> _memCache = {};
+  Future<Uint8List?>? _future;
+
+  @override
+  void initState() {
+    super.initState();
+    _future = _load();
+  }
+
+  @override
+  void didUpdateWidget(covariant _PeoplePhotoAvatar oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.peopleId != widget.peopleId) {
+      _future = _load();
+    }
+  }
+
+  Future<Uint8List?> _load() async {
+    final id = widget.peopleId;
+    if (id == null) return null;
+
+    final cached = _memCache[id];
+    if (cached != null) return cached;
+
+    final url = personPhotoUrl(id);
+
+    final resp = await http.get(
+      Uri.parse(url),
+      headers: {'X-App-Key': publicAppKey},
+    );
+
+    if (resp.statusCode == 200 && resp.bodyBytes.isNotEmpty) {
+      _memCache[id] = resp.bodyBytes;
+      return resp.bodyBytes;
+    }
+
+    return null;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final r = widget.radius;
+
+    Widget avatarFallback({Widget? child}) => CircleAvatar(
+      radius: r,
+      backgroundColor: Colors.grey.shade200,
+      child: child ?? const Icon(Icons.person, color: Colors.black54),
+    );
+
+    final id = widget.peopleId;
+    if (id == null) return avatarFallback(child: const Icon(Icons.group));
+
+    return GestureDetector(
+      onTap: widget.onTap,
+      child: FutureBuilder<Uint8List?>(
+        future: _future,
+        builder: (ctx, snap) {
+          if (snap.connectionState != ConnectionState.done) {
+            return avatarFallback(
+              child: const SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+            );
+          }
+
+          final bytes = snap.data;
+          if (bytes == null) return avatarFallback();
+
+          return CircleAvatar(
+            radius: r,
+            backgroundColor: Colors.grey.shade200,
+            backgroundImage: MemoryImage(bytes),
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _StatusDot extends StatelessWidget {
+  const _StatusDot({
+    required this.isOnline,
+    required this.tooltipOnline,
+    required this.tooltipOffline,
+    this.size = 12,
+  });
+
+  final bool isOnline;
+  final String tooltipOnline;
+  final String tooltipOffline;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: isOnline ? tooltipOnline : tooltipOffline,
+      child: Container(
+        width: size,
+        height: size,
+        decoration: BoxDecoration(
+          color: isOnline ? Colors.green : Colors.red,
+          shape: BoxShape.circle,
+          border: Border.all(color: Colors.white, width: 2),
+          boxShadow: const [
+            BoxShadow(
+              color: Colors.black26,
+              blurRadius: 3,
+              offset: Offset(0, 1),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PeoplePhotoAvatarWithStatus extends StatelessWidget {
+  const _PeoplePhotoAvatarWithStatus({
+    required this.peopleId,
+    required this.radius,
+    required this.isOnline,
+    this.onTap,
+  });
+
+  final int? peopleId;
+  final double radius;
+  final bool isOnline;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final box = radius * 2;
+
+    final dotSize = (radius * 0.55).clamp(10.0, 14.0).toDouble();
+    final dotPadding = (radius * 0.12).clamp(1.0, 4.0).toDouble();
+
+    final l10n = AppLocalizations.of(context)!;
+
+    return SizedBox(
+      width: box,
+      height: box,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Align(
+            alignment: Alignment.center,
+            child: _PeoplePhotoAvatar(
+              peopleId: peopleId,
+              radius: radius,
+              onTap: onTap,
+            ),
+          ),
+          Positioned(
+            right: dotPadding,
+            top: dotPadding,
+            child: _StatusDot(
+              isOnline: isOnline,
+              size: dotSize,
+              tooltipOnline: l10n.statusOnline,
+              tooltipOffline: l10n.statusOffline,
+            ),
+          ),
+        ],
       ),
     );
   }
