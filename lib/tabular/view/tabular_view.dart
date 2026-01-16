@@ -100,8 +100,12 @@ class _TabularViewState extends State<TabularView> with WidgetsBindingObserver {
   // ✅ You set it to 60s
   static const Duration _pollInterval = Duration(seconds: 60);
 
-  // ✅ Age slider touched (optionnel si tu l’utilises dans le part)
-  bool _ageFilterTouched = false;
+  // ----------------------------
+  // Options pays (source: dataset)
+  // Optimisation: on ne recalculera que si dataset change.
+  // ----------------------------
+  int _countryOptionsCacheHash = 0;
+  List<String> _countryOptionsCache = const <String>[];
 
   // ---------------------------------------------------------------------------
   // "Table" layout constants
