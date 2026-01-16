@@ -3,22 +3,17 @@ part of 'tabular_view.dart';
 
 extension _TabularFilters on _TabularViewState {
   // ---------------------------------------------------------------------------
-  // State filtres (DOIT exister dans _TabularViewState)
-  // ---------------------------------------------------------------------------
-  // Set<String> _selectedGenotypes;
-  // Set<String> _selectedCountries;
-  // bool _connectedOnly;
-  // int? _selectedMinAge;
-  // int? _selectedMaxAge;
-  // int? _datasetMinAge;
-  // int? _datasetMaxAge;
-  // List<Person> _allPeople;
+  // Objectif (cohérence + simplification)
+  // - Min/Max âge = domaine du dataset (=_allPeople), PAS recalculé selon autres critères
+  // - Les filtres appliqués doivent prendre en compte :
+  //   âge + pays + génotypes + connecté + distance
   //
-  // + Distance (DOIT exister dans _TabularViewState)
-  // bool _distanceFilterEnabled;
-  // LatLng? _distanceOrigin;
-  // double? _maxDistanceKm;
-  // Future<bool> _ensureLocation();
+  // IMPORTANT :
+  // - Pour éviter d'exclure des personnes "sans âge" quand le slider est full-range,
+  //   le filtre âge est actif seulement si l'utilisateur a resserré la plage.
+  // - Pour éviter d'exclure des personnes à cause de countryCode sale (espaces, lowercase, etc),
+  //   on normalise toujours countryCode avec trim().toUpperCase().
+  // ---------------------------------------------------------------------------
 
   // ----------------------------
   // Options
@@ -31,6 +26,16 @@ extension _TabularFilters on _TabularViewState {
     'clinique',
     'mosaïque',
   ];
+
+  // ----------------------------
+  // Helpers normalisation
+  // ----------------------------
+  String _normIso2(String? raw) {
+    final s = (raw ?? '').trim().toUpperCase();
+    return s;
+  }
+
+  bool _isIso2(String s) => s.length == 2;
 
   // ---------------------------------------------------------------------------
   // Distance helper (Haversine) — km
@@ -58,24 +63,21 @@ extension _TabularFilters on _TabularViewState {
   }
 
   bool _matchesDistance(Person p) {
-    if (!_distanceFilterEnabled ||
-        _distanceOrigin == null ||
-        _maxDistanceKm == null) {
-      return true;
-    }
+    if (!_distanceFilterEnabled) return true;
+
+    final maxKm = _maxDistanceKm;
+    final oLat = _distanceOriginLat;
+    final oLng = _distanceOriginLng;
+
+    // si origine/max pas définis => filtre off
+    if (maxKm == null || oLat == null || oLng == null) return true;
 
     final lat = p.latitude;
     final lng = p.longitude;
     if (lat == null || lng == null) return false;
 
-    final d = _haversineKm(
-      lat1: _distanceOrigin!.latitude,
-      lon1: _distanceOrigin!.longitude,
-      lat2: lat,
-      lon2: lng,
-    );
-
-    return d <= _maxDistanceKm!;
+    final d = _haversineKm(lat1: oLat, lon1: oLng, lat2: lat, lon2: lng);
+    return d <= maxKm;
   }
 
   // ----------------------------
@@ -96,15 +98,15 @@ extension _TabularFilters on _TabularViewState {
   }
 
   String _countryLabelForIso2(BuildContext ctx, String iso2) {
-    final code = iso2.trim().toUpperCase();
+    final code = _normIso2(iso2);
     final translated = _countriesByCode[code];
     return (translated == null || translated.trim().isEmpty)
         ? code
-        : translated;
+        : translated.trim();
   }
 
   // ----------------------------
-  // Domain (min/max âge dataset)
+  // Domain (min/max âge dataset) => UNIQUEMENT basé sur _allPeople
   // ----------------------------
   void _recomputeAgeDomainFromAllPeople() {
     final ages = _allPeople.map((p) => p.age).whereType<int>().toList()..sort();
@@ -113,38 +115,90 @@ extension _TabularFilters on _TabularViewState {
       _datasetMaxAge = null;
       return;
     }
+
     _datasetMinAge = ages.first;
     _datasetMaxAge = ages.last;
 
+    // default full-range
     _selectedMinAge ??= _datasetMinAge;
     _selectedMaxAge ??= _datasetMaxAge;
+
+    // clamp
+    _selectedMinAge = _selectedMinAge!.clamp(_datasetMinAge!, _datasetMaxAge!);
+    _selectedMaxAge = _selectedMaxAge!.clamp(_datasetMinAge!, _datasetMaxAge!);
+
+    if (_selectedMinAge! > _selectedMaxAge!) {
+      _selectedMinAge = _datasetMinAge;
+      _selectedMaxAge = _datasetMaxAge;
+    }
+  }
+
+  // ----------------------------
+  // Options pays (source: dataset)
+  // IMPORTANT: normalisation trim+upper, iso2 strict
+  // ----------------------------
+  List<String> get _countryOptions {
+    final set = <String>{};
+    for (final p in _allPeople) {
+      final c = _normIso2(p.countryCode);
+      if (_isIso2(c)) set.add(c);
+    }
+
+    final list = set.toList()
+      ..sort(
+        (a, b) => _countryLabelForIso2(context, a).toLowerCase().compareTo(
+          _countryLabelForIso2(context, b).toLowerCase(),
+        ),
+      );
+    return list;
   }
 
   // ----------------------------
   // Apply filters -> _view
   // ----------------------------
   void _applyTabularFilters({bool keepSort = true}) {
+    final countryOpts = _countryOptions;
+
+    final bool genotypeFilterActive =
+        _selectedGenotypes.isNotEmpty &&
+        _selectedGenotypes.length != kGenotypeOptions.length;
+
+    final bool countryFilterActive =
+        _selectedCountries.isNotEmpty &&
+        countryOpts.isNotEmpty &&
+        _selectedCountries.length != countryOpts.length;
+
     bool matchesGenotype(Person p) {
-      if (_selectedGenotypes.isEmpty) return true;
+      if (!genotypeFilterActive) return true;
+
       final g = (p.genotype ?? '').trim();
       if (g.isEmpty) return false;
 
       final norm = g.toLowerCase();
+
       for (final sel in _selectedGenotypes) {
         final s = sel.trim().toLowerCase();
-        // matching “souple”
-        if (norm.contains('del') && s.contains('dél')) return true;
-        if (norm.contains('dél') && s.contains('del')) return true;
-        if (norm.contains(s)) return true;
-        if (s.contains(norm)) return true;
+
+        if (norm.contains('deletion') &&
+            (s.contains('dél') || s.contains('del'))) {
+          return true;
+        }
+        if ((norm.contains('dél') || norm.contains('del')) &&
+            s.contains('dél')) {
+          return true;
+        }
+        if (norm.contains(s) || s.contains(norm)) return true;
       }
+
       return false;
     }
 
     bool matchesCountry(Person p) {
-      if (_selectedCountries.isEmpty) return true;
-      final code = (p.countryCode ?? '').trim().toUpperCase();
-      if (code.length != 2) return false;
+      // ✅ "Tout sélectionné" => filtre OFF (inclut codes manquants/sales)
+      if (!countryFilterActive) return true;
+
+      final code = _normIso2(p.countryCode);
+      if (!_isIso2(code)) return false;
       return _selectedCountries.contains(code);
     }
 
@@ -154,10 +208,21 @@ extension _TabularFilters on _TabularViewState {
     }
 
     bool matchesAge(Person p) {
-      if (_selectedMinAge == null || _selectedMaxAge == null) return true;
+      final minA = _selectedMinAge;
+      final maxA = _selectedMaxAge;
+      if (minA == null || maxA == null) return true;
+
+      // filtre actif seulement si l'utilisateur a resserré
+      final bool ageActive =
+          _datasetMinAge != null &&
+          _datasetMaxAge != null &&
+          (minA != _datasetMinAge || maxA != _datasetMaxAge);
+
+      if (!ageActive) return true;
+
       final a = p.age;
       if (a == null) return false;
-      return a >= _selectedMinAge! && a <= _selectedMaxAge!;
+      return a >= minA && a <= maxA;
     }
 
     final filtered = _allPeople.where((p) {
@@ -178,12 +243,14 @@ extension _TabularFilters on _TabularViewState {
   }
 
   // ----------------------------
-  // Tooltip résumé filtres (comme carto)
+  // Tooltip résumé filtres
   // ----------------------------
   String _tabularFiltersTooltipText(BuildContext ctx) {
     final l10n = AppLocalizations.of(ctx)!;
 
-    final genoActive = _selectedGenotypes.length != kGenotypeOptions.length;
+    final genoActive =
+        _selectedGenotypes.isNotEmpty &&
+        _selectedGenotypes.length != kGenotypeOptions.length;
     final genoPart = genoActive
         ? l10n.mapGenotypeCount(_selectedGenotypes.length)
         : null;
@@ -215,7 +282,8 @@ extension _TabularFilters on _TabularViewState {
 
     final distActive =
         _distanceFilterEnabled &&
-        _distanceOrigin != null &&
+        _distanceOriginLat != null &&
+        _distanceOriginLng != null &&
         _maxDistanceKm != null;
     final distPart = distActive
         ? l10n.mapDistanceMaxKm(_maxDistanceKm!.toStringAsFixed(0))
@@ -230,24 +298,6 @@ extension _TabularFilters on _TabularViewState {
     ].whereType<String>().toList();
 
     return parts.isEmpty ? l10n.mapNoFilters : parts.join(' • ');
-  }
-
-  // ----------------------------
-  // Options pays (source: liste courante + pays traduits)
-  // ----------------------------
-  List<String> get _countryOptions {
-    final set = <String>{};
-    for (final p in _allPeople) {
-      final c = (p.countryCode ?? '').trim().toUpperCase();
-      if (c.length == 2) set.add(c);
-    }
-    final list = set.toList()
-      ..sort(
-        (a, b) => _countryLabelForIso2(context, a).toLowerCase().compareTo(
-          _countryLabelForIso2(context, b).toLowerCase(),
-        ),
-      );
-    return list;
   }
 
   // ----------------------------
@@ -268,14 +318,16 @@ extension _TabularFilters on _TabularViewState {
     _selectedMaxAge = _datasetMaxAge;
 
     _distanceFilterEnabled = false;
-    _distanceOrigin = null;
+    _distanceOriginLat = null;
+    _distanceOriginLng = null;
     _maxDistanceKm = null;
 
     _applyTabularFilters();
   }
 
   // ----------------------------
-  // BottomSheet filtres (même style “carto” + Distance)
+  // BottomSheet filtres
+  // - pas de recalcul dynamique min/max âge
   // ----------------------------
   Future<void> _openTabularFiltersSheet() async {
     await _loadCountriesIfNeeded();
@@ -289,19 +341,22 @@ extension _TabularFilters on _TabularViewState {
     int? localMax = _selectedMaxAge ?? _datasetMaxAge;
 
     bool localDistanceEnabled = _distanceFilterEnabled;
-    LatLng? localOrigin = _distanceOrigin;
+    double? localOriginLat = _distanceOriginLat;
+    double? localOriginLng = _distanceOriginLng;
     double localMaxKm = _maxDistanceKm ?? 100.0;
 
-    bool _distanceOkForPerson(Person p) {
-      if (!localDistanceEnabled || localOrigin == null || localMaxKm <= 0)
-        return true;
+    bool localMatchesDistance(Person p) {
+      if (!localDistanceEnabled) return true;
+      if (localOriginLat == null || localOriginLng == null) return false;
+      if (localMaxKm <= 0) return true;
+
       final lat = p.latitude;
       final lng = p.longitude;
       if (lat == null || lng == null) return false;
 
       final d = _haversineKm(
-        lat1: localOrigin!.latitude,
-        lon1: localOrigin!.longitude,
+        lat1: localOriginLat!,
+        lon1: localOriginLng!,
         lat2: lat,
         lon2: lng,
       );
@@ -309,45 +364,72 @@ extension _TabularFilters on _TabularViewState {
     }
 
     int countResultsWithLocalFilters() {
-      int count = 0;
+      final countryOpts = _countryOptions;
+
+      final bool genoActive =
+          tempGenos.isNotEmpty && tempGenos.length != kGenotypeOptions.length;
+
+      final bool countryActive =
+          tempCountries.isNotEmpty &&
+          countryOpts.isNotEmpty &&
+          tempCountries.length != countryOpts.length;
 
       final minA = localMin;
       final maxA = localMax;
 
-      for (final p in _allPeople) {
-        // distance
-        if (!_distanceOkForPerson(p)) continue;
+      final bool ageActive =
+          _datasetMinAge != null &&
+          _datasetMaxAge != null &&
+          minA != null &&
+          maxA != null &&
+          (minA != _datasetMinAge || maxA != _datasetMaxAge);
 
-        // geno
-        if (tempGenos.isNotEmpty) {
+      int count = 0;
+
+      for (final p in _allPeople) {
+        if (!localMatchesDistance(p)) continue;
+
+        if (genoActive) {
           final g = (p.genotype ?? '').trim();
           if (g.isEmpty) continue;
 
           final norm = g.toLowerCase();
           bool ok = false;
+
           for (final sel in tempGenos) {
-            final s = sel.toLowerCase();
+            final s = sel.trim().toLowerCase();
+
+            if (norm.contains('deletion') &&
+                (s.contains('dél') || s.contains('del'))) {
+              ok = true;
+              break;
+            }
+
+            if ((norm.contains('dél') || norm.contains('del')) &&
+                s.contains('dél')) {
+              ok = true;
+              break;
+            }
+
             if (norm.contains(s) || s.contains(norm)) {
               ok = true;
               break;
             }
           }
+
           if (!ok) continue;
         }
 
-        // country
-        if (tempCountries.isNotEmpty) {
-          final code = (p.countryCode ?? '').trim().toUpperCase();
-          if (code.length != 2 || !tempCountries.contains(code)) continue;
+        if (countryActive) {
+          final code = _normIso2(p.countryCode);
+          if (!_isIso2(code) || !tempCountries.contains(code)) continue;
         }
 
-        // connected
         if (localConnectedOnly && !p.isConnected) continue;
 
-        // age
-        if (minA != null && maxA != null) {
+        if (ageActive) {
           final a = p.age;
-          if (a == null || a < minA || a > maxA) continue;
+          if (a == null || a < minA! || a > maxA!) continue;
         }
 
         count++;
@@ -417,7 +499,6 @@ extension _TabularFilters on _TabularViewState {
                         ],
                       ),
 
-                      // Compteur live
                       Padding(
                         padding: const EdgeInsets.only(top: 6, bottom: 12),
                         child: Row(
@@ -449,9 +530,7 @@ extension _TabularFilters on _TabularViewState {
                         ),
                       ),
 
-                      // -----------------------------------------------------------------
-                      // ✅ Distance (comme carto)
-                      // -----------------------------------------------------------------
+                      // Distance
                       Align(
                         alignment: Alignment.centerLeft,
                         child: Text(
@@ -468,9 +547,12 @@ extension _TabularFilters on _TabularViewState {
                             setModalState(() => localDistanceEnabled = true);
 
                             final ok = await _ensureLocation();
-                            if (ok && _distanceOrigin != null) {
+                            if (ok &&
+                                _distanceOriginLat != null &&
+                                _distanceOriginLng != null) {
                               setModalState(() {
-                                localOrigin = _distanceOrigin;
+                                localOriginLat = _distanceOriginLat;
+                                localOriginLng = _distanceOriginLng;
                               });
                             } else {
                               setModalState(() => localDistanceEnabled = false);
@@ -480,14 +562,15 @@ extension _TabularFilters on _TabularViewState {
                           }
                         },
                       ),
+
                       ListTile(
                         dense: true,
                         contentPadding: EdgeInsets.zero,
                         title: Text(
-                          localOrigin != null
+                          (localOriginLat != null && localOriginLng != null)
                               ? l10n.mapOriginDefined(
-                                  localOrigin!.latitude.toStringAsFixed(4),
-                                  localOrigin!.longitude.toStringAsFixed(4),
+                                  localOriginLat!.toStringAsFixed(4),
+                                  localOriginLng!.toStringAsFixed(4),
                                 )
                               : l10n.mapOriginUndefined,
                         ),
@@ -496,15 +579,19 @@ extension _TabularFilters on _TabularViewState {
                           label: Text(l10n.mapMyPosition),
                           onPressed: () async {
                             final ok = await _ensureLocation();
-                            if (ok && _distanceOrigin != null) {
+                            if (ok &&
+                                _distanceOriginLat != null &&
+                                _distanceOriginLng != null) {
                               setModalState(() {
                                 localDistanceEnabled = true;
-                                localOrigin = _distanceOrigin;
+                                localOriginLat = _distanceOriginLat;
+                                localOriginLng = _distanceOriginLng;
                               });
                             }
                           },
                         ),
                       ),
+
                       if (localDistanceEnabled) ...[
                         Row(
                           children: [
@@ -552,7 +639,7 @@ extension _TabularFilters on _TabularViewState {
 
                       const SizedBox(height: 16),
 
-                      // Pays (Expansion)
+                      // Pays
                       Align(
                         alignment: Alignment.centerLeft,
                         child: Text(
@@ -713,7 +800,8 @@ extension _TabularFilters on _TabularViewState {
                                 ..addAll(sortedCountryOptions);
 
                               localDistanceEnabled = false;
-                              localOrigin = null;
+                              localOriginLat = null;
+                              localOriginLng = null;
                               localMaxKm = 100.0;
 
                               if (hasAges) {
@@ -749,7 +837,8 @@ extension _TabularFilters on _TabularViewState {
                               _selectedMaxAge = localMax;
 
                               _distanceFilterEnabled = localDistanceEnabled;
-                              _distanceOrigin = localOrigin;
+                              _distanceOriginLat = localOriginLat;
+                              _distanceOriginLng = localOriginLng;
                               _maxDistanceKm = localDistanceEnabled
                                   ? localMaxKm
                                   : null;
