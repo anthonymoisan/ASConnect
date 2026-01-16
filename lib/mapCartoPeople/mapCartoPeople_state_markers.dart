@@ -19,9 +19,71 @@ extension _MapPeopleMarkers on _MapPeopleByCityState {
     return size.clamp(kMinSize, kMaxSize).toDouble();
   }
 
+  void _enterCountry(_CountryCluster country) {
+    setState(() {
+      _level = _MapLevel.city;
+      _activeCountry = country.countryCode;
+    });
+
+    final base = _filteredAllClusters.isNotEmpty
+        ? _filteredAllClusters
+        : _allClusters;
+
+    _clusters = base
+        .map((cl) {
+          final people = cl.people
+              .where(
+                (p) =>
+                    (p.countryCode ?? '').trim().toUpperCase() ==
+                    country.countryCode,
+              )
+              .toList();
+          if (people.isEmpty) return null;
+          return _CityCluster(city: cl.city, latLng: cl.latLng, people: people);
+        })
+        .whereType<_CityCluster>()
+        .toList();
+
+    _rebuildMarkers();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (_clusters.isEmpty) return;
+
+      const double maxCityZoomAfterEnter = 7.2;
+      const double minCityZoomAfterEnter = 4.5;
+
+      final points = _clusters.map((c) => c.latLng).toList();
+
+      if (points.length == 1) {
+        final p = points.first;
+        final nextZoom = (_map.camera.zoom + 1.2)
+            .clamp(minCityZoomAfterEnter, maxCityZoomAfterEnter)
+            .toDouble();
+        _map.move(p, nextZoom);
+        _currentZoom = nextZoom;
+        return;
+      }
+
+      final bounds = LatLngBounds.fromPoints(points);
+
+      _map.fitCamera(
+        CameraFit.bounds(bounds: bounds, padding: const EdgeInsets.all(36)),
+      );
+
+      final z = _map.camera.zoom;
+      final clamped = z
+          .clamp(minCityZoomAfterEnter, maxCityZoomAfterEnter)
+          .toDouble();
+      if ((clamped - z).abs() > 0.01) {
+        _map.move(_map.camera.center, clamped);
+      }
+      _currentZoom = clamped;
+    });
+  }
+
   // champs à ajouter dans le State :
   // int _markersSignature = 0;
-
   int _hashCombine(int h, int v) {
     h = 0x1fffffff & (h + v);
     h = 0x1fffffff & (h + ((0x0007ffff & h) << 10));
