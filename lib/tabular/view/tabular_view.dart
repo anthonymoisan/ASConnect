@@ -15,6 +15,25 @@ import '../models/listPerson.dart';
 import '../models/person.dart';
 import '../services/tabular_api.dart';
 
+// -----------------------------------------------------------------------------
+// Simple timing helper for console logs
+// -----------------------------------------------------------------------------
+Future<T> logTimed<T>(String label, Future<T> Function() fn) async {
+  final sw = Stopwatch()..start();
+  debugPrint('⏱️ START $label');
+  try {
+    final res = await fn();
+    sw.stop();
+    debugPrint('✅ END $label — ${sw.elapsedMilliseconds} ms');
+    return res;
+  } catch (e, st) {
+    sw.stop();
+    debugPrint('❌ FAIL $label — ${sw.elapsedMilliseconds} ms — $e');
+    debugPrint('$st');
+    rethrow;
+  }
+}
+
 /// ✅ Options génotypes (mêmes “familles” que la carto)
 const List<String> kTabularGenotypeOptions = <String>[
   'délétion',
@@ -41,6 +60,10 @@ class _TabularViewState extends State<TabularView> with WidgetsBindingObserver {
 
   Map<String, String> _countriesByCode = {};
   String? _countriesLocale;
+
+  // Guards against double calls
+  bool _loadingCountries = false;
+  bool _loadingPeople = false;
 
   // ✅ Tri
   int? _sortColumnIndex;
@@ -70,12 +93,14 @@ class _TabularViewState extends State<TabularView> with WidgetsBindingObserver {
   // ✅ Poll refresh status
   Timer? _pollTimer;
   bool _reloading = false;
-  static const Duration _pollInterval = Duration(seconds: 10);
+  static const Duration _pollInterval = Duration(seconds: 60);
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+
+    debugPrint('🧩 TabularView initState hash=${identityHashCode(this)}');
 
     _loadPeople();
     _startPolling();
@@ -131,7 +156,6 @@ class _TabularViewState extends State<TabularView> with WidgetsBindingObserver {
 
   Future<bool> _ensureLocation() async {
     try {
-      // Sur web, certains appels peuvent throw -> on reste permissif.
       try {
         final serviceEnabled = await Geolocator.isLocationServiceEnabled();
         if (!serviceEnabled) return false;
@@ -149,7 +173,7 @@ class _TabularViewState extends State<TabularView> with WidgetsBindingObserver {
           return false;
         }
       } catch (_) {
-        // Sur web, le navigateur gère le prompt; on continue.
+        // ignore (web)
       }
 
       final pos = await Geolocator.getCurrentPosition(
@@ -249,8 +273,15 @@ class _TabularViewState extends State<TabularView> with WidgetsBindingObserver {
   // ---------------------------------------------------------------------------
 
   Future<void> _loadPeople() async {
+    if (_loadingPeople) return;
+    _loadingPeople = true;
+
     try {
-      final data = await TabularApi.fetchPeopleMapRepresentation();
+      final data = await logTimed(
+        'TabularApi.fetchPeopleMapRepresentation (initial)',
+        () => TabularApi.fetchPeopleMapRepresentation(),
+      );
+      debugPrint('📦 People loaded: ${data.items.length}');
       if (!mounted) return;
 
       final meId = widget.currentPersonId;
@@ -264,7 +295,6 @@ class _TabularViewState extends State<TabularView> with WidgetsBindingObserver {
         _error = null;
       });
 
-      // ✅ init filtres (pays/âge) puis applique
       _recomputeAgeDomainFromAllPeople();
       if (_selectedCountries.isEmpty) {
         _selectedCountries.addAll(_countryOptions);
@@ -276,6 +306,8 @@ class _TabularViewState extends State<TabularView> with WidgetsBindingObserver {
         _error = e;
         _loading = false;
       });
+    } finally {
+      _loadingPeople = false;
     }
   }
 
@@ -284,7 +316,11 @@ class _TabularViewState extends State<TabularView> with WidgetsBindingObserver {
     _reloading = true;
 
     try {
-      final data = await TabularApi.fetchPeopleMapRepresentation(force: true);
+      final data = await logTimed(
+        'TabularApi.fetchPeopleMapRepresentation (reload force=true)',
+        () => TabularApi.fetchPeopleMapRepresentation(force: true),
+      );
+      debugPrint('📦 People reloaded: ${data.items.length}');
       if (!mounted) return;
 
       final meId = widget.currentPersonId;
@@ -326,9 +362,15 @@ class _TabularViewState extends State<TabularView> with WidgetsBindingObserver {
   Future<void> _loadCountriesIfNeeded() async {
     final loc = Localizations.localeOf(context).languageCode.toLowerCase();
     if (_countriesLocale == loc && _countriesByCode.isNotEmpty) return;
+    if (_loadingCountries) return;
 
+    _loadingCountries = true;
     try {
-      final map = await TabularApi.fetchCountriesTranslated(locale: loc);
+      final map = await logTimed(
+        'TabularApi.fetchCountriesTranslated locale=$loc',
+        () => TabularApi.fetchCountriesTranslated(locale: loc),
+      );
+      debugPrint('🌍 Countries loaded: ${map.length}');
       if (!mounted) return;
       setState(() {
         _countriesLocale = loc;
@@ -340,6 +382,8 @@ class _TabularViewState extends State<TabularView> with WidgetsBindingObserver {
       }
     } catch (_) {
       // fallback silencieux
+    } finally {
+      _loadingCountries = false;
     }
   }
 
@@ -689,7 +733,6 @@ class _TabularViewState extends State<TabularView> with WidgetsBindingObserver {
     _selectedMinAge = _datasetMinAge;
     _selectedMaxAge = _datasetMaxAge;
 
-    // ✅ reset distance
     _distanceFilterEnabled = false;
     _distanceOriginLat = null;
     _distanceOriginLng = null;
@@ -777,7 +820,6 @@ class _TabularViewState extends State<TabularView> with WidgetsBindingObserver {
     int? localMin = _selectedMinAge ?? _datasetMinAge;
     int? localMax = _selectedMaxAge ?? _datasetMaxAge;
 
-    // ✅ local distance
     bool localDistanceEnabled = _distanceFilterEnabled;
     double? localOriginLat = _distanceOriginLat;
     double? localOriginLng = _distanceOriginLng;
@@ -787,7 +829,6 @@ class _TabularViewState extends State<TabularView> with WidgetsBindingObserver {
       int count = 0;
 
       for (final p in _allPeople) {
-        // geno
         if (tempGenos.isNotEmpty) {
           final g = (p.genotype ?? '').trim();
           if (g.isEmpty) continue;
@@ -809,16 +850,13 @@ class _TabularViewState extends State<TabularView> with WidgetsBindingObserver {
           if (!ok) continue;
         }
 
-        // country
         if (tempCountries.isNotEmpty) {
           final code = (p.countryCode ?? '').trim().toUpperCase();
           if (code.length != 2 || !tempCountries.contains(code)) continue;
         }
 
-        // connected
         if (localConnectedOnly && !p.isConnected) continue;
 
-        // age
         final minA = localMin;
         final maxA = localMax;
         if (minA != null && maxA != null) {
@@ -826,7 +864,6 @@ class _TabularViewState extends State<TabularView> with WidgetsBindingObserver {
           if (a == null || a < minA || a > maxA) continue;
         }
 
-        // ✅ distance (local preview)
         if (localDistanceEnabled) {
           if (localOriginLat == null || localOriginLng == null) continue;
           if (p.latitude == null || p.longitude == null) continue;
@@ -905,8 +942,6 @@ class _TabularViewState extends State<TabularView> with WidgetsBindingObserver {
                           ),
                         ],
                       ),
-
-                      // Compteur live
                       Padding(
                         padding: const EdgeInsets.only(top: 6, bottom: 12),
                         child: Row(
@@ -938,7 +973,6 @@ class _TabularViewState extends State<TabularView> with WidgetsBindingObserver {
                         ),
                       ),
 
-                      // ✅ Distance (comme carto)
                       Align(
                         alignment: Alignment.centerLeft,
                         child: Text(
@@ -1026,7 +1060,6 @@ class _TabularViewState extends State<TabularView> with WidgetsBindingObserver {
                       ],
                       const SizedBox(height: 16),
 
-                      // Connectés
                       Align(
                         alignment: Alignment.centerLeft,
                         child: Text(
@@ -1044,7 +1077,6 @@ class _TabularViewState extends State<TabularView> with WidgetsBindingObserver {
 
                       const SizedBox(height: 16),
 
-                      // Pays
                       Align(
                         alignment: Alignment.centerLeft,
                         child: Text(
@@ -1111,7 +1143,6 @@ class _TabularViewState extends State<TabularView> with WidgetsBindingObserver {
 
                       const SizedBox(height: 16),
 
-                      // Génotypes
                       Align(
                         alignment: Alignment.centerLeft,
                         child: Text(
@@ -1141,7 +1172,6 @@ class _TabularViewState extends State<TabularView> with WidgetsBindingObserver {
 
                       const SizedBox(height: 16),
 
-                      // Âge
                       Align(
                         alignment: Alignment.centerLeft,
                         child: Text(
@@ -1239,7 +1269,6 @@ class _TabularViewState extends State<TabularView> with WidgetsBindingObserver {
                               _selectedMinAge = localMin;
                               _selectedMaxAge = localMax;
 
-                              // ✅ persist distance
                               _distanceFilterEnabled = localDistanceEnabled;
                               _distanceOriginLat = localOriginLat;
                               _distanceOriginLng = localOriginLng;
@@ -1267,8 +1296,184 @@ class _TabularViewState extends State<TabularView> with WidgetsBindingObserver {
   }
 
   // ---------------------------------------------------------------------------
-  // UI
+  // UI (NEW: virtualized "table" using SliverList)
   // ---------------------------------------------------------------------------
+
+  Widget _headerCell(
+    String label, {
+    required int columnIndex,
+    required VoidCallback onTap,
+    bool numeric = false,
+    double? width,
+  }) {
+    final isActive = _sortColumnIndex == columnIndex;
+    final icon = isActive
+        ? (_sortAscending ? Icons.arrow_upward : Icons.arrow_downward)
+        : Icons.unfold_more;
+
+    final text = Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Flexible(
+          child: Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontWeight: FontWeight.w800,
+              color: isActive ? Colors.black : Colors.black87,
+            ),
+          ),
+        ),
+        const SizedBox(width: 6),
+        Icon(icon, size: 14, color: Colors.black54),
+      ],
+    );
+
+    final content = InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+        child: Align(
+          alignment: numeric ? Alignment.centerRight : Alignment.centerLeft,
+          child: text,
+        ),
+      ),
+    );
+
+    if (width != null) {
+      return SizedBox(width: width, child: content);
+    }
+    return Expanded(child: content);
+  }
+
+  Widget _tableHeader(AppLocalizations l10n, BuildContext context) {
+    final pseudoW = _maxPseudoWidth(context);
+    final genoW = _maxGenotypeWidth(context);
+    final countryW = _maxCountryWidth(context);
+    final cityW = _maxCityWidth(context);
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.grey.shade100,
+        border: Border(
+          bottom: BorderSide(color: Colors.grey.shade300),
+          top: BorderSide(color: Colors.grey.shade300),
+        ),
+      ),
+      child: Row(
+        children: [
+          const SizedBox(width: 56), // avatar
+          _headerCell(
+            l10n.tabularColPseudo,
+            columnIndex: 1,
+            width: pseudoW + 16,
+            onTap: () =>
+                _applySort(1, _sortColumnIndex == 1 ? !_sortAscending : true),
+          ),
+          _headerCell(
+            l10n.tabularColAge,
+            columnIndex: 2,
+            numeric: true,
+            width: 70,
+            onTap: () =>
+                _applySort(2, _sortColumnIndex == 2 ? !_sortAscending : true),
+          ),
+          _headerCell(
+            l10n.tabularColGenotype,
+            columnIndex: 3,
+            width: genoW + 16,
+            onTap: () =>
+                _applySort(3, _sortColumnIndex == 3 ? !_sortAscending : true),
+          ),
+          _headerCell(
+            l10n.tabularColCountry,
+            columnIndex: 4,
+            width: countryW + 16,
+            onTap: () =>
+                _applySort(4, _sortColumnIndex == 4 ? !_sortAscending : true),
+          ),
+          _headerCell(
+            l10n.tabularColCity,
+            columnIndex: 5,
+            width: cityW + 16,
+            onTap: () =>
+                _applySort(5, _sortColumnIndex == 5 ? !_sortAscending : true),
+          ),
+          const SizedBox(width: 56), // action
+        ],
+      ),
+    );
+  }
+
+  Widget _personRow(AppLocalizations l10n, BuildContext context, Person p) {
+    final pseudoW = _maxPseudoWidth(context);
+    final genoW = _maxGenotypeWidth(context);
+    final countryW = _maxCountryWidth(context);
+    final cityW = _maxCityWidth(context);
+
+    final pseudo = _pseudo(p);
+    final ageLabel = (p.age == null) ? '—' : l10n.mapPersonTileAge(p.age!);
+    final genotype = _genotypeLabel(l10n, p);
+    final country = _countryLabel(p);
+    final city = _cityLabel(p);
+
+    return InkWell(
+      onTap: () => _openComposeMessageSheet(p),
+      child: Container(
+        decoration: BoxDecoration(
+          border: Border(bottom: BorderSide(color: Colors.grey.shade200)),
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+        child: Row(
+          children: [
+            SizedBox(
+              width: 56,
+              child: Center(
+                // Remets _photoCell(p) si tu veux. Pour debug perfs tu peux garder Text("Toto")
+                child: _photoCell(p),
+              ),
+            ),
+            SizedBox(
+              width: pseudoW + 16,
+              child: _ellipsisCell(
+                pseudo,
+                maxWidth: pseudoW,
+                style: const TextStyle(fontWeight: FontWeight.w700),
+              ),
+            ),
+            SizedBox(
+              width: 70,
+              child: Align(
+                alignment: Alignment.centerRight,
+                child: Text(ageLabel),
+              ),
+            ),
+            SizedBox(
+              width: genoW + 16,
+              child: _ellipsisCell(genotype, maxWidth: genoW),
+            ),
+            SizedBox(
+              width: countryW + 16,
+              child: _ellipsisCell(country, maxWidth: countryW),
+            ),
+            SizedBox(
+              width: cityW + 16,
+              child: _ellipsisCell(city, maxWidth: cityW),
+            ),
+            SizedBox(
+              width: 56,
+              child: IconButton(
+                tooltip: l10n.tabularSendMessageTooltip,
+                icon: const Icon(Icons.send),
+                onPressed: () => _openComposeMessageSheet(p),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -1276,6 +1481,8 @@ class _TabularViewState extends State<TabularView> with WidgetsBindingObserver {
 
     if (_loading) return const Center(child: CircularProgressIndicator());
     if (_error != null) return Center(child: Text('Error: $_error'));
+
+    // Empty
     if (_view.isEmpty) {
       return RefreshIndicator(
         onRefresh: () async {
@@ -1293,106 +1500,25 @@ class _TabularViewState extends State<TabularView> with WidgetsBindingObserver {
       );
     }
 
-    final pseudoMax = _maxPseudoWidth(context);
-    final genotypeMax = _maxGenotypeWidth(context);
-    final countryMax = _maxCountryWidth(context);
-    final cityMax = _maxCityWidth(context);
-
+    // Virtualized table
     return RefreshIndicator(
       onRefresh: () async {
         await _loadCountriesIfNeeded();
         await _reload(silent: false);
       },
-      child: LayoutBuilder(
-        builder: (ctx, constraints) {
-          return ListView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            children: [
-              _filtersBar(l10n),
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(minWidth: constraints.maxWidth),
-                  child: DataTable(
-                    showCheckboxColumn: false,
-                    sortColumnIndex: _sortColumnIndex,
-                    sortAscending: _sortAscending,
-                    columnSpacing: 14,
-                    headingRowHeight: 44,
-                    dataRowMinHeight: 54,
-                    dataRowMaxHeight: 64,
-                    columns: [
-                      const DataColumn(label: Text('')),
-                      DataColumn(
-                        label: Text(l10n.tabularColPseudo),
-                        onSort: (i, asc) => _applySort(i, asc),
-                      ),
-                      DataColumn(
-                        label: Text(l10n.tabularColAge),
-                        numeric: true,
-                        onSort: (i, asc) => _applySort(i, asc),
-                      ),
-                      DataColumn(
-                        label: Text(l10n.tabularColGenotype),
-                        onSort: (i, asc) => _applySort(i, asc),
-                      ),
-                      DataColumn(
-                        label: Text(l10n.tabularColCountry),
-                        onSort: (i, asc) => _applySort(i, asc),
-                      ),
-                      DataColumn(
-                        label: Text(l10n.tabularColCity),
-                        onSort: (i, asc) => _applySort(i, asc),
-                      ),
-                      DataColumn(label: Text(l10n.tabularColAction)),
-                    ],
-                    rows: _view.map((p) {
-                      final pseudo = _pseudo(p);
-                      final ageLabel = (p.age == null)
-                          ? '—'
-                          : l10n.mapPersonTileAge(p.age!);
-                      final genotype = _genotypeLabel(l10n, p);
-                      final country = _countryLabel(p);
-                      final city = _cityLabel(p);
-
-                      return DataRow(
-                        onSelectChanged: (_) => _openComposeMessageSheet(p),
-                        cells: [
-                          DataCell(_photoCell(p)),
-                          DataCell(
-                            _ellipsisCell(
-                              pseudo,
-                              maxWidth: pseudoMax,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          ),
-                          DataCell(Text(ageLabel)),
-                          DataCell(
-                            _ellipsisCell(genotype, maxWidth: genotypeMax),
-                          ),
-                          DataCell(
-                            _ellipsisCell(country, maxWidth: countryMax),
-                          ),
-                          DataCell(_ellipsisCell(city, maxWidth: cityMax)),
-                          DataCell(
-                            IconButton(
-                              tooltip: l10n.tabularSendMessageTooltip,
-                              icon: const Icon(Icons.send),
-                              onPressed: () => _openComposeMessageSheet(p),
-                            ),
-                          ),
-                        ],
-                      );
-                    }).toList(),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 24),
-            ],
-          );
-        },
+      child: CustomScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        slivers: [
+          SliverToBoxAdapter(child: _filtersBar(l10n)),
+          SliverToBoxAdapter(child: _tableHeader(l10n, context)),
+          SliverList(
+            delegate: SliverChildBuilderDelegate(
+              (ctx, i) => _personRow(l10n, ctx, _view[i]),
+              childCount: _view.length,
+            ),
+          ),
+          const SliverToBoxAdapter(child: SizedBox(height: 24)),
+        ],
       ),
     );
   }

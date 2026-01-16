@@ -508,7 +508,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   static const String? kMapTilerKey = apiEnvMapTitleKey;
   static const bool kAllowOsmInRelease = false;
-
+  /*
   late final List<Widget> _tabs = <Widget>[
     MapPeopleByCity(
       currentPersonId: widget.personId,
@@ -518,6 +518,18 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     ),
     ConversationsPage(personId: widget.personId),
 
+    TabularView(currentPersonId: widget.personId),
+  ];*/
+
+  late final List<Widget> _tabs = <Widget>[
+    const Center(child: Text('ONGLET 1 – MAP', style: TextStyle(fontSize: 18))),
+    const Center(
+      child: Text('ONGLET 2 – CONVERSATIONS', style: TextStyle(fontSize: 18)),
+    ),
+    /*
+    const Center(
+      child: Text('ONGLET 3 – TABLEAU', style: TextStyle(fontSize: 18)),
+    ),*/
     TabularView(currentPersonId: widget.personId),
   ];
 
