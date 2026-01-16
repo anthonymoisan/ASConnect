@@ -508,29 +508,17 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   static const String? kMapTilerKey = apiEnvMapTitleKey;
   static const bool kAllowOsmInRelease = false;
-  /*
+
   late final List<Widget> _tabs = <Widget>[
+    TabularView(currentPersonId: widget.personId),
     MapPeopleByCity(
       currentPersonId: widget.personId,
       mapTilerApiKey: kMapTilerKey,
       allowOsmInRelease: kAllowOsmInRelease,
-      osmUserAgent: 'ASConnexion/1.0 (mobile; contact: contact@fastfrance.org)',
+      osmUserAgent:
+          'ASConnexion/1.0 (mobile; contact: contact@angelmananalytics.org)',
     ),
     ConversationsPage(personId: widget.personId),
-
-    TabularView(currentPersonId: widget.personId),
-  ];*/
-
-  late final List<Widget> _tabs = <Widget>[
-    const Center(child: Text('ONGLET 1 – MAP', style: TextStyle(fontSize: 18))),
-    const Center(
-      child: Text('ONGLET 2 – CONVERSATIONS', style: TextStyle(fontSize: 18)),
-    ),
-    /*
-    const Center(
-      child: Text('ONGLET 3 – TABLEAU', style: TextStyle(fontSize: 18)),
-    ),*/
-    TabularView(currentPersonId: widget.personId),
   ];
 
   void _setIndex(int i) => setState(() => _currentIndex = i);
@@ -820,9 +808,18 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         _NavIcon(
-                          icon: Ionicons.people,
+                          icon: Ionicons
+                              .grid_outline, // ou Ionicons.list / Ionicons.table
                           selected: _currentIndex == 0,
                           onTap: () => _setIndex(0),
+                        ),
+
+                        const SizedBox(width: 28),
+
+                        _NavIcon(
+                          icon: Ionicons.people,
+                          selected: _currentIndex == 1,
+                          onTap: () => _setIndex(1),
                         ),
 
                         const SizedBox(width: 28),
@@ -832,23 +829,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                           children: [
                             _NavIcon(
                               icon: Ionicons.chatbubble,
-                              selected: _currentIndex == 1,
+                              selected: _currentIndex == 2,
                               onTap: () {
-                                _setIndex(1);
+                                _setIndex(2);
                                 _refreshUnreadMessagesTotal();
                               },
                             ),
                             _Badge(count: _unreadMessagesTotal),
                           ],
-                        ),
-
-                        const SizedBox(width: 28),
-
-                        _NavIcon(
-                          icon: Ionicons
-                              .grid_outline, // ou Ionicons.list / Ionicons.table
-                          selected: _currentIndex == 2,
-                          onTap: () => _setIndex(2),
                         ),
                       ],
                     ),
