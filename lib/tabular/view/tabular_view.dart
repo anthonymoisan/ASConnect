@@ -93,14 +93,27 @@ class _TabularViewState extends State<TabularView> with WidgetsBindingObserver {
   // ✅ Poll refresh status
   Timer? _pollTimer;
   bool _reloading = false;
+
+  // ✅ You set it to 60s
   static const Duration _pollInterval = Duration(seconds: 60);
+
+  // ---------------------------------------------------------------------------
+  // "Table" layout constants
+  // ---------------------------------------------------------------------------
+  static const double _gap = 12;
+  static const double _gapAgeGenotype =
+      22; // ✅ bigger gap between Age and Genotype
+  static const double _avatarCol = 56;
+  static const double _ageCol = 72;
+  static const double _actionCol = 64;
+
+  static const double _headerHeight = 46;
+  static const double _filtersHeight = 72;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-
-    debugPrint('🧩 TabularView initState hash=${identityHashCode(this)}');
 
     _loadPeople();
     _startPolling();
@@ -147,6 +160,7 @@ class _TabularViewState extends State<TabularView> with WidgetsBindingObserver {
 
   String _tableResultsLabel(AppLocalizations l10n) {
     final n = _view.length;
+    remembering: // ignore: dead_code
     return '${l10n.tableTabular} • $n';
   }
 
@@ -156,6 +170,7 @@ class _TabularViewState extends State<TabularView> with WidgetsBindingObserver {
 
   Future<bool> _ensureLocation() async {
     try {
+      // Sur web, certains appels peuvent throw -> on reste permissif.
       try {
         final serviceEnabled = await Geolocator.isLocationServiceEnabled();
         if (!serviceEnabled) return false;
@@ -173,7 +188,7 @@ class _TabularViewState extends State<TabularView> with WidgetsBindingObserver {
           return false;
         }
       } catch (_) {
-        // ignore (web)
+        // Sur web, le navigateur gère le prompt; on continue.
       }
 
       final pos = await Geolocator.getCurrentPosition(
@@ -295,6 +310,7 @@ class _TabularViewState extends State<TabularView> with WidgetsBindingObserver {
         _error = null;
       });
 
+      // ✅ init filtres (pays/âge) puis applique
       _recomputeAgeDomainFromAllPeople();
       if (_selectedCountries.isEmpty) {
         _selectedCountries.addAll(_countryOptions);
@@ -364,6 +380,7 @@ class _TabularViewState extends State<TabularView> with WidgetsBindingObserver {
     if (_countriesLocale == loc && _countriesByCode.isNotEmpty) return;
     if (_loadingCountries) return;
 
+    remembers: // ignore: dead_code
     _loadingCountries = true;
     try {
       final map = await logTimed(
@@ -672,11 +689,14 @@ class _TabularViewState extends State<TabularView> with WidgetsBindingObserver {
         final s = sel.trim().toLowerCase();
 
         if (norm.contains('deletion') &&
-            (s.contains('dél') || s.contains('del')))
+            (s.contains('dél') || s.contains('del'))) {
           return true;
+        }
 
-        if ((norm.contains('dél') || norm.contains('del')) && s.contains('dél'))
+        if ((norm.contains('dél') || norm.contains('del')) &&
+            s.contains('dél')) {
           return true;
+        }
 
         if (norm.contains(s) || s.contains(norm)) return true;
       }
@@ -733,6 +753,7 @@ class _TabularViewState extends State<TabularView> with WidgetsBindingObserver {
     _selectedMinAge = _datasetMinAge;
     _selectedMaxAge = _datasetMaxAge;
 
+    // ✅ reset distance
     _distanceFilterEnabled = false;
     _distanceOriginLat = null;
     _distanceOriginLng = null;
@@ -820,6 +841,7 @@ class _TabularViewState extends State<TabularView> with WidgetsBindingObserver {
     int? localMin = _selectedMinAge ?? _datasetMinAge;
     int? localMax = _selectedMaxAge ?? _datasetMaxAge;
 
+    // ✅ local distance
     bool localDistanceEnabled = _distanceFilterEnabled;
     double? localOriginLat = _distanceOriginLat;
     double? localOriginLng = _distanceOriginLng;
@@ -829,6 +851,7 @@ class _TabularViewState extends State<TabularView> with WidgetsBindingObserver {
       int count = 0;
 
       for (final p in _allPeople) {
+        // geno
         if (tempGenos.isNotEmpty) {
           final g = (p.genotype ?? '').trim();
           if (g.isEmpty) continue;
@@ -850,13 +873,16 @@ class _TabularViewState extends State<TabularView> with WidgetsBindingObserver {
           if (!ok) continue;
         }
 
+        // country
         if (tempCountries.isNotEmpty) {
           final code = (p.countryCode ?? '').trim().toUpperCase();
           if (code.length != 2 || !tempCountries.contains(code)) continue;
         }
 
+        // connected
         if (localConnectedOnly && !p.isConnected) continue;
 
+        // age
         final minA = localMin;
         final maxA = localMax;
         if (minA != null && maxA != null) {
@@ -864,6 +890,7 @@ class _TabularViewState extends State<TabularView> with WidgetsBindingObserver {
           if (a == null || a < minA || a > maxA) continue;
         }
 
+        // ✅ distance
         if (localDistanceEnabled) {
           if (localOriginLat == null || localOriginLng == null) continue;
           if (p.latitude == null || p.longitude == null) continue;
@@ -942,6 +969,8 @@ class _TabularViewState extends State<TabularView> with WidgetsBindingObserver {
                           ),
                         ],
                       ),
+
+                      // Compteur live
                       Padding(
                         padding: const EdgeInsets.only(top: 6, bottom: 12),
                         child: Row(
@@ -973,6 +1002,7 @@ class _TabularViewState extends State<TabularView> with WidgetsBindingObserver {
                         ),
                       ),
 
+                      // ✅ Distance
                       Align(
                         alignment: Alignment.centerLeft,
                         child: Text(
@@ -1060,6 +1090,7 @@ class _TabularViewState extends State<TabularView> with WidgetsBindingObserver {
                       ],
                       const SizedBox(height: 16),
 
+                      // Connectés
                       Align(
                         alignment: Alignment.centerLeft,
                         child: Text(
@@ -1077,6 +1108,7 @@ class _TabularViewState extends State<TabularView> with WidgetsBindingObserver {
 
                       const SizedBox(height: 16),
 
+                      // Pays
                       Align(
                         alignment: Alignment.centerLeft,
                         child: Text(
@@ -1143,6 +1175,7 @@ class _TabularViewState extends State<TabularView> with WidgetsBindingObserver {
 
                       const SizedBox(height: 16),
 
+                      // Génotypes
                       Align(
                         alignment: Alignment.centerLeft,
                         child: Text(
@@ -1172,6 +1205,7 @@ class _TabularViewState extends State<TabularView> with WidgetsBindingObserver {
 
                       const SizedBox(height: 16),
 
+                      // Âge
                       Align(
                         alignment: Alignment.centerLeft,
                         child: Text(
@@ -1269,6 +1303,7 @@ class _TabularViewState extends State<TabularView> with WidgetsBindingObserver {
                               _selectedMinAge = localMin;
                               _selectedMaxAge = localMax;
 
+                              // ✅ persist distance
                               _distanceFilterEnabled = localDistanceEnabled;
                               _distanceOriginLat = localOriginLat;
                               _distanceOriginLng = localOriginLng;
@@ -1296,7 +1331,7 @@ class _TabularViewState extends State<TabularView> with WidgetsBindingObserver {
   }
 
   // ---------------------------------------------------------------------------
-  // UI (NEW: virtualized "table" using SliverList)
+  // UI (virtualized table + pinned filter bar + pinned header)
   // ---------------------------------------------------------------------------
 
   Widget _headerCell(
@@ -1304,113 +1339,152 @@ class _TabularViewState extends State<TabularView> with WidgetsBindingObserver {
     required int columnIndex,
     required VoidCallback onTap,
     bool numeric = false,
-    double? width,
   }) {
     final isActive = _sortColumnIndex == columnIndex;
     final icon = isActive
         ? (_sortAscending ? Icons.arrow_upward : Icons.arrow_downward)
         : Icons.unfold_more;
 
-    final text = Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Flexible(
-          child: Text(
-            label,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              fontWeight: FontWeight.w800,
-              color: isActive ? Colors.black : Colors.black87,
-            ),
-          ),
-        ),
-        const SizedBox(width: 6),
-        Icon(icon, size: 14, color: Colors.black54),
-      ],
-    );
-
-    final content = InkWell(
+    return InkWell(
       onTap: onTap,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 10),
         child: Align(
           alignment: numeric ? Alignment.centerRight : Alignment.centerLeft,
-          child: text,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Flexible(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontWeight: FontWeight.w800,
+                    color: isActive ? Colors.black : Colors.black87,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 6),
+              Icon(icon, size: 14, color: Colors.black54),
+            ],
+          ),
         ),
       ),
     );
-
-    if (width != null) {
-      return SizedBox(width: width, child: content);
-    }
-    return Expanded(child: content);
   }
 
   Widget _tableHeader(AppLocalizations l10n, BuildContext context) {
-    final pseudoW = _maxPseudoWidth(context);
-    final genoW = _maxGenotypeWidth(context);
-    final countryW = _maxCountryWidth(context);
-    final cityW = _maxCityWidth(context);
+    final pseudoW = _maxPseudoWidth(context) + 16;
+    final genoW = _maxGenotypeWidth(context) + 16;
+    final countryW = _maxCountryWidth(context) + 16;
+    final cityW = _maxCityWidth(context) + 16;
 
     return Container(
+      height: _headerHeight,
+      padding: const EdgeInsets.symmetric(horizontal: 8),
       decoration: BoxDecoration(
         color: Colors.grey.shade100,
-        border: Border(
-          bottom: BorderSide(color: Colors.grey.shade300),
-          top: BorderSide(color: Colors.grey.shade300),
-        ),
+        border: Border(bottom: BorderSide(color: Colors.grey.shade300)),
       ),
       child: Row(
         children: [
-          const SizedBox(width: 56), // avatar
-          _headerCell(
-            l10n.tabularColPseudo,
-            columnIndex: 1,
-            width: pseudoW + 16,
-            onTap: () =>
-                _applySort(1, _sortColumnIndex == 1 ? !_sortAscending : true),
+          const SizedBox(width: _avatarCol),
+
+          const SizedBox(width: _gap),
+
+          SizedBox(
+            width: pseudoW,
+            child: _headerCell(
+              l10n.tabularColPseudo,
+              columnIndex: 1,
+              onTap: () =>
+                  _applySort(1, _sortColumnIndex == 1 ? !_sortAscending : true),
+            ),
           ),
-          _headerCell(
-            l10n.tabularColAge,
-            columnIndex: 2,
-            numeric: true,
-            width: 70,
-            onTap: () =>
-                _applySort(2, _sortColumnIndex == 2 ? !_sortAscending : true),
+
+          const SizedBox(width: _gap),
+
+          SizedBox(
+            width: _ageCol,
+            child: _headerCell(
+              l10n.tabularColAge,
+              columnIndex: 2,
+              numeric: true,
+              onTap: () =>
+                  _applySort(2, _sortColumnIndex == 2 ? !_sortAscending : true),
+            ),
           ),
-          _headerCell(
-            l10n.tabularColGenotype,
-            columnIndex: 3,
-            width: genoW + 16,
-            onTap: () =>
-                _applySort(3, _sortColumnIndex == 3 ? !_sortAscending : true),
+
+          // ✅ Bigger space here
+          const SizedBox(width: _gapAgeGenotype),
+
+          SizedBox(
+            width: genoW,
+            child: _headerCell(
+              l10n.tabularColGenotype,
+              columnIndex: 3,
+              onTap: () =>
+                  _applySort(3, _sortColumnIndex == 3 ? !_sortAscending : true),
+            ),
           ),
-          _headerCell(
-            l10n.tabularColCountry,
-            columnIndex: 4,
-            width: countryW + 16,
-            onTap: () =>
-                _applySort(4, _sortColumnIndex == 4 ? !_sortAscending : true),
+
+          const SizedBox(width: _gap),
+
+          SizedBox(
+            width: countryW,
+            child: _headerCell(
+              l10n.tabularColCountry,
+              columnIndex: 4,
+              onTap: () =>
+                  _applySort(4, _sortColumnIndex == 4 ? !_sortAscending : true),
+            ),
           ),
-          _headerCell(
-            l10n.tabularColCity,
-            columnIndex: 5,
-            width: cityW + 16,
-            onTap: () =>
-                _applySort(5, _sortColumnIndex == 5 ? !_sortAscending : true),
+
+          const SizedBox(width: _gap),
+
+          SizedBox(
+            width: cityW,
+            child: _headerCell(
+              l10n.tabularColCity,
+              columnIndex: 5,
+              onTap: () =>
+                  _applySort(5, _sortColumnIndex == 5 ? !_sortAscending : true),
+            ),
           ),
-          const SizedBox(width: 56), // action
+
+          const SizedBox(width: _gap),
+
+          SizedBox(
+            width: _actionCol,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 10),
+              child: Align(
+                alignment: Alignment.centerRight,
+                child: Text(
+                  l10n.tabularColAction,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontWeight: FontWeight.w800),
+                ),
+              ),
+            ),
+          ),
         ],
       ),
     );
   }
 
-  Widget _personRow(AppLocalizations l10n, BuildContext context, Person p) {
-    final pseudoW = _maxPseudoWidth(context);
-    final genoW = _maxGenotypeWidth(context);
-    final countryW = _maxCountryWidth(context);
-    final cityW = _maxCityWidth(context);
+  Widget _personRow(
+    AppLocalizations l10n,
+    BuildContext context,
+    Person p,
+    int i,
+  ) {
+    final pseudoMax = _maxPseudoWidth(context);
+    final genotypeMax = _maxGenotypeWidth(context);
+    final countryMax = _maxCountryWidth(context);
+    final cityMax = _maxCityWidth(context);
 
     final pseudo = _pseudo(p);
     final ageLabel = (p.age == null) ? '—' : l10n.mapPersonTileAge(p.age!);
@@ -1418,117 +1492,98 @@ class _TabularViewState extends State<TabularView> with WidgetsBindingObserver {
     final country = _countryLabel(p);
     final city = _cityLabel(p);
 
-    return InkWell(
-      onTap: () => _openComposeMessageSheet(p),
-      child: Container(
-        decoration: BoxDecoration(
-          border: Border(bottom: BorderSide(color: Colors.grey.shade200)),
-        ),
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-        child: Row(
-          children: [
-            SizedBox(
-              width: 56,
-              child: Center(
-                // Remets _photoCell(p) si tu veux. Pour debug perfs tu peux garder Text("Toto")
-                child: _photoCell(p),
-              ),
-            ),
-            SizedBox(
-              width: pseudoW + 16,
-              child: _ellipsisCell(
-                pseudo,
-                maxWidth: pseudoW,
-                style: const TextStyle(fontWeight: FontWeight.w700),
-              ),
-            ),
-            SizedBox(
-              width: 70,
-              child: Align(
-                alignment: Alignment.centerRight,
-                child: Text(ageLabel),
-              ),
-            ),
-            SizedBox(
-              width: genoW + 16,
-              child: _ellipsisCell(genotype, maxWidth: genoW),
-            ),
-            SizedBox(
-              width: countryW + 16,
-              child: _ellipsisCell(country, maxWidth: countryW),
-            ),
-            SizedBox(
-              width: cityW + 16,
-              child: _ellipsisCell(city, maxWidth: cityW),
-            ),
-            SizedBox(
-              width: 56,
-              child: IconButton(
-                tooltip: l10n.tabularSendMessageTooltip,
-                icon: const Icon(Icons.send),
-                onPressed: () => _openComposeMessageSheet(p),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+    final bg = (i.isEven) ? Colors.white : Colors.grey.shade50;
 
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-
-    if (_loading) return const Center(child: CircularProgressIndicator());
-    if (_error != null) return Center(child: Text('Error: $_error'));
-
-    // Empty
-    if (_view.isEmpty) {
-      return RefreshIndicator(
-        onRefresh: () async {
-          await _loadCountriesIfNeeded();
-          await _reload(silent: false);
-        },
-        child: ListView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          children: [
-            _filtersBar(l10n),
-            const SizedBox(height: 24),
-            const Center(child: Text('—')),
-          ],
-        ),
-      );
-    }
-
-    // Virtualized table
-    return RefreshIndicator(
-      onRefresh: () async {
-        await _loadCountriesIfNeeded();
-        await _reload(silent: false);
-      },
-      child: CustomScrollView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        slivers: [
-          SliverToBoxAdapter(child: _filtersBar(l10n)),
-          SliverToBoxAdapter(child: _tableHeader(l10n, context)),
-          SliverList(
-            delegate: SliverChildBuilderDelegate(
-              (ctx, i) => _personRow(l10n, ctx, _view[i]),
-              childCount: _view.length,
-            ),
+    return Material(
+      color: bg,
+      child: InkWell(
+        onTap: () => _openComposeMessageSheet(p),
+        child: Container(
+          decoration: BoxDecoration(
+            border: Border(bottom: BorderSide(color: Colors.grey.shade200)),
           ),
-          const SliverToBoxAdapter(child: SizedBox(height: 24)),
-        ],
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+          child: Row(
+            children: [
+              SizedBox(
+                width: _avatarCol,
+                child: Center(child: _photoCell(p)),
+              ),
+
+              const SizedBox(width: _gap),
+
+              SizedBox(
+                width: _maxPseudoWidth(context) + 16,
+                child: _ellipsisCell(
+                  pseudo,
+                  maxWidth: pseudoMax,
+                  style: const TextStyle(fontWeight: FontWeight.w700),
+                ),
+              ),
+
+              const SizedBox(width: _gap),
+
+              SizedBox(
+                width: _ageCol,
+                child: Align(
+                  alignment: Alignment.centerRight,
+                  child: Text(ageLabel),
+                ),
+              ),
+
+              // ✅ Bigger space here
+              const SizedBox(width: _gapAgeGenotype),
+
+              SizedBox(
+                width: _maxGenotypeWidth(context) + 16,
+                child: _ellipsisCell(genotype, maxWidth: genotypeMax),
+              ),
+
+              const SizedBox(width: _gap),
+
+              SizedBox(
+                width: _maxCountryWidth(context) + 16,
+                child: _ellipsisCell(country, maxWidth: countryMax),
+              ),
+
+              const SizedBox(width: _gap),
+
+              SizedBox(
+                width: _maxCityWidth(context) + 16,
+                child: _ellipsisCell(city, maxWidth: cityMax),
+              ),
+
+              const SizedBox(width: _gap),
+
+              SizedBox(
+                width: _actionCol,
+                child: Align(
+                  alignment: Alignment.centerRight,
+                  child: IconButton(
+                    tooltip: l10n.tabularSendMessageTooltip,
+                    icon: const Icon(Icons.send),
+                    onPressed: () => _openComposeMessageSheet(p),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
 
-  Widget _filtersBar(AppLocalizations l10n) {
+  Widget _filtersBarPinned(AppLocalizations l10n) {
     final tooltip = _tabularFiltersTooltipText(context);
     final tableLabel = _tableResultsLabel(l10n);
 
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 10, 12, 6),
+    return Container(
+      height: _filtersHeight,
+      padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border(bottom: BorderSide(color: Colors.grey.shade300)),
+      ),
       child: Row(
         children: [
           Tooltip(
@@ -1543,6 +1598,7 @@ class _TabularViewState extends State<TabularView> with WidgetsBindingObserver {
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
@@ -1576,13 +1632,105 @@ class _TabularViewState extends State<TabularView> with WidgetsBindingObserver {
       ),
     );
   }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+
+    if (_loading) return const Center(child: CircularProgressIndicator());
+    if (_error != null) return Center(child: Text('Error: $_error'));
+
+    if (_view.isEmpty) {
+      return RefreshIndicator(
+        onRefresh: () async {
+          await _loadCountriesIfNeeded();
+          await _reload(silent: false);
+        },
+        child: ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          children: [
+            _filtersBarPinned(l10n),
+            const SizedBox(height: 24),
+            const Center(child: Text('—')),
+          ],
+        ),
+      );
+    }
+
+    return RefreshIndicator(
+      onRefresh: () async {
+        await _loadCountriesIfNeeded();
+        await _reload(silent: false);
+      },
+      child: CustomScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        slivers: [
+          // ✅ Filters pinned (always visible)
+          SliverPersistentHeader(
+            pinned: true,
+            delegate: _PinnedHeaderDelegate(
+              height: _filtersHeight,
+              child: _filtersBarPinned(l10n),
+            ),
+          ),
+
+          // ✅ Columns pinned (always visible under filters)
+          SliverPersistentHeader(
+            pinned: true,
+            delegate: _PinnedHeaderDelegate(
+              height: _headerHeight,
+              child: _tableHeader(l10n, context),
+            ),
+          ),
+
+          // ✅ Virtualized rows
+          SliverList(
+            delegate: SliverChildBuilderDelegate(
+              (ctx, i) => _personRow(l10n, ctx, _view[i], i),
+              childCount: _view.length,
+            ),
+          ),
+          const SliverToBoxAdapter(child: SizedBox(height: 24)),
+        ],
+      ),
+    );
+  }
+}
+
+// ============================================================================
+// ✅ Pinned header delegate
+// ============================================================================
+class _PinnedHeaderDelegate extends SliverPersistentHeaderDelegate {
+  _PinnedHeaderDelegate({required this.child, required this.height});
+
+  final Widget child;
+  final double height;
+
+  @override
+  double get minExtent => height;
+
+  @override
+  double get maxExtent => height;
+
+  @override
+  Widget build(
+    BuildContext context,
+    double shrinkOffset,
+    bool overlapsContent,
+  ) {
+    return Material(elevation: overlapsContent ? 2 : 0, child: child);
+  }
+
+  @override
+  bool shouldRebuild(covariant _PinnedHeaderDelegate oldDelegate) {
+    return oldDelegate.child != child || oldDelegate.height != height;
+  }
 }
 
 // ============================================================================
 // ✅ BottomSheet dédiée => controller dispose uniquement au bon moment
-// + envoie + ouvre le chat (même comportement que la carto)
+// + envoie + ouvre le chat
 // ============================================================================
-
 class _ComposeMessageSheet extends StatefulWidget {
   final Person person;
   final String displayName;
@@ -1770,7 +1918,6 @@ class _ComposeMessageSheetState extends State<_ComposeMessageSheet> {
 // -----------------------------------------------------------------------------
 // Dot + avatar
 // -----------------------------------------------------------------------------
-
 class _StatusDot extends StatelessWidget {
   const _StatusDot({
     required this.isOnline,
