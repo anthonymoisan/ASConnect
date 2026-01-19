@@ -73,6 +73,18 @@ class _Person {
     return '$f $l';
   }
 
+  String get pseudo {
+    final f = (firstname ?? '').trim();
+    final l = (lastname ?? '').trim();
+    if (f.isEmpty) return '—';
+
+    final lnInitial = (l ?? '').trim().isNotEmpty
+        ? l!.trim()[0].toUpperCase()
+        : '';
+
+    return lnInitial.isEmpty ? f : '$f $lnInitial';
+  }
+
   String get firstName {
     final f = (firstname ?? '').trim();
     if (f.isEmpty) return 'Anonyme';

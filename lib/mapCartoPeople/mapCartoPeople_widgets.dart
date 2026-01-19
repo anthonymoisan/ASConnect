@@ -344,15 +344,19 @@ class _PersonTileState extends State<_PersonTile> {
         ListTile(
           contentPadding: EdgeInsets.zero,
 
-          leading: _PersonAvatar(
+          // ✅ AVATAR + DOT (vert/rouge) directement dans la liste
+          leading: _PersonAvatarWithStatus(
             url: photoUrl,
             onTap: () => widget.onOpenPhoto(photoUrl),
             headers: {'X-App-Key': _publicAppKey},
             radius: 22,
+            isConnected: p.isConnected == true,
+            tooltipOnline: l10n.statusOnline,
+            tooltipOffline: l10n.statusOffline,
           ),
 
           title: Text(
-            p.firstName,
+            p.pseudo,
             style: const TextStyle(fontWeight: FontWeight.w600),
           ),
           subtitle: Text(subtitle),
@@ -399,6 +403,101 @@ class _PersonTileState extends State<_PersonTile> {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _PersonAvatarWithStatus extends StatelessWidget {
+  final String url;
+  final VoidCallback onTap;
+  final Map<String, String> headers;
+  final double radius;
+
+  final bool isConnected;
+  final String tooltipOnline;
+  final String tooltipOffline;
+
+  const _PersonAvatarWithStatus({
+    required this.url,
+    required this.onTap,
+    required this.headers,
+    required this.radius,
+    required this.isConnected,
+    required this.tooltipOnline,
+    required this.tooltipOffline,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final box = radius * 2;
+
+    final dotSize = (radius * 0.55).clamp(10.0, 14.0).toDouble();
+    final dotPadding = (radius * 0.12).clamp(1.0, 5.0).toDouble();
+
+    return SizedBox(
+      width: box,
+      height: box,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Align(
+            alignment: Alignment.center,
+            child: _PersonAvatar(
+              url: url,
+              onTap: onTap,
+              headers: headers,
+              radius: radius,
+            ),
+          ),
+          Positioned(
+            right: dotPadding,
+            top: dotPadding,
+            child: _StatusDot(
+              isOnline: isConnected,
+              size: dotSize,
+              tooltipOnline: tooltipOnline,
+              tooltipOffline: tooltipOffline,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _StatusDot extends StatelessWidget {
+  const _StatusDot({
+    required this.isOnline,
+    required this.tooltipOnline,
+    required this.tooltipOffline,
+    this.size = 12,
+  });
+
+  final bool isOnline;
+  final String tooltipOnline;
+  final String tooltipOffline;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: isOnline ? tooltipOnline : tooltipOffline,
+      child: Container(
+        width: size,
+        height: size,
+        decoration: BoxDecoration(
+          color: isOnline ? Colors.green : Colors.red,
+          shape: BoxShape.circle,
+          border: Border.all(color: Colors.white, width: 2),
+          boxShadow: const [
+            BoxShadow(
+              color: Colors.black26,
+              blurRadius: 3,
+              offset: Offset(0, 1),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
