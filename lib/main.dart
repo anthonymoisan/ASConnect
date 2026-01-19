@@ -510,7 +510,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   static const bool kAllowOsmInRelease = false;
 
   late final List<Widget> _tabs = <Widget>[
-    TabularView(currentPersonId: widget.personId),
     MapPeopleByCity(
       currentPersonId: widget.personId,
       mapTilerApiKey: kMapTilerKey,
@@ -518,6 +517,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       osmUserAgent:
           'ASConnexion/1.0 (mobile; contact: contact@angelmananalytics.org)',
     ),
+    TabularView(currentPersonId: widget.personId),
     ConversationsPage(personId: widget.personId),
   ];
 
@@ -688,7 +688,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   List<String> _titles(BuildContext context) {
     final t = AppLocalizations.of(context)!;
-    return <String>[t.tabCommunity, t.tabChats, t.tableTabular];
+    return <String>[t.tabCommunity, t.tableTabular, t.tabChats];
   }
 
   @override
@@ -808,8 +808,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         _NavIcon(
-                          icon: Ionicons
-                              .grid_outline, // ou Ionicons.list / Ionicons.table
+                          icon: Ionicons.people,
                           selected: _currentIndex == 0,
                           onTap: () => _setIndex(0),
                         ),
@@ -817,7 +816,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                         const SizedBox(width: 28),
 
                         _NavIcon(
-                          icon: Ionicons.people,
+                          icon: Ionicons
+                              .grid_outline, // ou Ionicons.list / Ionicons.table
                           selected: _currentIndex == 1,
                           onTap: () => _setIndex(1),
                         ),
