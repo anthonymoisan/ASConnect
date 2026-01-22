@@ -68,7 +68,11 @@ class _EditProfilePageState extends State<EditProfilePage> {
   DateTime? _birthDate;
   String? _genotype;
 
+  // ✅ Sexe ("M" / "F") provenant de l'API
   String? _gender;
+
+  // ✅ is_info (0/1 côté API) -> bool côté UI
+  bool _isInfo = false;
 
   double? _lat;
   double? _lon;
@@ -330,18 +334,23 @@ class _EditProfilePageState extends State<EditProfilePage> {
       final r = (json['secret_answer'] as String?) ?? '';
       final photoMime = (json['photo_mime'] as String?) ?? 'image/jpeg';
 
-      // ✅ NOUVEAU : gender retourné par l'API ("M"/"F")
+      // ✅ gender ("M"/"F")
       final gender = (json['gender'] as String?) ?? '';
       final normalizedGender = (gender == 'M' || gender == 'F') ? gender : null;
 
-      // ✅ Mise à jour des champs synchrones
+      // ✅ is_info (1/0)
+      final isInfoNum = (json['is_info'] as num?)?.toInt() ?? 0;
+      final isInfoBool = isInfoNum == 1;
+
       setState(() {
         _firstCtrl.text = first;
         _lastCtrl.text = last;
         _emailCtrl.text = email;
         _originalEmail = email;
         _genotype = _genotypeServerValues.contains(genotype) ? genotype : null;
-        _gender = normalizedGender; // ✅
+        _gender = normalizedGender;
+        _isInfo = isInfoBool;
+
         _birthDate = dob;
         _birthCtrl.text = dob != null ? _formatDate(dob) : '';
         _cityCtrl.text = city;
@@ -356,7 +365,8 @@ class _EditProfilePageState extends State<EditProfilePage> {
           'lastname': last,
           'emailAddress': email,
           'genotype': _genotype,
-          'gender': _gender, // ✅
+          'gender': _gender,
+          'is_info': _isInfo ? 1 : 0,
           'dateOfBirth': dob?.toIso8601String(),
           'city': city,
           'latitude': lat,
@@ -368,7 +378,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
         _photoBust = DateTime.now().millisecondsSinceEpoch;
       });
 
-      // ✅ Check photo serveur (async) hors setState
       final hasPhoto = await _checkServerPhotoExists();
       if (mounted) setState(() => _serverHasPhoto = hasPhoto);
     } on TimeoutException {
@@ -735,8 +744,11 @@ class _EditProfilePageState extends State<EditProfilePage> {
       addIfChanged('emailAddress', email);
       addIfChanged('genotype', _genotype);
 
-      // ✅ NOUVEAU : gender
+      // ✅ gender
       addIfChanged('gender', _gender);
+
+      // ✅ is_info : on compare en int (0/1)
+      addIfChanged('is_info', _isInfo ? 1 : 0);
 
       addIfChanged('dateOfBirth', dobIso);
       addIfChanged('city', city);
@@ -831,9 +843,13 @@ class _EditProfilePageState extends State<EditProfilePage> {
               payload[k] = v;
               break;
 
-            // ✅ NOUVEAU : gender envoyé tel quel ("M"/"F")
             case 'gender':
-              payload['gender'] = v;
+              payload['gender'] = v; // "M"/"F"
+              break;
+
+            // ✅ is_info envoyé en 0/1
+            case 'is_info':
+              payload['is_info'] = v;
               break;
 
             case 'dateOfBirth':
@@ -1038,7 +1054,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                     ),
                     const SizedBox(height: 12),
 
-                    // ✅ NOUVEAU : Sexe (listbox) — labels issus des ARB:
+                    // Sexe (listbox) — labels issus des ARB:
                     // genderLabel / genderMale / genderFemale
                     DropdownButtonFormField<String>(
                       value: (_gender == 'M' || _gender == 'F')
@@ -1262,6 +1278,19 @@ class _EditProfilePageState extends State<EditProfilePage> {
                         label: Text(context.l10n.editProfileChangePassword),
                         onPressed: _saving ? null : _changePasswordDialog,
                       ),
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    // ✅ NOUVEAU : Checkbox is_info juste avant les boutons
+                    CheckboxListTile(
+                      contentPadding: EdgeInsets.zero,
+                      value: _isInfo,
+                      onChanged: _saving
+                          ? null
+                          : (v) => setState(() => _isInfo = v ?? false),
+                      title: Text(context.l10n.acceptInfoAngelman),
+                      controlAffinity: ListTileControlAffinity.leading,
                     ),
 
                     const SizedBox(height: 28),
