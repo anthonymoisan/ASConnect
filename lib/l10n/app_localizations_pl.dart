@@ -1239,4 +1239,19 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get tabularSendMessageCancel => 'Anuluj';
+
+  @override
+  String get genderLabel => 'Płeć';
+
+  @override
+  String get genderMale => 'Mężczyzna';
+
+  @override
+  String get genderFemale => 'Kobieta';
+
+  @override
+  String get genderRequired => 'Wybierz płeć';
+
+  @override
+  String get acceptInfoAngelman => 'Wyrażam zgodę na otrzymywanie informacji o zespole Angelmana';
 }

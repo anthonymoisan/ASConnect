@@ -619,6 +619,13 @@
   "tabularSendMessageSend": "Senden",
   "tabularSendMessageTooltip": "Nachricht senden",
   "tabularSendMessageSentStub": "Nachricht bereit zum Senden (noch nicht verbunden).",
-  "tabularSendMessageCancel": "Abbrechen"
+  "tabularSendMessageCancel": "Abbrechen",
+  
+  "genderLabel": "Geschlecht",
+  "genderMale": "Männlich",
+  "genderFemale": "Weiblich",
+  "genderRequired": "Bitte wähle ein Geschlecht",
+  
+  "acceptInfoAngelman": "Ich stimme zu, Informationen über das Angelman-Syndrom zu erhalten"
 
 }

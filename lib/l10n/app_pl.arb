@@ -619,6 +619,12 @@
   "tabularSendMessageSend": "Wyślij",
   "tabularSendMessageTooltip": "Wyślij wiadomość",
   "tabularSendMessageSentStub": "Wiadomość gotowa do wysłania (do podłączenia).",
-  "tabularSendMessageCancel": "Anuluj"
+  "tabularSendMessageCancel": "Anuluj",
 
+  "genderLabel": "Płeć",
+  "genderMale": "Mężczyzna",
+  "genderFemale": "Kobieta",
+  "genderRequired": "Wybierz płeć",
+  
+  "acceptInfoAngelman": "Wyrażam zgodę na otrzymywanie informacji o zespole Angelmana"
 }

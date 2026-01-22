@@ -619,5 +619,13 @@
   "tabularSendMessageSend": "Invia",
   "tabularSendMessageTooltip": "Invia un messaggio",
   "tabularSendMessageSentStub": "Messaggio pronto per l’invio (da collegare).",
-  "tabularSendMessageCancel": "Annulla"
+  "tabularSendMessageCancel": "Annulla",
+  
+  "genderLabel": "Sesso",
+  "genderMale": "Uomo",
+  "genderFemale": "Donna",
+  "genderRequired": "Seleziona un sesso",
+  
+  "acceptInfoAngelman": "Accetto di ricevere informazioni sulla sindrome di Angelman"
+
 }

@@ -620,6 +620,13 @@
   "tabularSendMessageSend": "Enviar",
   "tabularSendMessageTooltip": "Enviar mensagem",
   "tabularSendMessageSentStub": "Mensagem pronta para envio (a ligar).",
-  "tabularSendMessageCancel": "Cancelar"
+  "tabularSendMessageCancel": "Cancelar",
+  
+  "genderLabel": "Sexo",
+  "genderMale": "Homem",
+  "genderFemale": "Mulher",
+  "genderRequired": "Por favor, selecione um sexo",
+  
+  "acceptInfoAngelman": "Aceito receber informações sobre a síndrome de Angelman"
 
 }

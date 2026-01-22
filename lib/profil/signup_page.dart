@@ -29,6 +29,9 @@ const String kPublicApiBase =
 Uri _publicSignupUri() => Uri.parse('$kPublicApiBase/people');
 
 class SignUpData {
+  /// ✅ Champ API: "M" ou "F"
+  final String gender;
+
   final String firstName;
   final String lastName;
   final DateTime birthDate;
@@ -42,7 +45,11 @@ class SignUpData {
   final String secretAnswer;
   final bool consent;
 
+  // ✅ NOUVEAU : opt-in infos Angelman (API: is_info 1/0)
+  final bool acceptAngelmanInfo;
+
   SignUpData({
+    required this.gender,
     required this.firstName,
     required this.lastName,
     required this.birthDate,
@@ -55,6 +62,7 @@ class SignUpData {
     required this.secretQuestion,
     required this.secretAnswer,
     required this.consent,
+    required this.acceptAngelmanInfo,
   });
 }
 
@@ -84,6 +92,9 @@ class _SignUpPageState extends State<SignUpPage> {
 
   DateTime? _birthDate;
 
+  // ✅ Sexe: on stocke une clé UI ("male"/"female") et on mappe vers "M"/"F" pour l'API
+  String? _genderKey; // "male" | "female"
+
   // 🔐 On stocke des "codes" UI pour afficher des labels localisés
   // et on mappe vers la valeur FR attendue par l'API.
   String? _genotypeKey; // ex: deletion / mutation / upd...
@@ -93,6 +104,10 @@ class _SignUpPageState extends State<SignUpPage> {
   bool _submitting = false;
 
   bool _consent = false;
+
+  // ✅ NOUVEAU : 2e checkbox (optionnelle)
+  bool _acceptAngelmanInfo = false;
+
   bool _triedSubmit = false;
 
   final ImagePicker _picker = ImagePicker();
@@ -108,6 +123,12 @@ class _SignUpPageState extends State<SignUpPage> {
     'icd': 'ICD',
     'clinical': 'Clinique',
     'mosaic': 'Mosaïque',
+  };
+
+  // --- Sexe (clé UI -> valeur API) ---
+  static const Map<String, String> _genderApiValue = {
+    'male': 'M',
+    'female': 'F',
   };
 
   // ----------- GEOLOCALISATION -----------
@@ -285,6 +306,8 @@ class _SignUpPageState extends State<SignUpPage> {
     final req = http.MultipartRequest('POST', _publicSignupUri())
       ..headers['Accept'] = 'application/json'
       ..headers['X-App-Key'] = _publicAppKey
+      ..fields['gender'] = data
+          .gender // ✅ "M" / "F"
       ..fields['firstname'] = data.firstName
       ..fields['lastname'] = data.lastName
       ..fields['emailAddress'] = data.email
@@ -297,7 +320,9 @@ class _SignUpPageState extends State<SignUpPage> {
         _secretQuestionIndex ?? 0,
       ).toString()
       ..fields['rSecrete'] = data.secretAnswer
-      ..fields['consent'] = data.consent ? 'true' : 'false';
+      ..fields['consent'] = data.consent ? 'true' : 'false'
+      // ✅ NOUVEAU : 1 si coché, 0 sinon
+      ..fields['is_info'] = data.acceptAngelmanInfo ? '1' : '0';
 
     if (data.photoBytes != null && data.photoBytes!.isNotEmpty) {
       final filename = data.photoFilename ?? 'photo.jpg';
@@ -361,6 +386,15 @@ class _SignUpPageState extends State<SignUpPage> {
 
     if (!(_formKey.currentState?.validate() ?? false)) return;
 
+    // ✅ Sexe obligatoire (clé UI -> code API)
+    if (_genderKey == null || _genderKey!.isEmpty) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(t.genderRequired)));
+      return;
+    }
+    final genderApi = _genderApiValue[_genderKey!] ?? 'M';
+
     if (_birthDate == null) {
       ScaffoldMessenger.of(
         context,
@@ -409,6 +443,7 @@ class _SignUpPageState extends State<SignUpPage> {
     final genotypeApi = _genotypeApiValueFr[_genotypeKey!] ?? 'Clinique';
 
     final data = SignUpData(
+      gender: genderApi, // ✅ "M" / "F"
       firstName: _firstCtrl.text.trim(),
       lastName: _lastCtrl.text.trim(),
       birthDate: _birthDate!,
@@ -421,6 +456,7 @@ class _SignUpPageState extends State<SignUpPage> {
       secretQuestion: _secretQuestionLabel(t, _secretQuestionIndex ?? 0),
       secretAnswer: _secretAnswerCtrl.text.trim(),
       consent: _consent,
+      acceptAngelmanInfo: _acceptAngelmanInfo, // ✅ NOUVEAU
     );
 
     setState(() => _submitting = true);
@@ -535,6 +571,32 @@ class _SignUpPageState extends State<SignUpPage> {
                     ),
                   ),
                 ],
+              ),
+              const SizedBox(height: 12),
+
+              // ✅ SEXE (AU-DESSUS DU PRÉNOM) — UI localisée, API = "M"/"F"
+              DropdownButtonFormField<String>(
+                value: _genderKey,
+                isExpanded: true,
+                borderRadius: BorderRadius.circular(12),
+                decoration: InputDecoration(
+                  labelText: t.genderLabel,
+                  prefixIcon: const Icon(Ionicons.male_female_outline),
+                  border: const OutlineInputBorder(),
+                ),
+                items: const ['male', 'female']
+                    .map(
+                      (k) => DropdownMenuItem<String>(
+                        value: k,
+                        child: Text(
+                          k == 'male' ? t.genderMale : t.genderFemale,
+                        ),
+                      ),
+                    )
+                    .toList(),
+                onChanged: (v) => setState(() => _genderKey = v),
+                validator: (v) =>
+                    (v == null || v.isEmpty) ? t.genderRequired : null,
               ),
               const SizedBox(height: 12),
 
@@ -863,6 +925,17 @@ class _SignUpPageState extends State<SignUpPage> {
                 title: Text(t.consentCheckbox),
                 controlAffinity: ListTileControlAffinity.leading,
               ),
+
+              // ✅ NOUVEAU : checkbox opt-in infos Angelman (après le consentement)
+              CheckboxListTile(
+                contentPadding: EdgeInsets.zero,
+                value: _acceptAngelmanInfo,
+                onChanged: (v) =>
+                    setState(() => _acceptAngelmanInfo = v ?? false),
+                title: Text(t.acceptInfoAngelman),
+                controlAffinity: ListTileControlAffinity.leading,
+              ),
+
               if (_triedSubmit && !_consent)
                 Padding(
                   padding: const EdgeInsets.only(left: 12),
