@@ -67,6 +67,9 @@ class _EditProfilePageState extends State<EditProfilePage> {
 
   DateTime? _birthDate;
   String? _genotype;
+
+  String? _gender;
+
   double? _lat;
   double? _lon;
   int? _secretQuestionCode;
@@ -327,6 +330,10 @@ class _EditProfilePageState extends State<EditProfilePage> {
       final r = (json['secret_answer'] as String?) ?? '';
       final photoMime = (json['photo_mime'] as String?) ?? 'image/jpeg';
 
+      // ✅ NOUVEAU : gender retourné par l'API ("M"/"F")
+      final gender = (json['gender'] as String?) ?? '';
+      final normalizedGender = (gender == 'M' || gender == 'F') ? gender : null;
+
       // ✅ Mise à jour des champs synchrones
       setState(() {
         _firstCtrl.text = first;
@@ -334,6 +341,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
         _emailCtrl.text = email;
         _originalEmail = email;
         _genotype = _genotypeServerValues.contains(genotype) ? genotype : null;
+        _gender = normalizedGender; // ✅
         _birthDate = dob;
         _birthCtrl.text = dob != null ? _formatDate(dob) : '';
         _cityCtrl.text = city;
@@ -348,6 +356,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
           'lastname': last,
           'emailAddress': email,
           'genotype': _genotype,
+          'gender': _gender, // ✅
           'dateOfBirth': dob?.toIso8601String(),
           'city': city,
           'latitude': lat,
@@ -725,6 +734,10 @@ class _EditProfilePageState extends State<EditProfilePage> {
       addIfChanged('lastname', last);
       addIfChanged('emailAddress', email);
       addIfChanged('genotype', _genotype);
+
+      // ✅ NOUVEAU : gender
+      addIfChanged('gender', _gender);
+
       addIfChanged('dateOfBirth', dobIso);
       addIfChanged('city', city);
       addIfChanged('latitude', _lat);
@@ -817,6 +830,12 @@ class _EditProfilePageState extends State<EditProfilePage> {
             case 'city':
               payload[k] = v;
               break;
+
+            // ✅ NOUVEAU : gender envoyé tel quel ("M"/"F")
+            case 'gender':
+              payload['gender'] = v;
+              break;
+
             case 'dateOfBirth':
               if (_birthDate != null) {
                 payload['dateOfBirth'] = DateFormat(
@@ -1016,6 +1035,36 @@ class _EditProfilePageState extends State<EditProfilePage> {
                           ),
                         ),
                       ],
+                    ),
+                    const SizedBox(height: 12),
+
+                    // ✅ NOUVEAU : Sexe (listbox) — labels issus des ARB:
+                    // genderLabel / genderMale / genderFemale
+                    DropdownButtonFormField<String>(
+                      value: (_gender == 'M' || _gender == 'F')
+                          ? _gender
+                          : null,
+                      isExpanded: true,
+                      borderRadius: BorderRadius.circular(12),
+                      decoration: InputDecoration(
+                        labelText: context.l10n.genderLabel,
+                        prefixIcon: const Icon(Ionicons.male_female_outline),
+                        border: const OutlineInputBorder(),
+                      ),
+                      items: [
+                        DropdownMenuItem(
+                          value: 'M',
+                          child: Text(context.l10n.genderMale),
+                        ),
+                        DropdownMenuItem(
+                          value: 'F',
+                          child: Text(context.l10n.genderFemale),
+                        ),
+                      ],
+                      onChanged: (v) => setState(() => _gender = v),
+                      validator: (v) => (v == null || v.isEmpty)
+                          ? context.l10n.fieldRequired(context.l10n.genderLabel)
+                          : null,
                     ),
                     const SizedBox(height: 12),
 
