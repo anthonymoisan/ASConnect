@@ -366,7 +366,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
           'emailAddress': email,
           'genotype': _genotype,
           'gender': _gender,
-          'is_info': _isInfo ? 1 : 0,
+          'is_info': _isInfo,
           'dateOfBirth': dob?.toIso8601String(),
           'city': city,
           'latitude': lat,
@@ -710,6 +710,17 @@ class _EditProfilePageState extends State<EditProfilePage> {
     }
   }
 
+  String _dateOfBirthForApi(DateTime d) {
+    final lang = Localizations.localeOf(context).languageCode.toLowerCase();
+
+    // Si ton backend attend un format "localisé" :
+    // - en => MM/dd/yyyy
+    // - la plupart des langues EU => dd/MM/yyyy
+    final pattern = (lang == 'en') ? 'MM/dd/yyyy' : 'dd/MM/yyyy';
+
+    return DateFormat(pattern).format(d);
+  }
+
   Future<void> _save() async {
     setState(() => _triedSave = true);
 
@@ -748,7 +759,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
       addIfChanged('gender', _gender);
 
       // ✅ is_info : on compare en int (0/1)
-      addIfChanged('is_info', _isInfo ? 1 : 0);
+      addIfChanged('is_info', _isInfo);
 
       addIfChanged('dateOfBirth', dobIso);
       addIfChanged('city', city);
@@ -854,9 +865,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
 
             case 'dateOfBirth':
               if (_birthDate != null) {
-                payload['dateOfBirth'] = DateFormat(
-                  'yyyy-MM-dd',
-                ).format(_birthDate!);
+                payload['dateOfBirth'] = _dateOfBirthForApi(_birthDate!);
               }
               break;
             case 'latitude':
