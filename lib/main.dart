@@ -42,7 +42,7 @@ const apiEnvMapTitleKey = String.fromEnvironment(
 );
 
 const String _publicBase =
-    'https://anthonymoisan.pythonanywhere.com/api/public';
+    'https://anthonymoisan.eu.pythonanywhere.com/api/public';
 
 // Local notifications (iOS badge)
 final FlutterLocalNotificationsPlugin _localNotifs =
