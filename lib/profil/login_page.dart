@@ -52,7 +52,7 @@ class _LoginPageState extends State<LoginPage> {
   String? _selectedLangCode; // null = système
 
   // API publique (proxy)
-  static const String _apiBase = 'https://anthonymoisan.pythonanywhere.com';
+  static const String _apiBase = 'https://anthonymoisan.eu.pythonanywhere.com';
   static const String _loginPath = '/api/public/auth/login';
 
   // Clé d'application publique (passée au build/run via --dart-define)

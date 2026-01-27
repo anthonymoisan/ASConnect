@@ -8,7 +8,7 @@ import '../models/listPerson.dart';
 import '../../whatsApp/services/conversation_api.dart' show publicAppKey;
 import '../../whatsApp/models/conversation.dart';
 
-const String _base = 'https://anthonymoisan.pythonanywhere.com/api/public';
+const String _base = 'https://anthonymoisan.eu.pythonanywhere.com/api/public';
 
 class _CacheEntry<T> {
   final T value;

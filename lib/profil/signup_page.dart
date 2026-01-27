@@ -24,7 +24,7 @@ const String _publicAppKey = String.fromEnvironment(
 );
 
 const String kPublicApiBase =
-    'https://anthonymoisan.pythonanywhere.com/api/public';
+    'https://anthonymoisan.eu.pythonanywhere.com/api/public';
 
 Uri _publicSignupUri() => Uri.parse('$kPublicApiBase/people');
 
@@ -296,12 +296,17 @@ class _SignUpPageState extends State<SignUpPage> {
   // API attend 1..3
   int _secretQuestionCodeFromIndex(int index) => index + 1;
 
-  Future<void> _submitToApi(SignUpData data) async {
+  Future<void> _submitToApi(
+    SignUpData data,
+    ({double lat, double lon}) coords,
+  ) async {
     final t = AppLocalizations.of(context)!;
 
-    final coords = await _getLatLon();
     final latStr = coords.lat.toStringAsFixed(6);
     final lonStr = coords.lon.toStringAsFixed(6);
+    //final coords = await _getLatLon();
+    //final latStr = coords.lat.toStringAsFixed(6);
+    //final lonStr = coords.lon.toStringAsFixed(6);
 
     final req = http.MultipartRequest('POST', _publicSignupUri())
       ..headers['Accept'] = 'application/json'
@@ -459,12 +464,22 @@ class _SignUpPageState extends State<SignUpPage> {
       acceptAngelmanInfo: _acceptAngelmanInfo, // ✅ NOUVEAU
     );
 
+    // ✅ Vérif géolocalisation AVANT l’appel API
+    final coords = await _getLatLon();
+    final geoOk = !(coords.lat == 0.0 && coords.lon == 0.0);
+    if (!geoOk) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(t.signupEnableGeolocation)));
+      return;
+    }
+
     setState(() => _submitting = true);
     try {
       if (widget.onSubmit != null) {
         await widget.onSubmit!(data);
       } else {
-        await _submitToApi(data);
+        await _submitToApi(data, coords);
       }
     } on TimeoutException {
       if (!mounted) return;

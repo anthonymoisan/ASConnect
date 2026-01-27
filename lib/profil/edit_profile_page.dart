@@ -26,7 +26,7 @@ const String _publicAppKey = String.fromEnvironment(
 
 // Base API publique
 const String kPublicApiBase =
-    'https://anthonymoisan.pythonanywhere.com/api/public';
+    'https://anthonymoisan.eu.pythonanywhere.com/api/public';
 
 // Helpers d'URL
 String _peopleInfoUrl(int id) => '$kPublicApiBase/people/$id/info';

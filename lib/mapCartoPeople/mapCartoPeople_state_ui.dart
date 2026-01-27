@@ -13,7 +13,7 @@ extension _MapPeopleUI on _MapPeopleByCityState {
 
   // ✅ plafonds zoom par niveau
   static const double kMaxZoomCountry = 6.0;
-  static const double kMaxZoomCity = 8.0;
+  static const double kMaxZoomCity = 12.0;
 
   double get _levelMaxZoom =>
       _level == _MapLevel.city ? kMaxZoomCity : kMaxZoomCountry;

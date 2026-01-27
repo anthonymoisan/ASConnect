@@ -74,7 +74,7 @@ class _MapCartoState extends State<MapCarto>
   // =======================
   //        BACKENDS
   // =======================
-  static const _BASE = 'https://anthonymoisan.pythonanywhere.com';
+  static const _BASE = 'https://anthonymoisan.eu.pythonanywhere.com';
 
   // v6 (→ PRIVÉ Basic)
   static String get _apiIme => '$_BASE/api/v6/resources/Ime';

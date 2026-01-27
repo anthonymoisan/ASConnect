@@ -53,7 +53,7 @@ const String _publicAppKey = String.fromEnvironment(
 enum _MapLevel { country, city }
 
 // API (endpoints PUBLIC)
-const String _base = 'https://anthonymoisan.pythonanywhere.com/api/public';
+const String _base = 'https://anthonymoisan.eu.pythonanywhere.com/api/public';
 String get _peopleApi => '$_base/peopleMapRepresentation';
 String _personPhotoUrl(int id) => '$_base/people/$id/photo';
 
