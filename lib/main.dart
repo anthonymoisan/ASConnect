@@ -4,6 +4,7 @@ import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart'; // ✅ NEW: pour appliquer le mode sans "flash"
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:http/http.dart' as http;
 import 'package:ionicons/ionicons.dart';
@@ -75,12 +76,13 @@ Future<void> main() async {
 }
 
 // ============================================================================
-// ✅ 2 modes d'affichage web desktop
-// - wideCard  : carte large centrée (login + home)
-// - mobileCard: carte mobile centrée (le reste)
+// ✅ 3 modes d'affichage web desktop
+// - mobileCard : carte mobile centrée (le reste)  => CONTACT = petit ✅
+// - wideCard   : carte large centrée (home)
+// - fullScreen : plein écran (login au démarrage) => LOGIN = grand ✅
 // ============================================================================
 
-enum AppFrameMode { mobileCard, wideCard }
+enum AppFrameMode { mobileCard, wideCard, fullScreen }
 
 class AppFrameController extends ValueNotifier<AppFrameMode> {
   AppFrameController({AppFrameMode initial = AppFrameMode.mobileCard})
@@ -93,6 +95,7 @@ class AppFrameController extends ValueNotifier<AppFrameMode> {
 
   void setMobileCard() => setMode(AppFrameMode.mobileCard);
   void setWideCard() => setMode(AppFrameMode.wideCard);
+  void setFullScreen() => setMode(AppFrameMode.fullScreen);
 }
 
 class AppFrameScope extends InheritedWidget {
@@ -115,17 +118,21 @@ class AppFrameScope extends InheritedWidget {
       oldWidget.controller != controller;
 }
 
-/// Règles: login + home en wide, le reste en mobile.
-/// Route sans name => mobile par sécurité (évite de rester en wide par erreur).
+/// Règles:
+/// - login => fullScreen (grand au démarrage)
+/// - home  => wideCard
+/// - le reste => mobileCard (contact = petit)
+/// Route sans name => mobile par sécurité.
 AppFrameMode frameModeForRouteName(String? name) {
   if (name == null || name.isEmpty) return AppFrameMode.mobileCard;
-  if (name == '/login' || name == '/home') return AppFrameMode.wideCard;
+  if (name == '/login') return AppFrameMode.fullScreen;
+  if (name == '/home') return AppFrameMode.wideCard;
   return AppFrameMode.mobileCard;
 }
 
 // ============================================================================
 // ✅ NavigatorObserver : IMPORTANT pour resync le mode sur POP
-// (sinon après /signup -> back, on resterait en mobile sur /login)
+// ✅ MODIF: applique immédiatement quand possible (évite flash grand->petit)
 // ============================================================================
 
 class FrameRouteObserver extends NavigatorObserver {
@@ -139,14 +146,22 @@ class FrameRouteObserver extends NavigatorObserver {
 
     final name = route.settings.name;
     final nextMode = frameModeForRouteName(name);
-
-    // ✅ IMPORTANT: on diffère le setMode pour éviter setState/notify pendant build
     if (controller.value == nextMode) return;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (controller.value != nextMode) {
-        controller.setMode(nextMode);
-      }
-    });
+
+    final phase = SchedulerBinding.instance.schedulerPhase;
+    final canApplyNow =
+        phase == SchedulerPhase.idle ||
+        phase == SchedulerPhase.postFrameCallbacks;
+
+    if (canApplyNow) {
+      controller.setMode(nextMode);
+    } else {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (controller.value != nextMode) {
+          controller.setMode(nextMode);
+        }
+      });
+    }
   }
 
   @override
@@ -169,7 +184,7 @@ class FrameRouteObserver extends NavigatorObserver {
 }
 
 // ============================================================================
-// ✅ Web shell : carte mobile OU wide selon controller.value
+// ✅ Web shell : carte mobile OU wide OU fullScreen selon controller.value
 // ============================================================================
 
 class WebResponsiveShell extends StatelessWidget {
@@ -190,13 +205,18 @@ class WebResponsiveShell extends StatelessWidget {
       builder: (context, constraints) {
         final isDesktop = constraints.maxWidth >= 900;
 
-        // Web étroit => plein écran
+        // Web étroit => plein écran (mobile-like)
         if (!isDesktop) return child;
 
         return AnimatedBuilder(
           animation: controller,
           builder: (_, __) {
             const bg = BoxDecoration(color: Color(0xFFF2F3F5));
+
+            // ✅ FULL SCREEN : login “grand” au démarrage
+            if (controller.value == AppFrameMode.fullScreen) {
+              return Container(decoration: bg, child: child);
+            }
 
             if (controller.value == AppFrameMode.mobileCard) {
               return Container(
@@ -219,7 +239,7 @@ class WebResponsiveShell extends StatelessWidget {
               );
             }
 
-            // wideCard
+            // wideCard (home)
             return Container(
               decoration: bg,
               child: Center(
@@ -279,7 +299,7 @@ class _ASConnexionState extends State<ASConnexion> {
   Locale? _locale;
 
   final AppFrameController _frameCtrl = AppFrameController(
-    initial: AppFrameMode.wideCard, // login wide
+    initial: AppFrameMode.fullScreen, // ✅ login grand dès le démarrage
   );
 
   late final FrameRouteObserver _frameObserver = FrameRouteObserver(_frameCtrl);
@@ -308,9 +328,20 @@ class _ASConnexionState extends State<ASConnexion> {
     } catch (_) {}
   }
 
-  // ✅ applique le mode en post-frame pour éviter notify pendant build
-  void _scheduleFrameMode(AppFrameMode nextMode) {
+  // ✅ MODIF: applique le mode immédiatement quand possible (évite flash grand->petit)
+  void _applyFrameMode(AppFrameMode nextMode) {
     if (_frameCtrl.value == nextMode) return;
+
+    final phase = SchedulerBinding.instance.schedulerPhase;
+    final canApplyNow =
+        phase == SchedulerPhase.idle ||
+        phase == SchedulerPhase.postFrameCallbacks;
+
+    if (canApplyNow) {
+      _frameCtrl.setMode(nextMode);
+      return;
+    }
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       if (_frameCtrl.value != nextMode) {
@@ -328,9 +359,8 @@ class _ASConnexionState extends State<ASConnexion> {
     // ✅ modeChanged calculé sur la valeur courante (avant update)
     final bool modeChanged = _frameCtrl.value != nextMode;
 
-    // ❌ AVANT: _frameCtrl.setMode(nextMode);  (provoquait l'exception)
-    // ✅ MAINTENANT: on diffère le changement
-    _scheduleFrameMode(nextMode);
+    // ✅ MODIF: on essaie d'appliquer tout de suite (sinon post-frame)
+    _applyFrameMode(nextMode);
 
     Widget page;
 
@@ -407,6 +437,7 @@ class _ASConnexionState extends State<ASConnexion> {
             },
           );
         } else {
+          // ✅ Contact = petit (mobileCard) via frameModeForRouteName (default)
           page = ContactPage(personId: pid);
         }
         break;
@@ -456,6 +487,7 @@ class _ASConnexionState extends State<ASConnexion> {
 
     final st = RouteSettings(name: name, arguments: settings.arguments);
 
+    // ✅ Si le mode de frame change, on enlève l'animation de route pour éviter un flash
     if (modeChanged) {
       return _NoAnimMaterialPageRoute(settings: st, builder: (_) => page);
     }
