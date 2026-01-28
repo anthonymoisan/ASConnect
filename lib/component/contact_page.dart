@@ -15,7 +15,9 @@ extension L10nX on BuildContext {
 }
 
 class ContactPage extends StatefulWidget {
-  const ContactPage({super.key});
+  final int personId; // ✅ id de la personne connectée
+
+  const ContactPage({super.key, required this.personId});
 
   @override
   State<ContactPage> createState() => _ContactPageState();
@@ -32,8 +34,14 @@ class _ContactPageState extends State<ContactPage> {
   late int _b;
   late String _captchaToken; // validation serveur (anti-rejeu)
 
+  // ✅ Cache email (évite de rappeler /people/<id>/info à chaque envoi)
+  String? _personEmail;
+  bool _loadingEmail = false;
+
   static const String _apiBase = 'https://anthonymoisan.eu.pythonanywhere.com';
   static const String _contactPath = '/api/public/contact';
+  static const String _personInfoPathPrefix =
+      '/api/public/people/'; // + <id> + /info
 
   static const String _publicAppKey = String.fromEnvironment(
     'PUBLIC_APP_KEY',
@@ -44,6 +52,13 @@ class _ContactPageState extends State<ContactPage> {
   void initState() {
     super.initState();
     _regenCaptcha();
+
+    // ✅ Précharge l'email en arrière-plan (UX + fluide)
+    scheduleMicrotask(() async {
+      try {
+        await _getPersonEmail(widget.personId);
+      } catch (_) {}
+    });
   }
 
   void _regenCaptcha() {
@@ -73,16 +88,53 @@ class _ContactPageState extends State<ContactPage> {
     return ans != null && ans == _a + _b;
   }
 
-  Future<http.Response> _postOnce(Uri uri, Map<String, dynamic> payload) {
-    final headers = <String, String>{
-      HttpHeaders.contentTypeHeader: 'application/json',
+  Map<String, String> _baseHeaders({bool json = false}) {
+    return <String, String>{
+      if (json) HttpHeaders.contentTypeHeader: 'application/json',
       HttpHeaders.acceptHeader: 'application/json',
       if (_publicAppKey.isNotEmpty) 'X-App-Key': _publicAppKey,
     };
+  }
+
+  Future<http.Response> _postOnce(Uri uri, Map<String, dynamic> payload) {
+    final headers = _baseHeaders(json: true);
 
     return http
         .post(uri, headers: headers, body: jsonEncode(payload))
         .timeout(const Duration(seconds: 15));
+  }
+
+  // ✅ Appel à /people/<int:person_id>/info pour récupérer le mail
+  Future<String?> _getPersonEmail(int personId) async {
+    // cache
+    final cached = _personEmail;
+    if (cached != null && cached.trim().isNotEmpty) return cached;
+
+    if (_loadingEmail) return _personEmail;
+    _loadingEmail = true;
+
+    try {
+      final uri = Uri.parse('$_apiBase$_personInfoPathPrefix$personId/info');
+      final resp = await http
+          .get(uri, headers: _baseHeaders())
+          .timeout(const Duration(seconds: 10));
+
+      if (resp.statusCode >= 200 && resp.statusCode < 300) {
+        final m =
+            jsonDecode(utf8.decode(resp.bodyBytes)) as Map<String, dynamic>;
+
+        // ✅ ton backend renvoie bien "email"
+        final email = m['email'];
+        if (email is String && email.contains('@')) {
+          _personEmail = email.trim();
+          return _personEmail;
+        }
+      }
+
+      return null;
+    } finally {
+      _loadingEmail = false;
+    }
   }
 
   void _snack(String message) {
@@ -107,9 +159,20 @@ class _ContactPageState extends State<ContactPage> {
       final subject = _titleCtrl.text.trim();
       final body = _messageCtrl.text.trim();
 
+      // ✅ récupère l'email lié à la personne connectée
+      String? email;
+      try {
+        email = await _getPersonEmail(widget.personId);
+      } catch (_) {
+        email = null;
+      }
+
+      print(email);
+
       final payload = {
         'subject': subject,
         'body': body,
+        if (email != null && email.trim().isNotEmpty) 'mail_from': email.trim(),
         'captcha_answer': int.parse(_captchaCtrl.text.trim()),
         'captcha_token': _captchaToken,
       };
@@ -273,8 +336,9 @@ class _ContactPageState extends State<ContactPage> {
                   border: const OutlineInputBorder(),
                 ),
                 validator: (v) {
-                  if ((v ?? '').trim().isEmpty)
+                  if ((v ?? '').trim().isEmpty) {
                     return context.l10n.contactCaptchaRequired;
+                  }
                   if (!_captchaOK) return context.l10n.contactCaptchaIncorrect;
                   return null;
                 },

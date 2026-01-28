@@ -393,7 +393,22 @@ class _ASConnexionState extends State<ASConnexion> {
         break;
 
       case '/contact':
-        page = const ContactPage();
+        final pid = _personId;
+        if (pid == null) {
+          page = LoginPage(
+            currentLocale: _locale,
+            onLocaleChanged: _setLocale,
+            onLogin: (email, pass, id) async {
+              await _handleLogin(email, pass, id);
+              if (!mounted) return;
+              Navigator.of(
+                navigatorKey.currentContext!,
+              ).pushReplacementNamed('/home');
+            },
+          );
+        } else {
+          page = ContactPage(personId: pid);
+        }
         break;
 
       case '/version':
