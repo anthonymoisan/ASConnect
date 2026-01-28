@@ -642,7 +642,7 @@ abstract class AppLocalizations {
   /// No description provided for @signupEmailAlreadyExistsRedirect.
   ///
   /// In en, this message translates to:
-  /// **'Your email is already in our database. You will be redirected to the login page.'**
+  /// **'Your email is already in our database! Enter another email address or go to the “Forgot my password” section.'**
   String get signupEmailAlreadyExistsRedirect;
 
   /// No description provided for @signupSelectBirthdate.

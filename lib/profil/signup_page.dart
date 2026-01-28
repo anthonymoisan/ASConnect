@@ -345,7 +345,7 @@ class _SignUpPageState extends State<SignUpPage> {
     final streamed = await req.send().timeout(const Duration(seconds: 20));
     final resp = await http.Response.fromStream(streamed);
 
-    if (resp.statusCode == 201 || resp.statusCode == 200) {
+    if (resp.statusCode == 200) {
       if (!mounted) return;
       ScaffoldMessenger.of(
         context,
@@ -357,20 +357,8 @@ class _SignUpPageState extends State<SignUpPage> {
     if (resp.statusCode == 409) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          behavior: SnackBarBehavior.floating,
-          content: Center(
-            child: Text(
-              t.signupEmailAlreadyExistsRedirect,
-              textAlign: TextAlign.center,
-            ),
-          ),
-          duration: const Duration(seconds: 4),
-        ),
+        SnackBar(content: Text(t.signupEmailAlreadyExistsRedirect)),
       );
-      await Future.delayed(const Duration(milliseconds: 400));
-      if (!mounted) return;
-      Navigator.of(context).pushReplacementNamed('/login');
       return;
     }
 

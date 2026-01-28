@@ -125,7 +125,7 @@
   "signupCreateBtn": "Criar minha conta",
 
   "signupSuccess": "Conta criada com sucesso.",
-  "signupEmailAlreadyExistsRedirect": "Seu e-mail já está no nosso banco de dados. Você será redirecionado para a página de login.",
+  "signupEmailAlreadyExistsRedirect": "Seu e-mail já está no nosso banco de dados! Insira outro endereço de e-mail ou vá para a seção “Esqueci minha senha”.",
   "signupSelectBirthdate": "Selecione uma data de nascimento",
   "signupChooseGenotype": "Escolha um genótipo",
   "signupChooseSecretQuestion": "Escolha uma pergunta de segurança",

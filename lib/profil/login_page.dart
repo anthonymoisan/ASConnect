@@ -202,12 +202,7 @@ class _LoginPageState extends State<LoginPage> {
       }
 
       if (resp.statusCode == 400) {
-        String msg = t.badRequest;
-        try {
-          final d = jsonDecode(resp.body);
-          msg = d['error']?.toString() ?? msg;
-        } catch (_) {}
-        _showPersistentAuthError(msg);
+        _showPersistentAuthError(t.badRequest);
         return;
       }
 
@@ -216,7 +211,7 @@ class _LoginPageState extends State<LoginPage> {
         return;
       }
 
-      if (resp.statusCode == 502 || resp.statusCode == 504) {
+      if (resp.statusCode == 500) {
         _showPersistentAuthError(t.serviceUnavailable);
         return;
       }

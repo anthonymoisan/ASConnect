@@ -286,7 +286,7 @@ class AppLocalizationsPt extends AppLocalizations {
   String get signupSuccess => 'Conta criada com sucesso.';
 
   @override
-  String get signupEmailAlreadyExistsRedirect => 'Seu e-mail já está no nosso banco de dados. Você será redirecionado para a página de login.';
+  String get signupEmailAlreadyExistsRedirect => 'Seu e-mail já está no nosso banco de dados! Insira outro endereço de e-mail ou vá para a seção “Esqueci minha senha”.';
 
   @override
   String get signupSelectBirthdate => 'Selecione uma data de nascimento';

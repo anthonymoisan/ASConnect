@@ -286,7 +286,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get signupSuccess => 'Konto erfolgreich erstellt.';
 
   @override
-  String get signupEmailAlreadyExistsRedirect => 'Deine E-Mail-Adresse ist bereits in unserer Datenbank. Du wirst zur Login-Seite weitergeleitet.';
+  String get signupEmailAlreadyExistsRedirect => 'Deine E-Mail-Adresse ist bereits in unserer Datenbank! Gib eine andere E-Mail-Adresse ein oder gehe zum Bereich „Passwort vergessen“.';
 
   @override
   String get signupSelectBirthdate => 'Bitte wähle ein Geburtsdatum aus';
