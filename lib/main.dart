@@ -4,7 +4,7 @@ import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/scheduler.dart'; // ✅ NEW: pour appliquer le mode sans "flash"
+import 'package:flutter/scheduler.dart'; // ✅ NEW
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:http/http.dart' as http;
 import 'package:ionicons/ionicons.dart';
@@ -77,9 +77,9 @@ Future<void> main() async {
 
 // ============================================================================
 // ✅ 3 modes d'affichage web desktop
-// - mobileCard : carte mobile centrée (le reste)  => CONTACT = petit ✅
-// - wideCard   : carte large centrée (home)
-// - fullScreen : plein écran (login au démarrage) => LOGIN = grand ✅
+// - mobileCard : carte mobile centrée (le reste)  ✅ CONTACT = petit
+// - wideCard   : carte large centrée            ✅ HOME = grand
+// - fullScreen : plein écran                    ✅ LOGIN = grand
 // ============================================================================
 
 enum AppFrameMode { mobileCard, wideCard, fullScreen }
@@ -90,7 +90,7 @@ class AppFrameController extends ValueNotifier<AppFrameMode> {
 
   void setMode(AppFrameMode mode) {
     if (value == mode) return;
-    value = mode; // notifyListeners() via ValueNotifier
+    value = mode;
   }
 
   void setMobileCard() => setMode(AppFrameMode.mobileCard);
@@ -119,20 +119,21 @@ class AppFrameScope extends InheritedWidget {
 }
 
 /// Règles:
-/// - login => fullScreen (grand au démarrage)
-/// - home  => wideCard
-/// - le reste => mobileCard (contact = petit)
-/// Route sans name => mobile par sécurité.
+/// - /login => fullScreen (grand)
+/// - /home  => wideCard (grand)
+/// - /contact + le reste => mobileCard (petit)
 AppFrameMode frameModeForRouteName(String? name) {
   if (name == null || name.isEmpty) return AppFrameMode.mobileCard;
   if (name == '/login') return AppFrameMode.fullScreen;
   if (name == '/home') return AppFrameMode.wideCard;
+  // contact explicit pour être sûr
+  if (name == '/contact') return AppFrameMode.mobileCard;
   return AppFrameMode.mobileCard;
 }
 
 // ============================================================================
-// ✅ NavigatorObserver : IMPORTANT pour resync le mode sur POP
-// ✅ MODIF: applique immédiatement quand possible (évite flash grand->petit)
+// ✅ NavigatorObserver : resync mode sur PUSH/POP/REPLACE
+// ✅ MODIF: applique immédiatement quand possible (évite flash)
 // ============================================================================
 
 class FrameRouteObserver extends NavigatorObserver {
@@ -157,9 +158,7 @@ class FrameRouteObserver extends NavigatorObserver {
       controller.setMode(nextMode);
     } else {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (controller.value != nextMode) {
-          controller.setMode(nextMode);
-        }
+        if (controller.value != nextMode) controller.setMode(nextMode);
       });
     }
   }
@@ -172,7 +171,7 @@ class FrameRouteObserver extends NavigatorObserver {
 
   @override
   void didPop(Route<dynamic> route, Route<dynamic>? previousRoute) {
-    _apply(previousRoute); // ✅ essentiel
+    _apply(previousRoute);
     super.didPop(route, previousRoute);
   }
 
@@ -213,11 +212,12 @@ class WebResponsiveShell extends StatelessWidget {
           builder: (_, __) {
             const bg = BoxDecoration(color: Color(0xFFF2F3F5));
 
-            // ✅ FULL SCREEN : login “grand” au démarrage
+            // FULL SCREEN
             if (controller.value == AppFrameMode.fullScreen) {
               return Container(decoration: bg, child: child);
             }
 
+            // MOBILE CARD
             if (controller.value == AppFrameMode.mobileCard) {
               return Container(
                 decoration: bg,
@@ -239,7 +239,7 @@ class WebResponsiveShell extends StatelessWidget {
               );
             }
 
-            // wideCard (home)
+            // WIDE CARD
             return Container(
               decoration: bg,
               child: Center(
@@ -270,7 +270,7 @@ class WebResponsiveShell extends StatelessWidget {
 }
 
 // ============================================================================
-// ✅ Route sans animation (évite flash / transition bizarre quand on change de mode)
+// ✅ Route sans animation (évite flash quand le mode change)
 // ============================================================================
 
 class _NoAnimMaterialPageRoute<T> extends MaterialPageRoute<T> {
@@ -294,18 +294,82 @@ class ASConnexion extends StatefulWidget {
   State<ASConnexion> createState() => _ASConnexionState();
 }
 
-class _ASConnexionState extends State<ASConnexion> {
+class _ASConnexionState extends State<ASConnexion> with WidgetsBindingObserver {
   int? _personId;
   Locale? _locale;
 
   final AppFrameController _frameCtrl = AppFrameController(
-    initial: AppFrameMode.fullScreen, // ✅ login grand dès le démarrage
+    initial: AppFrameMode.fullScreen, // ✅ login grand au démarrage
   );
 
   late final FrameRouteObserver _frameObserver = FrameRouteObserver(_frameCtrl);
 
+  // ✅ Empêche d’envoyer 10 fois le "disconnect" en rafale
+  bool _disconnectSent = false;
+
+  // ✅ un navigatorKey évite d’avoir des ctx “dans le vide” pendant les transitions
+  final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+
+    // ✅ Force le mode "grand" dès le 1er frame (utile si cache/hot reload)
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _applyFrameMode(frameModeForRouteName('/login'));
+    });
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  // ✅ Détecte fermeture / arrière-plan (mobile) + parfois fermeture onglet (web)
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Quand on quitte / ferme / met en arrière plan => on notifie "déconnecté"
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.detached ||
+        state == AppLifecycleState.inactive ||
+        state == AppLifecycleState.hidden) {
+      _notifyDisconnectedIfNeeded();
+    }
+  }
+
+  Future<void> _notifyDisconnectedIfNeeded() async {
+    final pid = _personId;
+    if (pid == null) return;
+    if (_disconnectSent) return;
+    _disconnectSent = true;
+
+    try {
+      final uri = Uri.parse('$_publicBase/auth/connection');
+      final headers = <String, String>{
+        'Content-Type': 'application/json',
+        if (_publicAppKey.isNotEmpty) 'X-App-Key': _publicAppKey,
+      };
+
+      await http
+          .post(
+            uri,
+            headers: headers,
+            body: jsonEncode({'id': pid, 'is_connected': false}),
+          )
+          .timeout(const Duration(seconds: 12));
+    } catch (_) {
+      // On ne bloque pas la fermeture
+    }
+  }
+
   Future<void> _handleLogin(String email, String pass, int id) async {
-    setState(() => _personId = id);
+    setState(() {
+      _personId = id;
+      _disconnectSent = false; // ✅ on "réarme" après un nouveau login
+    });
   }
 
   void _handleLogout() {
@@ -328,7 +392,7 @@ class _ASConnexionState extends State<ASConnexion> {
     } catch (_) {}
   }
 
-  // ✅ MODIF: applique le mode immédiatement quand possible (évite flash grand->petit)
+  // ✅ Applique le mode immédiatement quand possible (évite flash)
   void _applyFrameMode(AppFrameMode nextMode) {
     if (_frameCtrl.value == nextMode) return;
 
@@ -344,22 +408,18 @@ class _ASConnexionState extends State<ASConnexion> {
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      if (_frameCtrl.value != nextMode) {
-        _frameCtrl.setMode(nextMode);
-      }
+      if (_frameCtrl.value != nextMode) _frameCtrl.setMode(nextMode);
     });
   }
 
   Route<dynamic> _onGenerateRoute(RouteSettings settings) {
     final name = settings.name ?? '/login';
 
-    // ✅ mode calculé depuis le nom
+    // ✅ calcule le mode depuis le nom
     final nextMode = frameModeForRouteName(name);
-
-    // ✅ modeChanged calculé sur la valeur courante (avant update)
     final bool modeChanged = _frameCtrl.value != nextMode;
 
-    // ✅ MODIF: on essaie d'appliquer tout de suite (sinon post-frame)
+    // ✅ applique le mode tout de suite si possible
     _applyFrameMode(nextMode);
 
     Widget page;
@@ -369,17 +429,18 @@ class _ASConnexionState extends State<ASConnexion> {
         page = LoginPage(
           currentLocale: _locale,
           onLocaleChanged: _setLocale,
-          onSignUp: () =>
-              Navigator.of(navigatorKey.currentContext!).pushNamed('/signup'),
-          onForgotPassword: () => Navigator.of(
-            navigatorKey.currentContext!,
-          ).pushNamed('/forgot-password'),
+          onSignUp: () => navigatorKey.currentState?.pushNamed('/signup'),
+          onForgotPassword: () =>
+              navigatorKey.currentState?.pushNamed('/forgot-password'),
           onLogin: (email, pass, id) async {
             await _handleLogin(email, pass, id);
             if (!mounted) return;
-            Navigator.of(
-              navigatorKey.currentContext!,
-            ).pushReplacementNamed('/home');
+
+            // ✅ IMPORTANT: on force le mode HOME avant d'afficher la route
+            _applyFrameMode(AppFrameMode.wideCard);
+
+            // ✅ pushReplacementNamed via navigatorKey = nom de route OK
+            navigatorKey.currentState?.pushReplacementNamed('/home');
           },
         );
         break;
@@ -398,23 +459,25 @@ class _ASConnexionState extends State<ASConnexion> {
           page = LoginPage(
             currentLocale: _locale,
             onLocaleChanged: _setLocale,
-            onSignUp: () =>
-                Navigator.of(navigatorKey.currentContext!).pushNamed('/signup'),
-            onForgotPassword: () => Navigator.of(
-              navigatorKey.currentContext!,
-            ).pushNamed('/forgot-password'),
+            onSignUp: () => navigatorKey.currentState?.pushNamed('/signup'),
+            onForgotPassword: () =>
+                navigatorKey.currentState?.pushNamed('/forgot-password'),
             onLogin: (email, pass, id) async {
               await _handleLogin(email, pass, id);
               if (!mounted) return;
-              Navigator.of(
-                navigatorKey.currentContext!,
-              ).pushReplacementNamed('/home');
+
+              _applyFrameMode(AppFrameMode.wideCard);
+              navigatorKey.currentState?.pushReplacementNamed('/home');
             },
           );
         } else {
           page = HomeScreen(
             personId: pid,
-            onLogout: _handleLogout,
+            onLogout: () async {
+              // ✅ quand on se logout "proprement", on notifie aussi déconnecté
+              await _notifyDisconnectedIfNeeded();
+              _handleLogout();
+            },
             onBadgeUpdate: _setLauncherBadge,
             currentLocale: _locale,
             onLocaleChanged: _setLocale,
@@ -431,13 +494,13 @@ class _ASConnexionState extends State<ASConnexion> {
             onLogin: (email, pass, id) async {
               await _handleLogin(email, pass, id);
               if (!mounted) return;
-              Navigator.of(
-                navigatorKey.currentContext!,
-              ).pushReplacementNamed('/home');
+
+              _applyFrameMode(AppFrameMode.wideCard);
+              navigatorKey.currentState?.pushReplacementNamed('/home');
             },
           );
         } else {
-          // ✅ Contact = petit (mobileCard) via frameModeForRouteName (default)
+          // ✅ /contact = petit
           page = ContactPage(personId: pid);
         }
         break;
@@ -455,9 +518,9 @@ class _ASConnexionState extends State<ASConnexion> {
             onLogin: (email, pass, id) async {
               await _handleLogin(email, pass, id);
               if (!mounted) return;
-              Navigator.of(
-                navigatorKey.currentContext!,
-              ).pushReplacementNamed('/home');
+
+              _applyFrameMode(AppFrameMode.wideCard);
+              navigatorKey.currentState?.pushReplacementNamed('/home');
             },
           );
         } else {
@@ -469,17 +532,15 @@ class _ASConnexionState extends State<ASConnexion> {
         page = LoginPage(
           currentLocale: _locale,
           onLocaleChanged: _setLocale,
-          onSignUp: () =>
-              Navigator.of(navigatorKey.currentContext!).pushNamed('/signup'),
-          onForgotPassword: () => Navigator.of(
-            navigatorKey.currentContext!,
-          ).pushNamed('/forgot-password'),
+          onSignUp: () => navigatorKey.currentState?.pushNamed('/signup'),
+          onForgotPassword: () =>
+              navigatorKey.currentState?.pushNamed('/forgot-password'),
           onLogin: (email, pass, id) async {
             await _handleLogin(email, pass, id);
             if (!mounted) return;
-            Navigator.of(
-              navigatorKey.currentContext!,
-            ).pushReplacementNamed('/home');
+
+            _applyFrameMode(AppFrameMode.wideCard);
+            navigatorKey.currentState?.pushReplacementNamed('/home');
           },
         );
         break;
@@ -487,15 +548,11 @@ class _ASConnexionState extends State<ASConnexion> {
 
     final st = RouteSettings(name: name, arguments: settings.arguments);
 
-    // ✅ Si le mode de frame change, on enlève l'animation de route pour éviter un flash
     if (modeChanged) {
       return _NoAnimMaterialPageRoute(settings: st, builder: (_) => page);
     }
     return MaterialPageRoute(settings: st, builder: (_) => page);
   }
-
-  // ✅ un navigatorKey évite d’avoir des ctx “dans le vide” pendant les transitions
-  final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
   @override
   Widget build(BuildContext context) {
@@ -505,13 +562,9 @@ class _ASConnexionState extends State<ASConnexion> {
         key: const ValueKey('as-connexion-app'),
         navigatorKey: navigatorKey,
         debugShowCheckedModeBanner: false,
-
         locale: _locale,
 
-        // ✅ plus de hardcode : suit automatiquement tes ARB
         supportedLocales: AppLocalizations.supportedLocales,
-
-        // ✅ ajoute le delegate de flutter_localized_locales
         localizationsDelegates: [
           AppLocalizations.delegate,
           LocaleNamesLocalizationsDelegate(),
@@ -669,45 +722,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   Future<void> _logoutAndGoToLogin() async {
     widget.onBadgeUpdate(0);
-    widget.onLogout();
-
-    final uri = Uri.parse('$_publicBase/auth/connection');
-    final headers = <String, String>{
-      'Content-Type': 'application/json',
-      if (_publicAppKey.isNotEmpty) 'X-App-Key': _publicAppKey,
-    };
-
-    final resp = await http
-        .post(
-          uri,
-          headers: headers,
-          body: jsonEncode({'id': widget.personId, 'is_connected': false}),
-        )
-        .timeout(const Duration(seconds: 12));
-
-    if ((resp.statusCode == 400) || (resp.statusCode == 500)) {
-      if (!mounted) return;
-      final sm = ScaffoldMessenger.of(context);
-      sm.hideCurrentSnackBar();
-      sm.showSnackBar(
-        SnackBar(
-          behavior: SnackBarBehavior.floating,
-          duration: const Duration(seconds: 8),
-          backgroundColor: Theme.of(context).colorScheme.error,
-          content: SizedBox(
-            width: double.infinity,
-            child: Text(
-              "Problem with LogOut !",
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: Theme.of(context).colorScheme.onError,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-        ),
-      );
-    }
+    widget.onLogout(); // ✅ dans ASConnexionState, on notifie déjà le backend
 
     if (_scaffoldKey.currentState?.isDrawerOpen ?? false) {
       Navigator.of(context).pop();
