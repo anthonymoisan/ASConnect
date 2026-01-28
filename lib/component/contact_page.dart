@@ -32,7 +32,7 @@ class _ContactPageState extends State<ContactPage> {
   late int _b;
   late String _captchaToken; // validation serveur (anti-rejeu)
 
-  static const String _apiBase = 'https://anthonymoisan.pythonanywhere.com';
+  static const String _apiBase = 'https://anthonymoisan.eu.pythonanywhere.com';
   static const String _contactPath = '/api/public/contact';
 
   static const String _publicAppKey = String.fromEnvironment(

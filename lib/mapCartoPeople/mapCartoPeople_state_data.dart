@@ -101,7 +101,7 @@ extension _MapPeopleData on _MapPeopleByCityState {
 
     try {
       final uri = Uri.https(
-        'anthonymoisan.pythonanywhere.com',
+        'anthonymoisan.eu.pythonanywhere.com',
         '/api/public/people/countriesTranslated',
         {'locale': locale},
       );

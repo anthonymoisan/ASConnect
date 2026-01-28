@@ -17,7 +17,7 @@ ____________________________________________
 3) Catégories de données collectées
 Les données suivantes peuvent être collectées :
 •	Données d’identification :
-o	nom, prénom, adresse e-mail, mot de passe, photo,
+o	le sexe, nom, prénom, adresse e-mail, mot de passe, photo,
 o	question et réponse secrète (en cas d’oubli du mot de passe) ;
 •	Données sensibles :
 o	génotype, localisation.
@@ -28,10 +28,11 @@ Les données sont conservées pendant toute la durée d’utilisation du compte,
 L’utilisateur peut à tout moment exercer son droit à l’oubli directement dans l’application, via le menu :
 Politique de confidentialité → Droit à l’oubli.
 ____________________________________________
-5) Destinataires et hébergement des données
+5) Destinataireset hébergement des données
 Les données sont hébergées de manière sécurisée sur les serveurs de PythonAnywhere.
 Les données sont stockées dans l’Union européenne.
 (Pour plus d’informations sur la politique de protection des données de l’hébergeur, consultez https://www.pythonanywhere.com/privacy/. )
+L’application Web est hébergé chez O2Switch en France, consultez https://www.o2switch.fr/du-rgpd.pdf.
 ____________________________________________
 6) Droits des utilisateurs
 Conformément au Règlement (UE) 2016/679 (RGPD), les utilisateurs disposent des droits suivants :

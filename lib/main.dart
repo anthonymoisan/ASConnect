@@ -88,7 +88,7 @@ class AppFrameController extends ValueNotifier<AppFrameMode> {
 
   void setMode(AppFrameMode mode) {
     if (value == mode) return;
-    value = mode;
+    value = mode; // notifyListeners() via ValueNotifier
   }
 
   void setMobileCard() => setMode(AppFrameMode.mobileCard);
@@ -138,7 +138,15 @@ class FrameRouteObserver extends NavigatorObserver {
     if (route is! PageRoute) return;
 
     final name = route.settings.name;
-    controller.setMode(frameModeForRouteName(name));
+    final nextMode = frameModeForRouteName(name);
+
+    // ✅ IMPORTANT: on diffère le setMode pour éviter setState/notify pendant build
+    if (controller.value == nextMode) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (controller.value != nextMode) {
+        controller.setMode(nextMode);
+      }
+    });
   }
 
   @override
@@ -300,15 +308,29 @@ class _ASConnexionState extends State<ASConnexion> {
     } catch (_) {}
   }
 
+  // ✅ applique le mode en post-frame pour éviter notify pendant build
+  void _scheduleFrameMode(AppFrameMode nextMode) {
+    if (_frameCtrl.value == nextMode) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (_frameCtrl.value != nextMode) {
+        _frameCtrl.setMode(nextMode);
+      }
+    });
+  }
+
   Route<dynamic> _onGenerateRoute(RouteSettings settings) {
     final name = settings.name ?? '/login';
 
     // ✅ mode calculé depuis le nom
     final nextMode = frameModeForRouteName(name);
 
-    // ✅ si mode change, on supprime l'anim (évite “flash” login -> signup)
+    // ✅ modeChanged calculé sur la valeur courante (avant update)
     final bool modeChanged = _frameCtrl.value != nextMode;
-    _frameCtrl.setMode(nextMode);
+
+    // ❌ AVANT: _frameCtrl.setMode(nextMode);  (provoquait l'exception)
+    // ✅ MAINTENANT: on diffère le changement
+    _scheduleFrameMode(nextMode);
 
     Widget page;
 
@@ -812,18 +834,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                           selected: _currentIndex == 0,
                           onTap: () => _setIndex(0),
                         ),
-
                         const SizedBox(width: 28),
-
                         _NavIcon(
-                          icon: Ionicons
-                              .grid_outline, // ou Ionicons.list / Ionicons.table
+                          icon: Ionicons.grid_outline,
                           selected: _currentIndex == 1,
                           onTap: () => _setIndex(1),
                         ),
-
                         const SizedBox(width: 28),
-
                         Stack(
                           clipBehavior: Clip.none,
                           children: [

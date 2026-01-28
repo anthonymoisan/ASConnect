@@ -248,7 +248,7 @@ class TabularApi {
   }) async {
     final loc = locale.trim().toLowerCase();
     final uri = Uri.https(
-      'anthonymoisan.pythonanywhere.com',
+      'anthonymoisan.eu.pythonanywhere.com',
       '/api/public/people/countriesTranslated',
       {'locale': loc},
     );
@@ -361,7 +361,7 @@ class TabularApi {
     bool dedup = true,
   }) async {
     final uri = Uri.https(
-      'anthonymoisan.pythonanywhere.com',
+      'anthonymoisan.eu.pythonanywhere.com',
       '/api/public/conversations/private',
     );
 
