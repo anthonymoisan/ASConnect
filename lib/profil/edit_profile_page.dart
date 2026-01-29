@@ -33,6 +33,9 @@ String _peopleInfoUrl(int id) => '$kPublicApiBase/people/$id/info';
 String _peoplePhotoUrl(int id, int bust) =>
     '$kPublicApiBase/people/$id/photo?b=$bust';
 String _peopleUpdateUrl() => '$kPublicApiBase/people/update';
+Uri _publicLookupUri(String email) => Uri.parse(
+  '$kPublicApiBase/people/lookup?emailAddress=${Uri.encodeQueryComponent(email)}',
+);
 
 extension L10nX on BuildContext {
   AppLocalizations get l10n => AppLocalizations.of(this)!;
@@ -494,6 +497,37 @@ class _EditProfilePageState extends State<EditProfilePage> {
     );
   }
 
+  Future<bool> _emailExists(String email) async {
+    final t = AppLocalizations.of(context)!;
+
+    http.Response lookupResp;
+    try {
+      lookupResp = await http
+          .get(
+            _publicLookupUri(email),
+            headers: {'Accept': 'application/json', 'X-App-Key': _publicAppKey},
+          )
+          .timeout(const Duration(seconds: 8));
+    } on TimeoutException {
+      throw Exception(t.timeoutCheckConnection);
+    } catch (e) {
+      throw Exception(t.errorWithMessage('Lookup failed: $e'));
+    }
+
+    if (lookupResp.statusCode == 200) return true;
+    if (lookupResp.statusCode == 404) return false;
+
+    String bodyPreview = '';
+    try {
+      bodyPreview = lookupResp.body;
+      if (bodyPreview.length > 200) {
+        bodyPreview = '${bodyPreview.substring(0, 200)}…';
+      }
+    } catch (_) {}
+
+    throw Exception(t.signupApiFailed(lookupResp.statusCode, bodyPreview));
+  }
+
   // ---------------- Mot de passe: règles ----------------
   bool _pwdHasMinLen(String s) => s.trim().length >= 8;
   bool _pwdHasUpper(String s) => RegExp(r'[A-Z]').hasMatch(s);
@@ -812,6 +846,8 @@ class _EditProfilePageState extends State<EditProfilePage> {
         });
       }
 
+      final t = AppLocalizations.of(context)!;
+
       // 2) Changement d'email (spécifique)
       if (changed.containsKey('emailAddress') &&
           email.isNotEmpty &&
@@ -821,6 +857,16 @@ class _EditProfilePageState extends State<EditProfilePage> {
           'emailAddress': _originalEmail,
           'emailNewAddress': email,
         });
+        final exists = await _emailExists(email);
+        if (!mounted) return;
+
+        if (exists) {
+          ScaffoldMessenger.of(context).clearSnackBars();
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(t.signupEmailAlreadyExistsRedirect)),
+          );
+          return;
+        }
         final resp = await http
             .patch(uri, headers: _jsonHeaders, body: body)
             .timeout(const Duration(seconds: 15));
