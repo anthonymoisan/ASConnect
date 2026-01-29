@@ -119,7 +119,7 @@ class _ContactPageState extends State<ContactPage> {
           .get(uri, headers: _baseHeaders())
           .timeout(const Duration(seconds: 10));
 
-      if (resp.statusCode >= 200 && resp.statusCode < 300) {
+      if (resp.statusCode == 200) {
         final m =
             jsonDecode(utf8.decode(resp.bodyBytes)) as Map<String, dynamic>;
 
@@ -167,8 +167,6 @@ class _ContactPageState extends State<ContactPage> {
         email = null;
       }
 
-      print(email);
-
       final payload = {
         'subject': subject,
         'body': body,
@@ -190,7 +188,7 @@ class _ContactPageState extends State<ContactPage> {
             jsonDecode(utf8.decode(resp.bodyBytes)) as Map<String, dynamic>?;
       } catch (_) {}
 
-      if (resp.statusCode >= 200 && resp.statusCode < 300) {
+      if (resp.statusCode == 200) {
         _snack(context.l10n.contactMessageSent);
         _formKey.currentState?.reset();
         _titleCtrl.clear();
@@ -203,11 +201,13 @@ class _ContactPageState extends State<ContactPage> {
       // Erreurs plus parlantes (i18n)
       String err = context.l10n.contactSendFailedWithCode(resp.statusCode);
 
-      if (resp.statusCode == 401 || resp.statusCode == 403) {
+      if (resp.statusCode == 400 ||
+          resp.statusCode == 401 ||
+          resp.statusCode == 403) {
         err = context.l10n.contactAccessDenied;
       } else if (resp.statusCode == 429) {
         err = context.l10n.contactTooManyRequests;
-      } else if (resp.statusCode == 502 || resp.statusCode == 504) {
+      } else if (resp.statusCode == 502 || resp.statusCode == 500) {
         err = context.l10n.contactServiceUnavailable;
       } else {
         final serverMsg =
