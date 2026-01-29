@@ -58,7 +58,6 @@ class AppMenu extends StatelessWidget {
               icon: Ionicons.mail_open,
               label: t.menuContact,
               action: MenuAction.contact,
-              onTapOverride: () => _defaultContact(context),
             ),
 
             // Politique de confidentialité
@@ -67,7 +66,6 @@ class AppMenu extends StatelessWidget {
               icon: Ionicons.document_text,
               label: t.menuPrivacyPolicy,
               action: MenuAction.privacy,
-              onTapOverride: () => _defaultPrivacy(context),
             ),
 
             const SizedBox(height: 8),
@@ -90,7 +88,6 @@ class AppMenu extends StatelessWidget {
                   ? appVersion!.trim()
                   : null,
               action: MenuAction.version,
-              onTapOverride: () => _defaultVersion(context),
             ),
           ],
         ),
@@ -127,40 +124,6 @@ class AppMenu extends StatelessWidget {
 
         onSelected?.call(action);
       },
-    );
-  }
-
-  Future<void> _defaultContact(BuildContext context) async {
-    final t = AppLocalizations.of(context)!;
-
-    final email = (contactEmail?.trim().isNotEmpty ?? false)
-        ? contactEmail!.trim()
-        : 'contact@exemple.org';
-
-    final uri = Uri(
-      scheme: 'mailto',
-      path: email,
-      queryParameters: {'subject': t.menuContactSubject},
-    );
-    await launchUrl(uri);
-  }
-
-  Future<void> _defaultPrivacy(BuildContext context) async {
-    final url = (privacyUrl?.trim().isNotEmpty ?? false)
-        ? privacyUrl!.trim()
-        : 'https://www.example.com/politique-de-confidentialite';
-    final uri = Uri.parse(url);
-    await launchUrl(uri, mode: LaunchMode.externalApplication);
-  }
-
-  Future<void> _defaultVersion(BuildContext context) async {
-    final t = AppLocalizations.of(context)!;
-
-    showAboutDialog(
-      context: context,
-      applicationIcon: const Icon(Ionicons.apps),
-      applicationName: t.appTitle,
-      applicationVersion: appVersion ?? '-',
     );
   }
 }
