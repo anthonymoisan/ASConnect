@@ -1257,4 +1257,13 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get signupEnableGeolocation => 'Per favore, autorizza la geolocalizzazione per continuare.';
+
+  @override
+  String get signUpCheckMail => 'Verifica dell’email';
+
+  @override
+  String get signUpGPS => 'Determinazione delle coordinate della tua città dalla posizione GPS';
+
+  @override
+  String get signUpMessageCreate => 'Creazione del profilo';
 }

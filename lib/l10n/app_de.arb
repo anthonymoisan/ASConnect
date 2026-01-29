@@ -628,6 +628,9 @@
   
   "acceptInfoAngelman": "Ich stimme zu, Informationen über das Angelman-Syndrom zu erhalten",
   
-  "signupEnableGeolocation": "Bitte erlaube die Standortbestimmung, um fortzufahren."
+  "signupEnableGeolocation": "Bitte erlaube die Standortbestimmung, um fortzufahren.",
+  "signUpCheckMail": "E-Mail-Überprüfung",
+  "signUpGPS": "Ermittlung der Koordinaten Ihrer Stadt anhand der GPS-Position",
+  "signUpMessageCreate": "Profil wird erstellt"
 
 }

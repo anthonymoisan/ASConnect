@@ -28,6 +28,13 @@ const String kPublicApiBase =
 
 Uri _publicSignupUri() => Uri.parse('$kPublicApiBase/people');
 
+Uri _publicLookupUri(String email) => Uri.parse(
+  '$kPublicApiBase/people/lookup?emailAddress=${Uri.encodeQueryComponent(email)}',
+);
+
+// =====================
+//   DATA
+// =====================
 class SignUpData {
   /// ✅ Champ API: "M" ou "F"
   final String gender;
@@ -66,6 +73,9 @@ class SignUpData {
   });
 }
 
+// =====================
+//   PAGE
+// =====================
 class SignUpPage extends StatefulWidget {
   const SignUpPage({super.key, this.onSubmit});
   final Future<void> Function(SignUpData data)? onSubmit;
@@ -101,19 +111,20 @@ class _SignUpPageState extends State<SignUpPage> {
   int? _secretQuestionIndex; // 0..2
 
   bool _obscure = true;
-  bool _submitting = false;
 
+  bool _submitting = false; // état global de soumission
   bool _consent = false;
-
-  // ✅ NOUVEAU : 2e checkbox (optionnelle)
   bool _acceptAngelmanInfo = false;
-
   bool _triedSubmit = false;
 
   final ImagePicker _picker = ImagePicker();
   XFile? _pickedFile;
   Uint8List? _photoBytes;
   String? _photoError;
+
+  // ---- Modal progress state (Check Email / Check GPS / Create)
+  int _progressStep = 0; // 0..2
+  bool _progressOpen = false;
 
   // --- Génotypes (clé UI -> valeur API FR) ---
   static const Map<String, String> _genotypeApiValueFr = {
@@ -296,7 +307,44 @@ class _SignUpPageState extends State<SignUpPage> {
   // API attend 1..3
   int _secretQuestionCodeFromIndex(int index) => index + 1;
 
-  Future<void> _submitToApi(
+  // --------------------
+  //  LOOKUP EMAIL
+  // --------------------
+  Future<bool> _emailExists(String email) async {
+    final t = AppLocalizations.of(context)!;
+
+    http.Response lookupResp;
+    try {
+      lookupResp = await http
+          .get(
+            _publicLookupUri(email),
+            headers: {'Accept': 'application/json', 'X-App-Key': _publicAppKey},
+          )
+          .timeout(const Duration(seconds: 8));
+    } on TimeoutException {
+      throw Exception(t.timeoutCheckConnection);
+    } catch (e) {
+      throw Exception(t.errorWithMessage('Lookup failed: $e'));
+    }
+
+    if (lookupResp.statusCode == 200) return true;
+    if (lookupResp.statusCode == 404) return false;
+
+    String bodyPreview = '';
+    try {
+      bodyPreview = lookupResp.body;
+      if (bodyPreview.length > 200) {
+        bodyPreview = '${bodyPreview.substring(0, 200)}…';
+      }
+    } catch (_) {}
+
+    throw Exception(t.signupApiFailed(lookupResp.statusCode, bodyPreview));
+  }
+
+  // --------------------
+  //  CREATE ACCOUNT
+  // --------------------
+  Future<void> _createAccount(
     SignUpData data,
     ({double lat, double lon}) coords,
   ) async {
@@ -304,15 +352,11 @@ class _SignUpPageState extends State<SignUpPage> {
 
     final latStr = coords.lat.toStringAsFixed(6);
     final lonStr = coords.lon.toStringAsFixed(6);
-    //final coords = await _getLatLon();
-    //final latStr = coords.lat.toStringAsFixed(6);
-    //final lonStr = coords.lon.toStringAsFixed(6);
 
     final req = http.MultipartRequest('POST', _publicSignupUri())
       ..headers['Accept'] = 'application/json'
       ..headers['X-App-Key'] = _publicAppKey
-      ..fields['gender'] = data
-          .gender // ✅ "M" / "F"
+      ..fields['gender'] = data.gender
       ..fields['firstname'] = data.firstName
       ..fields['lastname'] = data.lastName
       ..fields['emailAddress'] = data.email
@@ -326,7 +370,6 @@ class _SignUpPageState extends State<SignUpPage> {
       ).toString()
       ..fields['rSecrete'] = data.secretAnswer
       ..fields['consent'] = data.consent ? 'true' : 'false'
-      // ✅ NOUVEAU : 1 si coché, 0 sinon
       ..fields['is_info'] = data.acceptAngelmanInfo ? '1' : '0';
 
     if (data.photoBytes != null && data.photoBytes!.isNotEmpty) {
@@ -342,24 +385,14 @@ class _SignUpPageState extends State<SignUpPage> {
       );
     }
 
-    final streamed = await req.send().timeout(const Duration(seconds: 20));
+    final streamed = await req.send().timeout(const Duration(seconds: 25));
     final resp = await http.Response.fromStream(streamed);
 
-    if (resp.statusCode == 200) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(t.signupSuccess)));
-      Navigator.of(context).pushReplacementNamed('/login');
-      return;
-    }
+    if (resp.statusCode == 200) return;
 
     if (resp.statusCode == 409) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(t.signupEmailAlreadyExistsRedirect)),
-      );
-      return;
+      // course condition : email créé entre lookup et post
+      throw Exception(t.signupEmailAlreadyExistsRedirect);
     }
 
     String bodyPreview = '';
@@ -373,13 +406,57 @@ class _SignUpPageState extends State<SignUpPage> {
     throw Exception(t.signupApiFailed(resp.statusCode, bodyPreview));
   }
 
+  // =====================
+  //   MODAL PROGRESS
+  // =====================
+  void _openProgressDialog(AppLocalizations t) {
+    _progressStep = 0;
+    _progressOpen = true;
+
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => _SignupProgressDialog(
+        title: t.signupCreating,
+        step: _progressStep,
+        steps: [t.signUpCheckMail, t.signUpGPS, t.signUpMessageCreate],
+      ),
+    );
+  }
+
+  void _updateProgressDialogStep(int step, AppLocalizations t) {
+    if (!_progressOpen) return;
+    setState(() => _progressStep = step);
+
+    // Refresh fiable : pop + re-open (simple, robuste)
+    Navigator.of(context, rootNavigator: true).pop();
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => _SignupProgressDialog(
+        title: t.signupCreating,
+        step: _progressStep,
+        steps: [t.signUpCheckMail, t.signUpGPS, t.signUpMessageCreate],
+      ),
+    );
+  }
+
+  void _closeProgressDialog() {
+    if (!_progressOpen) return;
+    _progressOpen = false;
+    Navigator.of(context, rootNavigator: true).pop();
+  }
+
+  // --------------------
+  //  SUBMIT
+  // --------------------
   Future<void> _submit() async {
     final t = AppLocalizations.of(context)!;
     setState(() => _triedSubmit = true);
 
     if (!(_formKey.currentState?.validate() ?? false)) return;
 
-    // ✅ Sexe obligatoire (clé UI -> code API)
+    // ✅ Sexe obligatoire
     if (_genderKey == null || _genderKey!.isEmpty) {
       ScaffoldMessenger.of(
         context,
@@ -436,11 +513,11 @@ class _SignUpPageState extends State<SignUpPage> {
     final genotypeApi = _genotypeApiValueFr[_genotypeKey!] ?? 'Clinique';
 
     final data = SignUpData(
-      gender: genderApi, // ✅ "M" / "F"
+      gender: genderApi,
       firstName: _firstCtrl.text.trim(),
       lastName: _lastCtrl.text.trim(),
       birthDate: _birthDate!,
-      genotype: genotypeApi, // ✅ valeur FR envoyée à l'API
+      genotype: genotypeApi,
       email: _emailCtrl.text.trim(),
       password: _pwdCtrl.text,
       photoBytes: _photoBytes,
@@ -449,41 +526,92 @@ class _SignUpPageState extends State<SignUpPage> {
       secretQuestion: _secretQuestionLabel(t, _secretQuestionIndex ?? 0),
       secretAnswer: _secretAnswerCtrl.text.trim(),
       consent: _consent,
-      acceptAngelmanInfo: _acceptAngelmanInfo, // ✅ NOUVEAU
+      acceptAngelmanInfo: _acceptAngelmanInfo,
     );
 
-    // ✅ Vérif géolocalisation AVANT l’appel API
-    final coords = await _getLatLon();
-    final geoOk = !(coords.lat == 0.0 && coords.lon == 0.0);
-    if (!geoOk) {
+    // ✅ Modale de progression (toujours visible)
+    _openProgressDialog(t);
+
+    try {
+      // Hook custom (si tu veux overrider)
+      if (widget.onSubmit != null) {
+        // dans ce cas, on ne sait pas les étapes internes
+        setState(() => _submitting = true);
+        await widget.onSubmit!(data);
+        if (!mounted) return;
+        _closeProgressDialog();
+        return;
+      }
+
+      // STEP 0: Check Email
+      _updateProgressDialogStep(0, t);
+      final exists = await _emailExists(data.email);
+      if (!mounted) return;
+
+      if (exists) {
+        _closeProgressDialog();
+        ScaffoldMessenger.of(context).clearSnackBars();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(t.signupEmailAlreadyExistsRedirect)),
+        );
+        return;
+      }
+
+      // STEP 1: Check GPS
+      _updateProgressDialogStep(1, t);
+      final coords = await _getLatLon();
+      if (!mounted) return;
+
+      final geoOk = !(coords.lat == 0.0 && coords.lon == 0.0);
+      if (!geoOk) {
+        _closeProgressDialog();
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(t.signupEnableGeolocation)));
+        return;
+      }
+
+      // STEP 2: Create
+      _updateProgressDialogStep(2, t);
+
+      // Optionnel : état local (si tu veux aussi griser le bouton)
+      setState(() => _submitting = true);
+
+      await _createAccount(data, coords);
+      if (!mounted) return;
+
+      _closeProgressDialog();
+
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text(t.signupEnableGeolocation)));
-      return;
-    }
-
-    setState(() => _submitting = true);
-    try {
-      if (widget.onSubmit != null) {
-        await widget.onSubmit!(data);
-      } else {
-        await _submitToApi(data, coords);
-      }
+      ).showSnackBar(SnackBar(content: Text(t.signupSuccess)));
+      Navigator.of(context).pushReplacementNamed('/login');
     } on TimeoutException {
       if (!mounted) return;
+      _closeProgressDialog();
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text(t.timeoutCheckConnection)));
     } catch (e) {
       if (!mounted) return;
+      _closeProgressDialog();
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text(t.errorWithMessage(e.toString()))));
     } finally {
-      if (mounted) setState(() => _submitting = false);
+      if (mounted) {
+        setState(() => _submitting = false);
+      }
+      // sécurité : si encore ouverte
+      if (_progressOpen && mounted) {
+        _closeProgressDialog();
+      }
     }
   }
 
+  // --------------------
+  //  HELPERS
+  // --------------------
   String? _inferMime(String? filename) {
     final name = (filename ?? '').toLowerCase();
     if (name.endsWith('.png')) return 'image/png';
@@ -538,6 +666,9 @@ class _SignUpPageState extends State<SignUpPage> {
     );
   }
 
+  // --------------------
+  //  UI
+  // --------------------
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -577,7 +708,7 @@ class _SignUpPageState extends State<SignUpPage> {
               ),
               const SizedBox(height: 12),
 
-              // ✅ SEXE (AU-DESSUS DU PRÉNOM) — UI localisée, API = "M"/"F"
+              // ✅ SEXE
               DropdownButtonFormField<String>(
                 value: _genderKey,
                 isExpanded: true,
@@ -929,7 +1060,6 @@ class _SignUpPageState extends State<SignUpPage> {
                 controlAffinity: ListTileControlAffinity.leading,
               ),
 
-              // ✅ NOUVEAU : checkbox opt-in infos Angelman (après le consentement)
               CheckboxListTile(
                 contentPadding: EdgeInsets.zero,
                 value: _acceptAngelmanInfo,
@@ -953,7 +1083,7 @@ class _SignUpPageState extends State<SignUpPage> {
               SizedBox(
                 height: 48,
                 child: FilledButton.icon(
-                  icon: _submitting
+                  icon: (_submitting)
                       ? const SizedBox(
                           width: 18,
                           height: 18,
@@ -970,6 +1100,67 @@ class _SignUpPageState extends State<SignUpPage> {
           ),
         ),
       ),
+    );
+  }
+}
+
+// =====================
+//  PROGRESS DIALOG
+// =====================
+class _SignupProgressDialog extends StatelessWidget {
+  final String title;
+  final int step; // 0..2
+  final List<String> steps;
+
+  const _SignupProgressDialog({
+    required this.title,
+    required this.step,
+    required this.steps,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return PopScope(
+      canPop: false,
+      child: AlertDialog(
+        title: Text(title),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            for (int i = 0; i < steps.length; i++)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 6),
+                child: Row(
+                  children: [
+                    _stepIcon(i, step),
+                    const SizedBox(width: 10),
+                    Expanded(child: Text(steps[i])),
+                  ],
+                ),
+              ),
+            const SizedBox(height: 12),
+            const LinearProgressIndicator(minHeight: 3),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _stepIcon(int i, int current) {
+    if (i < current) {
+      return const Icon(Icons.check_circle, size: 20, color: Colors.green);
+    }
+    if (i == current) {
+      return const SizedBox(
+        width: 20,
+        height: 20,
+        child: CircularProgressIndicator(strokeWidth: 2),
+      );
+    }
+    return const Icon(
+      Icons.radio_button_unchecked,
+      size: 20,
+      color: Colors.grey,
     );
   }
 }

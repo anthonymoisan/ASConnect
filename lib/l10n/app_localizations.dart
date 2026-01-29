@@ -2336,6 +2336,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Please allow location access to continue.'**
   String get signupEnableGeolocation;
+
+  /// No description provided for @signUpCheckMail.
+  ///
+  /// In en, this message translates to:
+  /// **'Checking email'**
+  String get signUpCheckMail;
+
+  /// No description provided for @signUpGPS.
+  ///
+  /// In en, this message translates to:
+  /// **'Determining your city\'s coordinates from GPS location'**
+  String get signUpGPS;
+
+  /// No description provided for @signUpMessageCreate.
+  ///
+  /// In en, this message translates to:
+  /// **'Creating profile'**
+  String get signUpMessageCreate;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

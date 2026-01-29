@@ -626,5 +626,8 @@
   
   "acceptInfoAngelman": "I agree to receive information about Angelman syndrome",
   
-  "signupEnableGeolocation": "Please allow location access to continue."
+  "signupEnableGeolocation": "Please allow location access to continue.",
+  "signUpCheckMail": "Checking email",
+  "signUpGPS": "Determining your city's coordinates from GPS location",
+  "signUpMessageCreate": "Creating profile"
 }
