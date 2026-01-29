@@ -114,7 +114,9 @@ extension _MapPeopleData on _MapPeopleByCityState {
           .timeout(const Duration(seconds: 30));
 
       if (res.statusCode != 200) {
-        throw Exception("HTTP ${res.statusCode}");
+        throw Exception(
+          "HTTP map Carto issue with countries ${res.statusCode}",
+        );
       }
 
       final decoded = json.decode(res.body);

@@ -165,7 +165,7 @@ class TabularApi {
 
       if (status != 200) {
         throw Exception(
-          'Erreur fetchPeopleMapRepresentation ($status) : ${resp.body}',
+          'Erreur fetchPeopleMapRepresentation in Tabular View($status) : ${resp.body}',
         );
       }
 
