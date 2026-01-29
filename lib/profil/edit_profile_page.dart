@@ -678,8 +678,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                             final resp = await http
                                 .patch(uri, headers: _jsonHeaders, body: body)
                                 .timeout(const Duration(seconds: 15));
-                            if (!(resp.statusCode >= 200 &&
-                                resp.statusCode < 300)) {
+                            if (!(resp.statusCode == 200)) {
                               throw Exception('(${resp.statusCode})');
                             }
                             if (mounted) {
@@ -719,7 +718,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
           .patch(uri, headers: _jsonHeaders, body: body)
           .timeout(const Duration(seconds: 15));
 
-      if (!(resp.statusCode >= 200 && resp.statusCode < 300)) {
+      if (!(resp.statusCode == 200)) {
         throw Exception('(${resp.statusCode})');
       }
 
@@ -826,7 +825,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
 
         final streamed = await req.send().timeout(const Duration(seconds: 20));
         final resp = await http.Response.fromStream(streamed);
-        if (!(resp.statusCode >= 200 && resp.statusCode < 300)) {
+        if (!(resp.statusCode == 200)) {
           String err = '(${resp.statusCode})';
           try {
             final p = jsonDecode(utf8.decode(resp.bodyBytes));
@@ -870,7 +869,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
         final resp = await http
             .patch(uri, headers: _jsonHeaders, body: body)
             .timeout(const Duration(seconds: 15));
-        if (!(resp.statusCode >= 200 && resp.statusCode < 300)) {
+        if (!(resp.statusCode == 200)) {
           String err = '(${resp.statusCode})';
           try {
             final p = jsonDecode(utf8.decode(resp.bodyBytes));
@@ -937,7 +936,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
             )
             .timeout(const Duration(seconds: 15));
 
-        if (!(resp.statusCode >= 200 && resp.statusCode < 300)) {
+        if (!(resp.statusCode == 200)) {
           String err = '(${resp.statusCode})';
           try {
             final p = jsonDecode(utf8.decode(resp.bodyBytes));
