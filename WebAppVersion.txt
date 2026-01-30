@@ -1,3 +1,21 @@
+0) Générer avec flutter une webApp
+flutter build web --release `
+  --pwa-strategy=none `
+  --base-href /app/ `
+  --dart-define=PUBLIC_APP_KEY="je_vais_au_marcher_acheter_des_pommes_et_des_poires!123789" `
+  --dart-define=V6_LOGIN=admin `
+  --dart-define=V6_PASSWORD_B64=TW1hcyYzNzg0NDQ3NQ== `
+  --dart-define=API_ENVMAPTITLE=GWrtWoRHjXDnksQzZqH8
+
+Se mettre dans le répertoire où on a généré le javascript et lancer PowerShell Windows
+npx javascript-obfuscator main.dart.js `
+  --output main.dart.js `
+  --compact true `
+  --control-flow-flattening true `
+  --string-array true `
+  --string-array-encoding base64
+
+
 1) Faire une copie de webVersion qui est sous le repo ASConnect
 
 git clone https://github.com/anthonymoisan/ASConnect.git
