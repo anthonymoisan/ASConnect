@@ -245,7 +245,7 @@ class _ConversationsgroupPageState extends State<ConversationsgroupPage>
     if (confirm != true) return;
 
     try {
-      await ConversationApi.leaveConversation(
+      await ConversationApi.leaveGroupConversation(
         conversationId: conversationId,
         peoplePublicId: pid,
         softDeleteOwnMessages: true,

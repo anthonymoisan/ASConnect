@@ -519,4 +519,39 @@ class ConversationApi {
       );
     });
   }
+
+  static Future<void> leaveGroupConversation({
+    required int conversationId,
+    required int peoplePublicId,
+    required bool softDeleteOwnMessages,
+    required bool deleteEmptyConversation,
+  }) async {
+    final uri = Uri.parse(
+      '$_baseUrl/conversations/group/$conversationId/leave',
+    );
+
+    final body = <String, dynamic>{
+      'people_public_id': peoplePublicId,
+      'soft_delete_own_messages': softDeleteOwnMessages,
+      'delete_empty_conversation': deleteEmptyConversation,
+    };
+
+    final resp = await _client.post(
+      uri,
+      headers: {'Content-Type': 'application/json', 'X-App-Key': _appKey},
+      body: jsonEncode(body),
+    );
+
+    if (resp.statusCode < 200 || resp.statusCode >= 300) {
+      throw Exception(
+        'Erreur leaveGroupConversation (${resp.statusCode}) : ${resp.body}',
+      );
+    }
+
+    // ✅ Invalidation caches
+    _cache.removeWhere((k, _) => k.startsWith('groupSummary:'));
+    _cache.removeWhere((k, _) => k.startsWith('lastMsg:$conversationId:'));
+    _cache.removeWhere((k, _) => k.startsWith('unreadList:'));
+    _cache.removeWhere((k, _) => k.startsWith('unreadTotal:'));
+  }
 }
