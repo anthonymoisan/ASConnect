@@ -489,4 +489,34 @@ class ConversationApi {
       );
     }
   }
+
+  static Future<List<ConversationSummary>>
+  fetchConversationsGroupSummaryForPerson(int personId) async {
+    final uri = Uri.parse(
+      '$_baseUrl/people/$personId/conversationsGroupSummary',
+    );
+    final cacheKey = 'groupSummary:$personId';
+
+    final cached = _getCache<List<ConversationSummary>>(cacheKey);
+    if (cached != null) return cached;
+
+    return _dedup<List<ConversationSummary>>(cacheKey, () async {
+      final response = await _client.get(uri, headers: _headers);
+
+      if (response.statusCode == 200) {
+        final List<dynamic> jsonList =
+            jsonDecode(response.body) as List<dynamic>;
+        final list = jsonList
+            .map((j) => ConversationSummary.fromJson(j as Map<String, dynamic>))
+            .toList();
+
+        _setCache(cacheKey, list, _ttlShort);
+        return list;
+      }
+
+      throw Exception(
+        'Erreur fetchConversationsGroupSummaryForPerson (${response.statusCode}) : ${response.body}',
+      );
+    });
+  }
 }

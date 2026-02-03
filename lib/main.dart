@@ -642,7 +642,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     ),
     TabularView(currentPersonId: widget.personId),
     ConversationsPage(personId: widget.personId),
-    const ConversationsgroupPage(),
+    ConversationsgroupPage(personId: widget.personId),
   ];
 
   void _setIndex(int i) => setState(() => _currentIndex = i);
