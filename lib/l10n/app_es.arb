@@ -630,5 +630,7 @@
   "signupEnableGeolocation": "Por favor, autoriza la geolocalización para continuar.",
   "signUpCheckMail": "Verificación del correo",
   "signUpGPS": "Determinación de las coordenadas de tu ciudad a partir de la ubicación GPS",
-  "signUpMessageCreate": "Creación del perfil"
+  "signUpMessageCreate": "Creación del perfil",
+  
+  "tabGroup": "Grupo"
 }

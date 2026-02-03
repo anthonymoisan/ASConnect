@@ -24,6 +24,7 @@ import 'component/contact_page.dart';
 import 'profil/edit_profile_page.dart';
 import 'component/version.dart';
 import 'whatsApp/screens/conversations_page.dart';
+import 'whatsApp/screens/conversationsGroup_page.dart';
 
 import 'tabular/view/tabular_view.dart';
 
@@ -641,6 +642,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     ),
     TabularView(currentPersonId: widget.personId),
     ConversationsPage(personId: widget.personId),
+    const ConversationsgroupPage(),
   ];
 
   void _setIndex(int i) => setState(() => _currentIndex = i);
@@ -772,13 +774,17 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   List<String> _titles(BuildContext context) {
     final t = AppLocalizations.of(context)!;
-    return <String>[t.tabCommunity, t.tableTabular, t.tabChats];
+    return <String>[t.tabCommunity, t.tableTabular, t.tabChats, t.tabGroup];
   }
 
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context)!;
     final titles = _titles(context);
+
+    // ✅ Sécurise les index pour éviter RangeError si mismatch temporaire
+    final safeIndex = _currentIndex.clamp(0, titles.length - 1);
+    final safeTabIndex = _currentIndex.clamp(0, _tabs.length - 1);
 
     return Scaffold(
       key: _scaffoldKey,
@@ -848,21 +854,21 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           onPressed: () => _scaffoldKey.currentState?.openDrawer(),
         ),
         title: Text(
-          titles[_currentIndex],
+          titles[safeIndex],
           style: Theme.of(context).textTheme.titleMedium?.copyWith(
             fontWeight: FontWeight.w900,
             color: Colors.black,
           ),
         ),
       ),
-      body: IndexedStack(index: _currentIndex, children: _tabs),
+      body: IndexedStack(index: safeTabIndex, children: _tabs),
       bottomNavigationBar: SafeArea(
         child: BottomAppBar(
           color: Colors.transparent,
           elevation: 0,
           child: Center(
             child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 210),
+              constraints: const BoxConstraints(maxWidth: 300),
               child: Container(
                 margin: const EdgeInsets.only(bottom: 6),
                 decoration: BoxDecoration(
@@ -892,7 +898,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         _NavIcon(
-                          icon: Ionicons.people,
+                          icon: Ionicons.globe,
                           selected: _currentIndex == 0,
                           onTap: () => _setIndex(0),
                         ),
@@ -903,6 +909,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                           onTap: () => _setIndex(1),
                         ),
                         const SizedBox(width: 28),
+
+                        // 💬 Chats
                         Stack(
                           clipBehavior: Clip.none,
                           children: [
@@ -916,6 +924,15 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                             ),
                             _Badge(count: _unreadMessagesTotal),
                           ],
+                        ),
+
+                        const SizedBox(width: 20),
+
+                        // 👥 Groupes (icône visuellement plus "pleine")
+                        _NavIcon(
+                          icon: Ionicons.people,
+                          selected: _currentIndex == 3,
+                          onTap: () => _setIndex(3),
                         ),
                       ],
                     ),

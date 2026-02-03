@@ -2354,6 +2354,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Creating profile'**
   String get signUpMessageCreate;
+
+  /// No description provided for @tabGroup.
+  ///
+  /// In en, this message translates to:
+  /// **'Group'**
+  String get tabGroup;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

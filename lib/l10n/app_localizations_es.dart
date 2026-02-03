@@ -1266,4 +1266,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get signUpMessageCreate => 'Creación del perfil';
+
+  @override
+  String get tabGroup => 'Grupo';
 }
