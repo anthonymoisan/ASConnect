@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:ionicons/ionicons.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../models/conversation_summary.dart';
@@ -97,16 +96,16 @@ class _ConversationsgroupPageState extends State<ConversationsgroupPage>
     int s = list.length;
     for (final c in list) {
       s = (s * 31) ^ c.id;
-      s = (s * 31) ^ (c.unreadCount);
+      s = (s * 31) ^ c.unreadCount;
       s = (s * 31) ^ (c.lastMessageAt?.millisecondsSinceEpoch ?? 0);
+      s = (s * 31) ^ ((c.memberCount ?? 0));
 
       final lm = c.lastMessage;
       if (lm != null) {
-        s = (s * 31) ^ (lm.messageId ?? 0);
+        s = (s * 31) ^ lm.messageId;
         s = (s * 31) ^ (lm.senderPeopleId ?? 0);
-        // en groupe, isSeen peut être null => ok
         s = (s * 31) ^ ((lm.isSeen == true) ? 1 : 0);
-        s = (s * 31) ^ (lm.bodyText.hashCode);
+        s = (s * 31) ^ lm.bodyText.hashCode;
       }
     }
     return s;
@@ -129,7 +128,6 @@ class _ConversationsgroupPageState extends State<ConversationsgroupPage>
           await ConversationApi.fetchConversationsGroupSummaryForPerson(pid);
       if (!mounted) return;
 
-      // sécurité: garder uniquement les groupes si l'API mixait (au cas où)
       final groups = data.where((c) => c.isGroup == true).toList();
 
       setState(() {
@@ -286,8 +284,15 @@ class _ConversationsgroupPageState extends State<ConversationsgroupPage>
   String _groupTitle(BuildContext context, ConversationSummary conv) {
     final l10n = AppLocalizations.of(context)!;
     final raw = conv.title.trim();
-    if (raw.isEmpty) return l10n.tabGroup; // ou "Groupe" si tu préfères
+    if (raw.isEmpty) return l10n.tabGroup;
     return raw;
+  }
+
+  String _membersLine(ConversationSummary conv) {
+    final mc = conv.memberCount;
+    if (mc == null || mc <= 0) return '';
+    final l10n = AppLocalizations.of(context)!;
+    return l10n.groupMembersCount(mc);
   }
 
   @override
@@ -298,24 +303,25 @@ class _ConversationsgroupPageState extends State<ConversationsgroupPage>
       return Center(child: Text(l10n.conversationsReconnectToSee));
     }
 
-    final pid = widget.personId!;
-
     return RefreshIndicator(
       onRefresh: () => _reload(silent: false),
-      child: _buildBody(pid),
+      child: _buildBody(),
     );
   }
 
-  Widget _buildBody(int pid) {
+  Widget _buildBody() {
     final l10n = AppLocalizations.of(context)!;
 
     if (_initialLoading && _items.isEmpty) {
       return ListView(
         physics: const AlwaysScrollableScrollPhysics(),
-        children: const [
-          SizedBox(height: 160),
+        children: [
+          const SizedBox(height: 160),
           Center(
-            child: Text('Chargement…', style: TextStyle(color: Colors.black54)),
+            child: Text(
+              l10n.loading,
+              style: const TextStyle(color: Colors.black54),
+            ),
           ),
         ],
       );
@@ -337,13 +343,16 @@ class _ConversationsgroupPageState extends State<ConversationsgroupPage>
       separatorBuilder: (_, __) => const Divider(height: 1),
       itemBuilder: (context, index) {
         final conv = _items[index];
+        final members = _membersLine(conv);
 
         return ListTile(
           contentPadding: const EdgeInsets.symmetric(
             horizontal: 16,
             vertical: 8,
           ),
-          leading: const _GroupAvatar(radius: 22),
+
+          // ✅ plus d’avatar sur les groupes
+          // leading: ...
           title: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -361,7 +370,25 @@ class _ConversationsgroupPageState extends State<ConversationsgroupPage>
               ),
             ],
           ),
-          subtitle: _GroupLastLine(conv: conv),
+
+          // ✅ memberCount sous le titre + last line dessous
+          subtitle: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (members.isNotEmpty) ...[
+                const SizedBox(height: 2),
+                Text(
+                  members,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
+                ),
+              ],
+              const SizedBox(height: 2),
+              _GroupLastLine(conv: conv),
+            ],
+          ),
+
           trailing: conv.unreadCount > 0
               ? _UnreadBubble(count: conv.unreadCount)
               : null,
@@ -376,25 +403,6 @@ class _ConversationsgroupPageState extends State<ConversationsgroupPage>
 // ============================================================================
 // UI helpers
 // ============================================================================
-
-class _GroupAvatar extends StatelessWidget {
-  const _GroupAvatar({required this.radius});
-
-  final double radius;
-
-  @override
-  Widget build(BuildContext context) {
-    return CircleAvatar(
-      radius: radius,
-      backgroundColor: Colors.grey.shade200,
-      child: Icon(
-        Ionicons.people_circle_outline,
-        color: Colors.grey.shade700,
-        size: radius * 1.2,
-      ),
-    );
-  }
-}
 
 class _UnreadBubble extends StatelessWidget {
   final int count;
@@ -443,8 +451,7 @@ class _GroupLastLine extends StatelessWidget {
       );
     }
 
-    // En groupe: pas de double-check "vu" global => pas d'icône done/done_all
-    final pseudo = (last.pseudo ?? '').trim();
+    final pseudo = (last.pseudo).trim();
     final prefix = pseudo.isEmpty ? '' : '$pseudo : ';
     final text = '$prefix${last.bodyText}';
 

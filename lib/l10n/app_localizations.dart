@@ -2360,6 +2360,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Group'**
   String get tabGroup;
+
+  /// Group member count
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, one{{count} member} other{{count} members}}'**
+  String groupMembersCount(int count);
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

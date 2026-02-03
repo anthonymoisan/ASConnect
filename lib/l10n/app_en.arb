@@ -631,5 +631,10 @@
   "signUpGPS": "Determining your city's coordinates from GPS location",
   "signUpMessageCreate": "Creating profile",
   
-  "tabGroup": "Group"
+  "tabGroup": "Group",
+  "groupMembersCount": "{count, plural, one{{count} member} other{{count} members}}",
+  "@groupMembersCount": {
+    "description": "Group member count",
+    "placeholders": { "count": { "type": "int" } }
+  }
 }

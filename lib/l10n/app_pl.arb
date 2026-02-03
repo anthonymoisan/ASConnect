@@ -632,5 +632,10 @@
   "signUpGPS": "Ustalanie współrzędnych Twojego miasta na podstawie lokalizacji GPS",
   "signUpMessageCreate": "Tworzenie profilu",
   
-  "tabGroup": "Grupa"
+  "tabGroup": "Grupa",
+  "groupMembersCount": "{count, plural, one{{count} członek} few{{count} członkowie} many{{count} członków} other{{count} członków}}",
+  "@groupMembersCount": {
+    "description": "Liczba członków grupy",
+    "placeholders": { "count": { "type": "int" } }
+  }
 }

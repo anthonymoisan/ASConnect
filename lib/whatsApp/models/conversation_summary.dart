@@ -9,6 +9,8 @@ class ConversationSummary {
 
   final int unreadCount; // ✅ nombre de messages non lus (pour le viewer)
 
+  final int? memberCount;
+
   final int? otherPeopleId; // ✅ utile pour avatar en 1–1
   final bool? otherIsConnected;
 
@@ -21,6 +23,7 @@ class ConversationSummary {
     required this.createdAt,
     required this.lastMessageAt,
     required this.unreadCount,
+    required this.memberCount,
     required this.otherPeopleId,
     required this.otherIsConnected,
     required this.lastMessage,
@@ -38,6 +41,7 @@ class ConversationSummary {
           ? null
           : DateTime.parse(json['last_message_at']),
       unreadCount: (json['unread_count'] as int?) ?? 0,
+      memberCount: (json['member_count'] as int?) ?? 0,
       otherPeopleId: json['other_people_id'] as int?,
       otherIsConnected:
           (json['is_connected'] as bool?) ??

@@ -634,5 +634,10 @@
   "signUpGPS": "Déduction des coordonnées de votre ville à partir de la position GPS",
   "signUpMessageCreate": "Création profil",
 
-  "tabGroup": "Groupe"
+  "tabGroup": "Groupe",
+  "groupMembersCount": "{count, plural, one{{count} membre} other{{count} membres}}",
+  "@groupMembersCount": {
+    "description": "Nombre de membres dans un groupe",
+    "placeholders": { "count": { "type": "int" } }
+  }
 }

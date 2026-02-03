@@ -1269,4 +1269,15 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get tabGroup => 'Group';
+
+  @override
+  String groupMembersCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count members',
+      one: '$count member',
+    );
+    return '$_temp0';
+  }
 }

@@ -633,6 +633,11 @@
   "signUpGPS": "Ermittlung der Koordinaten Ihrer Stadt anhand der GPS-Position",
   "signUpMessageCreate": "Profil wird erstellt",
   
-  "tabGroup": "Gruppe"
+  "tabGroup": "Gruppe",
+  "groupMembersCount": "{count, plural, one{{count} Mitglied} other{{count} Mitglieder}}",
+  "@groupMembersCount": {
+    "description": "Anzahl der Gruppenmitglieder",
+    "placeholders": { "count": { "type": "int" } }
+  }
 
 }
