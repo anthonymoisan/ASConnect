@@ -2366,6 +2366,54 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{count, plural, one{{count} member} other{{count} members}}'**
   String groupMembersCount(int count);
+
+  /// No description provided for @groupCreateTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Create a group'**
+  String get groupCreateTooltip;
+
+  /// No description provided for @groupCreateTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Create a group'**
+  String get groupCreateTitle;
+
+  /// No description provided for @groupCreateIntro.
+  ///
+  /// In en, this message translates to:
+  /// **'You are about to create a group. Please choose a meaningful title, write the first message, and define the audience using filters.'**
+  String get groupCreateIntro;
+
+  /// No description provided for @groupTitleLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Group title'**
+  String get groupTitleLabel;
+
+  /// No description provided for @groupFirstMessageLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'First message'**
+  String get groupFirstMessageLabel;
+
+  /// No description provided for @groupCreateButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Create'**
+  String get groupCreateButton;
+
+  /// No description provided for @groupTitleRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Title is required'**
+  String get groupTitleRequired;
+
+  /// No description provided for @groupCreateNoMembers.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to create a group without members'**
+  String get groupCreateNoMembers;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

@@ -1282,4 +1282,28 @@ class AppLocalizationsPl extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get groupCreateTooltip => 'Utwórz grupę';
+
+  @override
+  String get groupCreateTitle => 'Utwórz grupę';
+
+  @override
+  String get groupCreateIntro => 'Zamierzasz utworzyć grupę. Wybierz znaczący tytuł, napisz pierwszą wiadomość i określ odbiorców za pomocą filtrów.';
+
+  @override
+  String get groupTitleLabel => 'Tytuł grupy';
+
+  @override
+  String get groupFirstMessageLabel => 'Pierwsza wiadomość';
+
+  @override
+  String get groupCreateButton => 'Utwórz';
+
+  @override
+  String get groupTitleRequired => 'Tytuł jest wymagany';
+
+  @override
+  String get groupCreateNoMembers => 'Nie można utworzyć grupy bez członków';
 }

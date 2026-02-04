@@ -1,3 +1,4 @@
+// lib/whatsApp/screens/conversationsGroup_page.dart
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -261,7 +262,7 @@ class _ConversationsgroupPageState extends State<ConversationsgroupPage>
   }
 
   // ---------------------------------------------------------------------------
-  // ✅ Création groupe (dialog) — version FIXE (controllers gérés par le dialog)
+  // ✅ Création groupe (dialog) — controllers gérés par le dialog
   // ---------------------------------------------------------------------------
 
   Future<void> _openCreateGroupDialog() async {
@@ -272,13 +273,12 @@ class _ConversationsgroupPageState extends State<ConversationsgroupPage>
       context: context,
       useRootNavigator: true,
       barrierDismissible: false,
-      builder: (ctx) => _CreateGroupDialog(peoplePublicId: pid),
+      builder: (_) => _CreateGroupDialog(peoplePublicId: pid),
     );
 
     if (!mounted) return;
 
     if (createdConversationId != null) {
-      // ✅ navigation hors dialog, après la frame
       WidgetsBinding.instance.addPostFrameCallback((_) async {
         if (!mounted) return;
         await _openConversation(createdConversationId);
@@ -320,6 +320,7 @@ class _ConversationsgroupPageState extends State<ConversationsgroupPage>
   }
 
   String _membersLine(ConversationSummary conv) {
+    // Note: memberCount is still dynamic, translation already handled by l10n.groupMembersCount
     final mc = conv.memberCount;
     if (mc == null || mc <= 0) return '';
     final l10n = AppLocalizations.of(context)!;
@@ -339,7 +340,7 @@ class _ConversationsgroupPageState extends State<ConversationsgroupPage>
         title: Text(l10n.tabGroup),
         actions: [
           IconButton(
-            tooltip: "Créer un groupe",
+            tooltip: l10n.groupCreateTooltip,
             icon: const Icon(Icons.add),
             onPressed: _openCreateGroupDialog,
           ),
@@ -480,7 +481,7 @@ class _CreateGroupDialogState extends State<_CreateGroupDialog> {
     if (title.isEmpty) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text("Titre requis")));
+      ).showSnackBar(SnackBar(content: Text(l10n.groupTitleRequired)));
       return;
     }
 
@@ -493,7 +494,7 @@ class _CreateGroupDialogState extends State<_CreateGroupDialog> {
 
       if (!members.contains(pid)) members.add(pid);
       if (members.isEmpty) {
-        throw Exception("Impossible de créer un groupe sans membres.");
+        throw Exception(l10n.groupCreateNoMembers);
       }
 
       final conv = await ConversationApi.createGroupConversation(
@@ -512,7 +513,6 @@ class _CreateGroupDialogState extends State<_CreateGroupDialog> {
 
       if (!mounted) return;
 
-      // ✅ retourne l'ID au parent
       Navigator.of(context, rootNavigator: true).pop(conv.id);
     } catch (e) {
       if (!mounted) return;
@@ -530,21 +530,19 @@ class _CreateGroupDialogState extends State<_CreateGroupDialog> {
     return PopScope(
       canPop: !_creating,
       child: AlertDialog(
-        title: Text(l10n.tabGroup),
+        title: Text(l10n.groupCreateTitle),
         content: SingleChildScrollView(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                "Vous êtes sur le point de créer un groupe. Nous vous remercions de mettre un titre significatif et de remplir le premier message ainsi que de définir l'audience à travers les filtres.",
-              ),
+              Text(l10n.groupCreateIntro),
               const SizedBox(height: 16),
               TextField(
                 controller: _titleCtrl,
                 maxLength: 255,
-                decoration: const InputDecoration(
-                  labelText: 'Titre du groupe',
-                  border: OutlineInputBorder(),
+                decoration: InputDecoration(
+                  labelText: l10n.groupTitleLabel,
+                  border: const OutlineInputBorder(),
                 ),
                 enabled: !_creating,
               ),
@@ -552,9 +550,9 @@ class _CreateGroupDialogState extends State<_CreateGroupDialog> {
               TextField(
                 controller: _firstMsgCtrl,
                 maxLines: 3,
-                decoration: const InputDecoration(
-                  labelText: 'Premier message',
-                  border: OutlineInputBorder(),
+                decoration: InputDecoration(
+                  labelText: l10n.groupFirstMessageLabel,
+                  border: const OutlineInputBorder(),
                 ),
                 enabled: !_creating,
               ),
@@ -576,9 +574,9 @@ class _CreateGroupDialogState extends State<_CreateGroupDialog> {
                     height: 18,
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
-                : const Text(
-                    "Créer",
-                    style: TextStyle(fontWeight: FontWeight.w600),
+                : Text(
+                    l10n.groupCreateButton,
+                    style: const TextStyle(fontWeight: FontWeight.w600),
                   ),
           ),
         ],

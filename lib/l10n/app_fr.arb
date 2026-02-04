@@ -639,5 +639,14 @@
   "@groupMembersCount": {
     "description": "Nombre de membres dans un groupe",
     "placeholders": { "count": { "type": "int" } }
-  }
+  },
+  
+  "groupCreateTooltip": "Créer un groupe",
+  "groupCreateTitle": "Créer un groupe",
+  "groupCreateIntro": "Vous êtes sur le point de créer un groupe. Merci de choisir un titre significatif, de rédiger le premier message et de définir l’audience via les filtres.",
+  "groupTitleLabel": "Titre du groupe",
+  "groupFirstMessageLabel": "Premier message",
+  "groupCreateButton": "Créer",
+  "groupTitleRequired": "Le titre est requis",
+  "groupCreateNoMembers": "Impossible de créer un groupe sans membres"
 }
