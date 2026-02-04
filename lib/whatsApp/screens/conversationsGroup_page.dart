@@ -46,7 +46,6 @@ class _ConversationsgroupPageState extends State<ConversationsgroupPage>
   void dispose() {
     _stopPolling();
     WidgetsBinding.instance.removeObserver(this);
-
     ConversationEvents.refreshTick.removeListener(_onRefreshTick);
     super.dispose();
   }
@@ -189,7 +188,8 @@ class _ConversationsgroupPageState extends State<ConversationsgroupPage>
           SnackBar(content: Text(l10n.conversationsLoadError(e.toString()))),
         );
       }
-      _error = e;
+
+      setState(() => _error = e);
     } finally {
       _reloading = false;
     }
@@ -218,6 +218,7 @@ class _ConversationsgroupPageState extends State<ConversationsgroupPage>
 
     final confirm = await showDialog<bool>(
       context: context,
+      useRootNavigator: true,
       builder: (ctx) {
         final l10n2 = AppLocalizations.of(ctx)!;
         return AlertDialog(
@@ -225,11 +226,12 @@ class _ConversationsgroupPageState extends State<ConversationsgroupPage>
           content: Text(l10n2.conversationsLeaveBody),
           actions: [
             TextButton(
-              onPressed: () => Navigator.of(ctx).pop(false),
+              onPressed: () =>
+                  Navigator.of(ctx, rootNavigator: true).pop(false),
               child: Text(l10n2.cancel),
             ),
             TextButton(
-              onPressed: () => Navigator.of(ctx).pop(true),
+              onPressed: () => Navigator.of(ctx, rootNavigator: true).pop(true),
               child: Text(
                 l10n2.conversationsLeaveConfirm,
                 style: const TextStyle(color: Colors.red),
@@ -257,6 +259,35 @@ class _ConversationsgroupPageState extends State<ConversationsgroupPage>
       ).showSnackBar(SnackBar(content: Text(l10n.genericError(e.toString()))));
     }
   }
+
+  // ---------------------------------------------------------------------------
+  // ✅ Création groupe (dialog) — version FIXE (controllers gérés par le dialog)
+  // ---------------------------------------------------------------------------
+
+  Future<void> _openCreateGroupDialog() async {
+    final pid = widget.personId;
+    if (pid == null) return;
+
+    final int? createdConversationId = await showDialog<int>(
+      context: context,
+      useRootNavigator: true,
+      barrierDismissible: false,
+      builder: (ctx) => _CreateGroupDialog(peoplePublicId: pid),
+    );
+
+    if (!mounted) return;
+
+    if (createdConversationId != null) {
+      // ✅ navigation hors dialog, après la frame
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        if (!mounted) return;
+        await _openConversation(createdConversationId);
+        if (mounted) _reload(silent: true);
+      });
+    }
+  }
+
+  // ---------------------------------------------------------------------------
 
   String _formatConversationDate(DateTime? date) {
     if (date == null) return '';
@@ -303,9 +334,21 @@ class _ConversationsgroupPageState extends State<ConversationsgroupPage>
       return Center(child: Text(l10n.conversationsReconnectToSee));
     }
 
-    return RefreshIndicator(
-      onRefresh: () => _reload(silent: false),
-      child: _buildBody(),
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(l10n.tabGroup),
+        actions: [
+          IconButton(
+            tooltip: "Créer un groupe",
+            icon: const Icon(Icons.add),
+            onPressed: _openCreateGroupDialog,
+          ),
+        ],
+      ),
+      body: RefreshIndicator(
+        onRefresh: () => _reload(silent: false),
+        child: _buildBody(),
+      ),
     );
   }
 
@@ -350,9 +393,6 @@ class _ConversationsgroupPageState extends State<ConversationsgroupPage>
             horizontal: 16,
             vertical: 8,
           ),
-
-          // ✅ plus d’avatar sur les groupes
-          // leading: ...
           title: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -370,8 +410,6 @@ class _ConversationsgroupPageState extends State<ConversationsgroupPage>
               ),
             ],
           ),
-
-          // ✅ memberCount sous le titre + last line dessous
           subtitle: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -381,14 +419,13 @@ class _ConversationsgroupPageState extends State<ConversationsgroupPage>
                   members,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
+                  style: TextStyle(color: Colors.orange.shade800, fontSize: 12),
                 ),
               ],
               const SizedBox(height: 2),
               _GroupLastLine(conv: conv),
             ],
           ),
-
           trailing: conv.unreadCount > 0
               ? _UnreadBubble(count: conv.unreadCount)
               : null,
@@ -396,6 +433,156 @@ class _ConversationsgroupPageState extends State<ConversationsgroupPage>
           onLongPress: () => _confirmLeaveConversation(conv.id),
         );
       },
+    );
+  }
+}
+
+// ============================================================================
+// Dialog : possède ses controllers -> dispose garanti au bon moment
+// ============================================================================
+
+class _CreateGroupDialog extends StatefulWidget {
+  final int peoplePublicId;
+
+  const _CreateGroupDialog({required this.peoplePublicId});
+
+  @override
+  State<_CreateGroupDialog> createState() => _CreateGroupDialogState();
+}
+
+class _CreateGroupDialogState extends State<_CreateGroupDialog> {
+  late final TextEditingController _titleCtrl;
+  late final TextEditingController _firstMsgCtrl;
+
+  bool _creating = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _titleCtrl = TextEditingController();
+    _firstMsgCtrl = TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    _titleCtrl.dispose();
+    _firstMsgCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _onCreate() async {
+    final l10n = AppLocalizations.of(context)!;
+    final pid = widget.peoplePublicId;
+
+    final title = _titleCtrl.text.trim();
+    final firstMsg = _firstMsgCtrl.text.trim();
+
+    if (title.isEmpty) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text("Titre requis")));
+      return;
+    }
+
+    setState(() => _creating = true);
+
+    try {
+      final members = await ConversationApi.fetchPeopleIdsForGroupFilters(
+        peoplePublicId: pid,
+      );
+
+      if (!members.contains(pid)) members.add(pid);
+      if (members.isEmpty) {
+        throw Exception("Impossible de créer un groupe sans membres.");
+      }
+
+      final conv = await ConversationApi.createGroupConversation(
+        peoplePublicId: pid,
+        listIdPeoplesMember: members,
+        title: title,
+      );
+
+      if (firstMsg.isNotEmpty) {
+        await ConversationApi.sendMessage(
+          conversationId: conv.id,
+          senderPeopleId: pid,
+          bodyText: firstMsg,
+        );
+      }
+
+      if (!mounted) return;
+
+      // ✅ retourne l'ID au parent
+      Navigator.of(context, rootNavigator: true).pop(conv.id);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(e.toString())));
+      setState(() => _creating = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+
+    return PopScope(
+      canPop: !_creating,
+      child: AlertDialog(
+        title: Text(l10n.tabGroup),
+        content: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                "Vous êtes sur le point de créer un groupe. Nous vous remercions de mettre un titre significatif et de remplir le premier message ainsi que de définir l'audience à travers les filtres.",
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: _titleCtrl,
+                maxLength: 255,
+                decoration: const InputDecoration(
+                  labelText: 'Titre du groupe',
+                  border: OutlineInputBorder(),
+                ),
+                enabled: !_creating,
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _firstMsgCtrl,
+                maxLines: 3,
+                decoration: const InputDecoration(
+                  labelText: 'Premier message',
+                  border: OutlineInputBorder(),
+                ),
+                enabled: !_creating,
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: _creating
+                ? null
+                : () => Navigator.of(context, rootNavigator: true).pop(null),
+            child: Text(l10n.cancel),
+          ),
+          TextButton(
+            onPressed: _creating ? null : _onCreate,
+            child: _creating
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Text(
+                    "Créer",
+                    style: TextStyle(fontWeight: FontWeight.w600),
+                  ),
+          ),
+        ],
+      ),
     );
   }
 }

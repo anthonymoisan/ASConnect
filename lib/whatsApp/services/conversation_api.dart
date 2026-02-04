@@ -554,4 +554,110 @@ class ConversationApi {
     _cache.removeWhere((k, _) => k.startsWith('unreadList:'));
     _cache.removeWhere((k, _) => k.startsWith('unreadTotal:'));
   }
+
+  /// ✅ POST /api/public/conversations/group
+  /// Crée une conversation de groupe
+  static Future<Conversation> createGroupConversation({
+    required int peoplePublicId,
+    required List<int> listIdPeoplesMember,
+    required String title,
+  }) async {
+    final uri = Uri.parse('$_baseUrl/conversations/group');
+
+    final body = <String, dynamic>{
+      'people_public_id': peoplePublicId,
+      'listIdPeoplesMember': listIdPeoplesMember,
+      'title': title,
+    };
+
+    final resp = await _client.post(
+      uri,
+      headers: {'X-App-Key': _appKey, 'Content-Type': 'application/json'},
+      body: jsonEncode(body),
+    );
+
+    if (resp.statusCode == 200) {
+      final data = jsonDecode(resp.body) as Map<String, dynamic>;
+
+      // ✅ Invalidation des caches concernés
+      _cache.removeWhere((k, _) => k.startsWith('convs:$peoplePublicId'));
+      _cache.removeWhere((k, _) => k.startsWith('groupSummary:'));
+      _cache.removeWhere((k, _) => k.startsWith('unreadList:'));
+      _cache.removeWhere((k, _) => k.startsWith('unreadTotal:'));
+
+      return Conversation.fromJson(data);
+    }
+
+    throw Exception(
+      'Erreur createGroupConversation (${resp.statusCode}) : ${resp.body}',
+    );
+  }
+
+  /// ✅ DELETE /api/public/conversations/group/<conversationId>
+  /// Supprime une conversation de groupe (admin uniquement)
+  static Future<void> deleteGroupConversation({
+    required int conversationId,
+    required int peoplePublicId,
+  }) async {
+    final uri = Uri.parse('$_baseUrl/conversations/group/$conversationId');
+
+    final resp = await _client.delete(
+      uri,
+      headers: {'X-App-Key': _appKey, 'Content-Type': 'application/json'},
+      body: jsonEncode({'people_public_id': peoplePublicId}),
+    );
+
+    if (resp.statusCode == 200) {
+      // ✅ Invalidation caches (la conversation disparaît)
+      _cache.removeWhere((k, _) => k.startsWith('convs:$peoplePublicId'));
+      _cache.removeWhere((k, _) => k.startsWith('groupSummary:'));
+      _cache.removeWhere((k, _) => k.startsWith('unreadList:'));
+      _cache.removeWhere((k, _) => k.startsWith('unreadTotal:'));
+      _cache.removeWhere((k, _) => k.startsWith('lastMsg:$conversationId:'));
+      return;
+    }
+
+    // ❌ Gestion d’erreurs explicites
+    if (resp.statusCode == 403) {
+      throw Exception('Suppression refusée : vous devez être admin du groupe.');
+    }
+    if (resp.statusCode == 404) {
+      throw Exception('Conversation de groupe introuvable.');
+    }
+
+    throw Exception(
+      'Erreur deleteGroupConversation '
+      '(${resp.statusCode}) : ${resp.body}',
+    );
+  }
+
+  /// ✅ GET /api/public/people/conversations/group/filters
+  /// Body JSON: { "people_public_id": 1 }
+  /// Retour attendu: liste d'IDs (ex: [2,3,4])
+  static Future<List<int>> fetchPeopleIdsForGroupFilters({
+    required int peoplePublicId,
+  }) async {
+    final uri = Uri.parse(
+      '$_baseUrl/people/conversations/group/filters',
+    ).replace(queryParameters: {'people_public_id': peoplePublicId.toString()});
+
+    final cacheKey = 'groupFiltersIds:$peoplePublicId';
+    final cached = _getCache<List<int>>(cacheKey);
+    if (cached != null) return cached;
+
+    return _dedup<List<int>>(cacheKey, () async {
+      final resp = await _client.get(uri, headers: _headers);
+
+      if (resp.statusCode == 200) {
+        final List<dynamic> jsonList = jsonDecode(resp.body) as List<dynamic>;
+        final ids = jsonList.map((e) => e as int).toList();
+        _setCache(cacheKey, ids, _ttlLong);
+        return ids;
+      }
+
+      throw Exception(
+        'Erreur fetchPeopleIdsForGroupFilters (${resp.statusCode}) : ${resp.body}',
+      );
+    });
+  }
 }
