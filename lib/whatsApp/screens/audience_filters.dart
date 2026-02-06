@@ -1,9 +1,9 @@
+import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
 
 import '../../l10n/app_localizations.dart';
 
-typedef IdOf<T> = int Function(T);
 typedef CountryOf<T> = String? Function(T);
 typedef AgeOf<T> = int? Function(T);
 typedef GenotypeOf<T> = String? Function(T);
@@ -56,10 +56,8 @@ class AudienceFilters<T> {
 
   static String _normIso2(String? raw) => (raw ?? '').trim().toUpperCase();
   static bool _isIso2(String s) => s.length == 2;
-
   static String _normGenotype(String? raw) => (raw ?? '').trim().toLowerCase();
 
-  /// Compute age domain from all people (min/max over non-null ages)
   static ({int? min, int? max}) ageDomain<T>(List<T> all, AgeOf<T> ageOf) {
     final ages = <int>[];
     for (final p in all) {
@@ -71,7 +69,6 @@ class AudienceFilters<T> {
     return (min: ages.first, max: ages.last);
   }
 
-  /// Compute country options from all people
   static List<String> countryOptions<T>(List<T> all, CountryOf<T> countryOf) {
     final set = <String>{};
     for (final p in all) {
@@ -82,7 +79,6 @@ class AudienceFilters<T> {
     return list;
   }
 
-  /// Compute genotype options from all people (raw values normalized)
   static List<String> genotypeOptions<T>(List<T> all, GenotypeOf<T> genoOf) {
     final set = <String>{};
     for (final p in all) {
@@ -93,7 +89,6 @@ class AudienceFilters<T> {
     return list;
   }
 
-  /// Default “all selected” filters
   static AudienceFilters<T> defaultAll<T>(
     List<T> all, {
     required CountryOf<T> countryOf,
@@ -116,9 +111,6 @@ class AudienceFilters<T> {
     );
   }
 
-  // ----------------------------
-  // Distance helper (Haversine) — km
-  // ----------------------------
   static double _haversineKm({
     required double lat1,
     required double lon1,
@@ -152,7 +144,6 @@ class AudienceFilters<T> {
     required List<String> datasetCountryOptions,
     required List<String> datasetGenotypeOptions,
   }) {
-    // Country active only if user narrowed selection
     final countryActive =
         countriesIso2.isNotEmpty &&
         datasetCountryOptions.isNotEmpty &&
@@ -163,7 +154,6 @@ class AudienceFilters<T> {
       if (!_isIso2(c) || !countriesIso2.contains(c)) return false;
     }
 
-    // Genotype active only if user narrowed selection
     final genoActive =
         genotypes.isNotEmpty &&
         datasetGenotypeOptions.isNotEmpty &&
@@ -172,12 +162,10 @@ class AudienceFilters<T> {
     if (genoActive) {
       final g = _normGenotype(genotypeOf(p));
       if (g.isEmpty) return false;
-      // simple contains-any
       final ok = genotypes.any((sel) => g.contains(sel) || sel.contains(g));
       if (!ok) return false;
     }
 
-    // Age active only if user narrowed range vs dataset
     final ageActive =
         datasetAgeDomain.min != null &&
         datasetAgeDomain.max != null &&
@@ -193,10 +181,13 @@ class AudienceFilters<T> {
 
     // Distance
     if (distanceEnabled) {
-      if (originLat == null || originLng == null || maxKm == null) return false;
+      // filtre OFF tant que pas prêt
+      if (originLat == null || originLng == null || maxKm == null) return true;
+
       final lat = latOf(p);
       final lng = lngOf(p);
       if (lat == null || lng == null) return false;
+
       final d = _haversineKm(
         lat1: originLat!,
         lon1: originLng!,
@@ -216,7 +207,6 @@ class AudienceFilters<T> {
 
 class AudienceFiltersSheet<T> extends StatefulWidget {
   final List<T> allPeople;
-
   final AudienceFilters<T> initial;
 
   final CountryOf<T> countryOf;
@@ -225,10 +215,9 @@ class AudienceFiltersSheet<T> extends StatefulWidget {
   final LatOf<T> latOf;
   final LngOf<T> lngOf;
 
-  /// Labels (optionnel) : mapping ISO2 -> nom pays
   final Map<String, String>? countriesByCode;
 
-  /// Origin for distance (tu peux brancher ta géoloc)
+  /// IMPORTANT: on attend une fonction, pas un Future.
   final Future<({double lat, double lng})?> Function()? resolveMyLocation;
 
   const AudienceFiltersSheet({
@@ -286,6 +275,11 @@ class _AudienceFiltersSheetState<T> extends State<AudienceFiltersSheet<T>> {
   late final List<String> _countryOptions;
   late final List<String> _genotypeOptions;
 
+  int _resultsCount = 0;
+  Timer? _countDebounce;
+
+  bool _resolvingLocation = false; // ✅ évite double tap / état “bloqué”
+
   @override
   void initState() {
     super.initState();
@@ -301,7 +295,6 @@ class _AudienceFiltersSheetState<T> extends State<AudienceFiltersSheet<T>> {
       widget.genotypeOf,
     );
 
-    // clamp age
     if (_ageDomain.min != null && _ageDomain.max != null) {
       final mi = _ageDomain.min!;
       final ma = _ageDomain.max!;
@@ -312,6 +305,29 @@ class _AudienceFiltersSheetState<T> extends State<AudienceFiltersSheet<T>> {
         maxAge: max(curMin, curMax),
       );
     }
+
+    WidgetsBinding.instance.addPostFrameCallback((_) => _scheduleCount());
+  }
+
+  @override
+  void dispose() {
+    _countDebounce?.cancel();
+    super.dispose();
+  }
+
+  void _setLocal(AudienceFilters<T> next) {
+    setState(() => _local = next);
+    _scheduleCount();
+  }
+
+  void _scheduleCount() {
+    _countDebounce?.cancel();
+    _countDebounce = Timer(const Duration(milliseconds: 140), () {
+      if (!mounted) return;
+      final c = _countResultsOptimized(_local);
+      if (!mounted) return;
+      setState(() => _resultsCount = c);
+    });
   }
 
   String _countryLabel(String iso2) {
@@ -321,21 +337,97 @@ class _AudienceFiltersSheetState<T> extends State<AudienceFiltersSheet<T>> {
     return name.trim();
   }
 
-  int _countResults(AudienceFilters<T> f) {
+  int _countResultsOptimized(AudienceFilters<T> f) {
+    final countryActive =
+        f.countriesIso2.isNotEmpty &&
+        _countryOptions.isNotEmpty &&
+        f.countriesIso2.length != _countryOptions.length;
+
+    final genoActive =
+        f.genotypes.isNotEmpty &&
+        _genotypeOptions.isNotEmpty &&
+        f.genotypes.length != _genotypeOptions.length;
+
+    final ageActive =
+        _ageDomain.min != null &&
+        _ageDomain.max != null &&
+        f.minAge != null &&
+        f.maxAge != null &&
+        (f.minAge != _ageDomain.min || f.maxAge != _ageDomain.max);
+
+    final distanceReady =
+        f.distanceEnabled &&
+        f.originLat != null &&
+        f.originLng != null &&
+        f.maxKm != null;
+
+    final selectedCountries = countryActive
+        ? f.countriesIso2.map((e) => e.trim().toUpperCase()).toSet()
+        : const <String>{};
+
+    final selectedGenos = genoActive
+        ? f.genotypes.map((e) => e.trim().toLowerCase()).toSet()
+        : const <String>{};
+
+    double? minLat, maxLat, minLng, maxLng;
+    if (distanceReady) {
+      final oLat = f.originLat!;
+      final oLng = f.originLng!;
+      final km = f.maxKm!;
+      final dLat = km / 111.32;
+      final cosLat = cos(oLat * pi / 180.0).abs();
+      final dLng = cosLat < 1e-6 ? 180.0 : km / (111.32 * cosLat);
+
+      minLat = oLat - dLat;
+      maxLat = oLat + dLat;
+      minLng = oLng - dLng;
+      maxLng = oLng + dLng;
+    }
+
     int count = 0;
     for (final p in widget.allPeople) {
-      final ok = f.matchesPerson(
-        p,
-        countryOf: widget.countryOf,
-        ageOf: widget.ageOf,
-        genotypeOf: widget.genotypeOf,
-        latOf: widget.latOf,
-        lngOf: widget.lngOf,
-        datasetAgeDomain: _ageDomain,
-        datasetCountryOptions: _countryOptions,
-        datasetGenotypeOptions: _genotypeOptions,
-      );
-      if (ok) count++;
+      if (distanceReady) {
+        final lat = widget.latOf(p);
+        final lng = widget.lngOf(p);
+        if (lat == null || lng == null) continue;
+
+        if (lat < minLat! || lat > maxLat! || lng < minLng! || lng > maxLng!)
+          continue;
+
+        final d = AudienceFilters._haversineKm(
+          lat1: f.originLat!,
+          lon1: f.originLng!,
+          lat2: lat,
+          lon2: lng,
+        );
+        if (d > f.maxKm!) continue;
+      }
+
+      if (genoActive) {
+        final g = (widget.genotypeOf(p) ?? '').trim().toLowerCase();
+        if (g.isEmpty) continue;
+        bool ok = false;
+        for (final sel in selectedGenos) {
+          if (g.contains(sel) || sel.contains(g)) {
+            ok = true;
+            break;
+          }
+        }
+        if (!ok) continue;
+      }
+
+      if (countryActive) {
+        final c = (widget.countryOf(p) ?? '').trim().toUpperCase();
+        if (c.length != 2 || !selectedCountries.contains(c)) continue;
+      }
+
+      if (ageActive) {
+        final a = widget.ageOf(p);
+        if (a == null) continue;
+        if (a < f.minAge! || a > f.maxAge!) continue;
+      }
+
+      count++;
     }
     return count;
   }
@@ -347,14 +439,58 @@ class _AudienceFiltersSheetState<T> extends State<AudienceFiltersSheet<T>> {
       ageOf: widget.ageOf,
       genotypeOf: widget.genotypeOf,
     );
-    setState(() => _local = def);
+    _setLocal(def);
+  }
+
+  Future<void> _ensureLocationOrExplain() async {
+    if (_resolvingLocation) return;
+
+    if (widget.resolveMyLocation == null) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Géolocalisation non disponible (resolver manquant)."),
+        ),
+      );
+      return;
+    }
+
+    setState(() => _resolvingLocation = true);
+    try {
+      final loc = await widget.resolveMyLocation!();
+      if (!mounted) return;
+
+      if (loc == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              "Impossible d’obtenir la position. Vérifie services GPS + autorisations.",
+            ),
+          ),
+        );
+        // On laisse distanceEnabled à false si pas de loc
+        _setLocal(_local.copyWith(distanceEnabled: false));
+        return;
+      }
+
+      _setLocal(
+        _local.copyWith(
+          distanceEnabled: true,
+          originLat: loc.lat,
+          originLng: loc.lng,
+          maxKm: _local.maxKm ?? 100.0,
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _resolvingLocation = false);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
 
-    final resultsCount = _countResults(_local);
+    final resultsCount = _resultsCount;
 
     final hasAges = _ageDomain.min != null && _ageDomain.max != null;
     final minAge = _ageDomain.min ?? 0;
@@ -375,18 +511,15 @@ class _AudienceFiltersSheetState<T> extends State<AudienceFiltersSheet<T>> {
           ),
           child: ListView(
             padding: EdgeInsets.zero,
+            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
             children: [
               Row(
                 children: [
                   const Icon(Icons.groups),
                   const SizedBox(width: 8),
-                  Text(
-                    // pas besoin de nouvelles keys l10n ici
+                  const Text(
                     'Audience',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w800,
-                      fontSize: 16,
-                    ),
+                    style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
                   ),
                 ],
               ),
@@ -421,9 +554,7 @@ class _AudienceFiltersSheetState<T> extends State<AudienceFiltersSheet<T>> {
 
               const SizedBox(height: 16),
 
-              // -----------------------------------------------------------------
               // Distance
-              // -----------------------------------------------------------------
               const Text(
                 'Distance',
                 style: TextStyle(fontWeight: FontWeight.w700),
@@ -432,44 +563,25 @@ class _AudienceFiltersSheetState<T> extends State<AudienceFiltersSheet<T>> {
                 contentPadding: EdgeInsets.zero,
                 title: const Text('Activer le filtre distance'),
                 value: _local.distanceEnabled,
-                onChanged: (v) async {
-                  if (!v) {
-                    setState(() {
-                      _local = _local.copyWith(
-                        distanceEnabled: false,
-                        originLat: null,
-                        originLng: null,
-                        maxKm: null,
-                      );
-                    });
-                    return;
-                  }
-
-                  // Try resolve location if provided
-                  if (widget.resolveMyLocation != null) {
-                    final loc = await widget.resolveMyLocation!();
-                    if (!mounted) return;
-                    if (loc == null) return;
-
-                    setState(() {
-                      _local = _local.copyWith(
-                        distanceEnabled: true,
-                        originLat: loc.lat,
-                        originLng: loc.lng,
-                        maxKm: _local.maxKm ?? 100.0,
-                      );
-                    });
-                  } else {
-                    // enable but still needs origin/max, user can still apply later
-                    setState(() {
-                      _local = _local.copyWith(
-                        distanceEnabled: true,
-                        maxKm: _local.maxKm ?? 100.0,
-                      );
-                    });
-                  }
-                },
+                onChanged: _resolvingLocation
+                    ? null // pendant l’obtention de la loc, on désactive temporairement
+                    : (v) async {
+                        if (!v) {
+                          _setLocal(
+                            _local.copyWith(
+                              distanceEnabled: false,
+                              originLat: null,
+                              originLng: null,
+                              maxKm: null,
+                            ),
+                          );
+                          return;
+                        }
+                        // si on active => on force la résolution de la position (sinon filtre inutile)
+                        await _ensureLocationOrExplain();
+                      },
               ),
+
               if (_local.distanceEnabled) ...[
                 ListTile(
                   dense: true,
@@ -478,6 +590,19 @@ class _AudienceFiltersSheetState<T> extends State<AudienceFiltersSheet<T>> {
                     (_local.originLat != null && _local.originLng != null)
                         ? 'Origine: ${_local.originLat!.toStringAsFixed(4)}, ${_local.originLng!.toStringAsFixed(4)}'
                         : 'Origine non définie',
+                  ),
+                  trailing: TextButton.icon(
+                    icon: _resolvingLocation
+                        ? const SizedBox(
+                            width: 14,
+                            height: 14,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.my_location),
+                    label: const Text('Ma position'),
+                    onPressed: _resolvingLocation
+                        ? null
+                        : _ensureLocationOrExplain,
                   ),
                 ),
                 Row(
@@ -490,9 +615,7 @@ class _AudienceFiltersSheetState<T> extends State<AudienceFiltersSheet<T>> {
                         divisions: 999,
                         label:
                             '${(_local.maxKm ?? 100.0).toStringAsFixed(0)} km',
-                        onChanged: (v) => setState(() {
-                          _local = _local.copyWith(maxKm: v);
-                        }),
+                        onChanged: (v) => _setLocal(_local.copyWith(maxKm: v)),
                       ),
                     ),
                     SizedBox(
@@ -508,9 +631,7 @@ class _AudienceFiltersSheetState<T> extends State<AudienceFiltersSheet<T>> {
 
               const SizedBox(height: 16),
 
-              // -----------------------------------------------------------------
-              // Countries
-              // -----------------------------------------------------------------
+              // Pays
               const Text('Pays', style: TextStyle(fontWeight: FontWeight.w700)),
               const SizedBox(height: 6),
               Theme(
@@ -528,17 +649,17 @@ class _AudienceFiltersSheetState<T> extends State<AudienceFiltersSheet<T>> {
                     Row(
                       children: [
                         TextButton(
-                          onPressed: () => setState(() {
-                            _local = _local.copyWith(
+                          onPressed: () => _setLocal(
+                            _local.copyWith(
                               countriesIso2: _countryOptions.toSet(),
-                            );
-                          }),
+                            ),
+                          ),
                           child: const Text('Tout sélectionner'),
                         ),
                         TextButton(
-                          onPressed: () => setState(() {
-                            _local = _local.copyWith(countriesIso2: <String>{});
-                          }),
+                          onPressed: () => _setLocal(
+                            _local.copyWith(countriesIso2: <String>{}),
+                          ),
                           child: const Text('Effacer'),
                         ),
                       ],
@@ -551,15 +672,15 @@ class _AudienceFiltersSheetState<T> extends State<AudienceFiltersSheet<T>> {
                         title: Text(_countryLabel(iso2)),
                         dense: true,
                         controlAffinity: ListTileControlAffinity.leading,
-                        onChanged: (v) => setState(() {
+                        onChanged: (v) {
                           final next = Set<String>.from(_local.countriesIso2);
                           if (v == true) {
                             next.add(iso2);
                           } else {
                             next.remove(iso2);
                           }
-                          _local = _local.copyWith(countriesIso2: next);
-                        }),
+                          _setLocal(_local.copyWith(countriesIso2: next));
+                        },
                       );
                     }),
                   ],
@@ -568,9 +689,7 @@ class _AudienceFiltersSheetState<T> extends State<AudienceFiltersSheet<T>> {
 
               const SizedBox(height: 16),
 
-              // -----------------------------------------------------------------
-              // Genotypes
-              // -----------------------------------------------------------------
+              // Génotype
               const Text(
                 'Génotype',
                 style: TextStyle(fontWeight: FontWeight.w700),
@@ -583,23 +702,21 @@ class _AudienceFiltersSheetState<T> extends State<AudienceFiltersSheet<T>> {
                   title: Text(g),
                   dense: true,
                   controlAffinity: ListTileControlAffinity.leading,
-                  onChanged: (v) => setState(() {
+                  onChanged: (v) {
                     final next = Set<String>.from(_local.genotypes);
                     if (v == true) {
                       next.add(g);
                     } else {
                       next.remove(g);
                     }
-                    _local = _local.copyWith(genotypes: next);
-                  }),
+                    _setLocal(_local.copyWith(genotypes: next));
+                  },
                 );
               }),
 
               const SizedBox(height: 16),
 
-              // -----------------------------------------------------------------
-              // Age
-              // -----------------------------------------------------------------
+              // Âge
               const Text('Âge', style: TextStyle(fontWeight: FontWeight.w700)),
               const SizedBox(height: 6),
               if (!hasAges)
@@ -627,12 +744,12 @@ class _AudienceFiltersSheetState<T> extends State<AudienceFiltersSheet<T>> {
                     (_local.minAge ?? minAge).toString(),
                     (_local.maxAge ?? maxAge).toString(),
                   ),
-                  onChanged: (rng) => setState(() {
-                    _local = _local.copyWith(
+                  onChanged: (rng) => _setLocal(
+                    _local.copyWith(
                       minAge: rng.start.round(),
                       maxAge: rng.end.round(),
-                    );
-                  }),
+                    ),
+                  ),
                 ),
               ],
 
@@ -641,10 +758,7 @@ class _AudienceFiltersSheetState<T> extends State<AudienceFiltersSheet<T>> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
-                  TextButton(
-                    onPressed: _reset,
-                    child: Text(l10n.mapReset), // déjà présent chez toi
-                  ),
+                  TextButton(onPressed: _reset, child: Text(l10n.mapReset)),
                   const SizedBox(width: 8),
                   TextButton(
                     onPressed: () => Navigator.of(context).pop(null),
@@ -653,12 +767,11 @@ class _AudienceFiltersSheetState<T> extends State<AudienceFiltersSheet<T>> {
                   const SizedBox(width: 8),
                   ElevatedButton.icon(
                     icon: const Icon(Icons.check),
-                    label: Text(l10n.mapApply), // déjà présent chez toi
+                    label: Text(l10n.mapApply),
                     onPressed: () => Navigator.of(context).pop(_local),
                   ),
                 ],
               ),
-
               const SizedBox(height: 8),
             ],
           ),

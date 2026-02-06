@@ -591,7 +591,7 @@ class _CreateGroupDialogState extends State<_CreateGroupDialog> {
       latOf: (p) => p.latitude,
       lngOf: (p) => p.longitude,
       countriesByCode: _countriesByCode,
-      resolveMyLocation: _resolveMyLocationForAudience,
+      resolveMyLocation: () => _resolveMyLocationForAudience(context),
     );
 
     if (!mounted) return;
