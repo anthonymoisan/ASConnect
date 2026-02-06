@@ -647,6 +647,7 @@
   "groupFirstMessageLabel": "Primo messaggio",
   "groupCreateButton": "Crea",
   "groupTitleRequired": "Il titolo è obbligatorio",
-  "groupCreateNoMembers": "Impossibile creare un gruppo senza membri"
+  "groupCreateNoMembers": "Impossibile creare un gruppo senza membri",
+  "audience": "Pubblico"
 
 }

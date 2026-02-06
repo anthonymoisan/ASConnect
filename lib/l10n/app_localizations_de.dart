@@ -1304,4 +1304,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get groupCreateNoMembers => 'Eine Gruppe kann nicht ohne Mitglieder erstellt werden';
+
+  @override
+  String get audience => 'Zielgruppe';
 }

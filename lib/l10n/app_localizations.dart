@@ -2414,6 +2414,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Unable to create a group without members'**
   String get groupCreateNoMembers;
+
+  /// No description provided for @audience.
+  ///
+  /// In en, this message translates to:
+  /// **'Audience'**
+  String get audience;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

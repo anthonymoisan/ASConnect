@@ -1,10 +1,10 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../../tabular/services/tabular_api.dart';
-import '../../tabular/models/listPerson.dart';
 import '../../tabular/models/person.dart';
 
 import '../models/conversation_summary.dart';
@@ -265,10 +265,6 @@ class _ConversationsgroupPageState extends State<ConversationsgroupPage>
     }
   }
 
-  // ---------------------------------------------------------------------------
-  // ✅ Création groupe
-  // ---------------------------------------------------------------------------
-
   Future<void> _openCreateGroupDialog() async {
     final pid = widget.personId;
     if (pid == null) return;
@@ -290,8 +286,6 @@ class _ConversationsgroupPageState extends State<ConversationsgroupPage>
       });
     }
   }
-
-  // ---------------------------------------------------------------------------
 
   String _formatConversationDate(DateTime? date) {
     if (date == null) return '';
@@ -460,12 +454,53 @@ class _CreateGroupDialogState extends State<_CreateGroupDialog> {
   AudienceFilters<Person>? _audience;
   Map<String, String> _countriesByCode = const {};
 
+  int _audienceCount = 0; // ✅ compteur stable
+
   @override
   void initState() {
     super.initState();
     _titleCtrl = TextEditingController();
     _firstMsgCtrl = TextEditingController();
-    _loadAudienceDataset();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _loadAudienceDataset();
+    });
+  }
+
+  Future<({double lat, double lng})?> _resolveMyLocationForAudience(
+    BuildContext ctx,
+  ) async {
+    try {
+      try {
+        final enabled = await Geolocator.isLocationServiceEnabled();
+        if (!enabled) return null;
+      } catch (_) {}
+
+      try {
+        var perm = await Geolocator.checkPermission();
+        if (perm == LocationPermission.denied) {
+          perm = await Geolocator.requestPermission();
+        }
+        if (perm == LocationPermission.denied ||
+            perm == LocationPermission.deniedForever) {
+          return null;
+        }
+      } catch (_) {}
+
+      try {
+        final last = await Geolocator.getLastKnownPosition();
+        if (last != null) return (lat: last.latitude, lng: last.longitude);
+      } catch (_) {}
+
+      final pos = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.lowest,
+        timeLimit: const Duration(seconds: 6),
+      );
+
+      return (lat: pos.latitude, lng: pos.longitude);
+    } catch (_) {
+      return null;
+    }
   }
 
   Future<void> _loadAudienceDataset() async {
@@ -473,7 +508,6 @@ class _CreateGroupDialogState extends State<_CreateGroupDialog> {
       final listPerson = await TabularApi.fetchPeopleMapRepresentation();
       final people = listPerson.items;
 
-      // countries translated (optionnel)
       Map<String, String> cMap = const {};
       try {
         final locale = Localizations.localeOf(context).languageCode;
@@ -493,9 +527,18 @@ class _CreateGroupDialogState extends State<_CreateGroupDialog> {
         _allPeople = people;
         _countriesByCode = cMap;
         _audience = initial;
+
+        // ✅ important: dès que le dataset est là, on affiche sa taille
+        _audienceCount = people.length;
       });
-    } catch (_) {
-      // si ça échoue, on garde null et on créera "tout le monde"
+    } catch (e) {
+      debugPrint('loadAudienceDataset error: $e');
+      if (!mounted) return;
+      setState(() {
+        _allPeople = null;
+        _audience = null;
+        _audienceCount = 0;
+      });
     }
   }
 
@@ -504,6 +547,33 @@ class _CreateGroupDialogState extends State<_CreateGroupDialog> {
     _titleCtrl.dispose();
     _firstMsgCtrl.dispose();
     super.dispose();
+  }
+
+  int _countMatchingPeople(AudienceFilters<Person> f, List<Person> all) {
+    final ageDomain = AudienceFilters.ageDomain(all, (p) => p.age);
+    final countryOpts = AudienceFilters.countryOptions(
+      all,
+      (p) => p.countryCode,
+    );
+    final genoOpts = AudienceFilters.genotypeOptions(all, (p) => p.genotype);
+
+    int count = 0;
+    for (final p in all) {
+      if (f.matchesPerson(
+        p,
+        countryOf: (pp) => pp.countryCode,
+        ageOf: (pp) => pp.age,
+        genotypeOf: (pp) => pp.genotype,
+        latOf: (pp) => pp.latitude,
+        lngOf: (pp) => pp.longitude,
+        datasetAgeDomain: ageDomain,
+        datasetCountryOptions: countryOpts,
+        datasetGenotypeOptions: genoOpts,
+      )) {
+        count++;
+      }
+    }
+    return count;
   }
 
   Future<void> _openAudienceFilters() async {
@@ -521,13 +591,16 @@ class _CreateGroupDialogState extends State<_CreateGroupDialog> {
       latOf: (p) => p.latitude,
       lngOf: (p) => p.longitude,
       countriesByCode: _countriesByCode,
-      // si tu veux brancher la géoloc plus tard, tu mets resolveMyLocation ici
-      resolveMyLocation: null,
+      resolveMyLocation: _resolveMyLocationForAudience,
     );
 
     if (!mounted) return;
     if (updated != null) {
-      setState(() => _audience = updated);
+      final c = _countMatchingPeople(updated, all);
+      setState(() {
+        _audience = updated;
+        _audienceCount = c;
+      });
     }
   }
 
@@ -535,7 +608,6 @@ class _CreateGroupDialogState extends State<_CreateGroupDialog> {
     final all = _allPeople;
     final f = _audience;
 
-    // fallback: tout le monde (ou seulement pid si dataset pas prêt)
     if (all == null || f == null) return <int>[pid];
 
     final ageDomain = AudienceFilters.ageDomain(all, (p) => p.age);
@@ -614,7 +686,13 @@ class _CreateGroupDialogState extends State<_CreateGroupDialog> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
 
-    final audienceReady = _allPeople != null && _audience != null;
+    final buttonEnabled = _allPeople != null && _audience != null;
+
+    // ✅ FIX: on affiche le compteur dès que le dataset est chargé
+    final datasetLoaded = _allPeople != null;
+    final countLabel = datasetLoaded
+        ? l10n.groupMembersCount(_audienceCount)
+        : '…';
 
     return PopScope(
       canPop: !_creating,
@@ -627,21 +705,32 @@ class _CreateGroupDialogState extends State<_CreateGroupDialog> {
               Text(l10n.groupCreateIntro),
               const SizedBox(height: 16),
 
-              // Audience section
               Row(
                 children: [
                   const Icon(Icons.tune, size: 18),
                   const SizedBox(width: 8),
-                  const Text(
-                    'Audience',
-                    style: TextStyle(fontWeight: FontWeight.w700),
-                  ),
-                  const Spacer(),
-                  TextButton(
-                    onPressed: (_creating || !audienceReady)
-                        ? null
-                        : _openAudienceFilters,
-                    child: Text(audienceReady ? 'Modifier' : 'Chargement...'),
+                  Expanded(
+                    child: TextButton(
+                      onPressed: (_creating || !buttonEnabled)
+                          ? null
+                          : _openAudienceFilters,
+                      style: TextButton.styleFrom(padding: EdgeInsets.zero),
+                      child: Row(
+                        children: [
+                          Text(
+                            l10n.audience,
+                            style: const TextStyle(fontWeight: FontWeight.w700),
+                          ),
+                          const Spacer(),
+                          Text(
+                            countLabel,
+                            style: TextStyle(color: Colors.grey.shade700),
+                          ),
+                          const SizedBox(width: 6),
+                          const Icon(Icons.chevron_right, size: 18),
+                        ],
+                      ),
+                    ),
                   ),
                 ],
               ),
