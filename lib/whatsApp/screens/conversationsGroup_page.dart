@@ -1,13 +1,18 @@
-// lib/whatsApp/screens/conversationsGroup_page.dart
 import 'dart:async';
 
 import 'package:flutter/material.dart';
 
 import '../../l10n/app_localizations.dart';
+import '../../tabular/services/tabular_api.dart';
+import '../../tabular/models/listPerson.dart';
+import '../../tabular/models/person.dart';
+
 import '../models/conversation_summary.dart';
 import '../services/conversation_api.dart';
 import '../services/conversation_events.dart';
 import 'chat_page.dart';
+
+import 'audience_filters.dart';
 
 class ConversationsgroupPage extends StatefulWidget {
   final int? personId;
@@ -215,8 +220,6 @@ class _ConversationsgroupPageState extends State<ConversationsgroupPage>
     final pid = widget.personId;
     if (pid == null) return;
 
-    final l10n = AppLocalizations.of(context)!;
-
     final confirm = await showDialog<bool>(
       context: context,
       useRootNavigator: true,
@@ -255,6 +258,7 @@ class _ConversationsgroupPageState extends State<ConversationsgroupPage>
       _reload(silent: true);
     } catch (e) {
       if (!mounted) return;
+      final l10n = AppLocalizations.of(context)!;
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text(l10n.genericError(e.toString()))));
@@ -262,7 +266,7 @@ class _ConversationsgroupPageState extends State<ConversationsgroupPage>
   }
 
   // ---------------------------------------------------------------------------
-  // ✅ Création groupe (dialog) — controllers gérés par le dialog
+  // ✅ Création groupe
   // ---------------------------------------------------------------------------
 
   Future<void> _openCreateGroupDialog() async {
@@ -320,7 +324,6 @@ class _ConversationsgroupPageState extends State<ConversationsgroupPage>
   }
 
   String _membersLine(ConversationSummary conv) {
-    // Note: memberCount is still dynamic, translation already handled by l10n.groupMembersCount
     final mc = conv.memberCount;
     if (mc == null || mc <= 0) return '';
     final l10n = AppLocalizations.of(context)!;
@@ -340,7 +343,7 @@ class _ConversationsgroupPageState extends State<ConversationsgroupPage>
         title: Text(l10n.tabGroup),
         actions: [
           IconButton(
-            tooltip: l10n.groupCreateTooltip,
+            tooltip: 'Créer un groupe',
             icon: const Icon(Icons.add),
             onPressed: _openCreateGroupDialog,
           ),
@@ -359,14 +362,9 @@ class _ConversationsgroupPageState extends State<ConversationsgroupPage>
     if (_initialLoading && _items.isEmpty) {
       return ListView(
         physics: const AlwaysScrollableScrollPhysics(),
-        children: [
-          const SizedBox(height: 160),
-          Center(
-            child: Text(
-              l10n.loading,
-              style: const TextStyle(color: Colors.black54),
-            ),
-          ),
+        children: const [
+          SizedBox(height: 160),
+          Center(child: Text('Chargement...')),
         ],
       );
     }
@@ -439,7 +437,7 @@ class _ConversationsgroupPageState extends State<ConversationsgroupPage>
 }
 
 // ============================================================================
-// Dialog : possède ses controllers -> dispose garanti au bon moment
+// Dialog : controllers + Audience Filters
 // ============================================================================
 
 class _CreateGroupDialog extends StatefulWidget {
@@ -457,11 +455,48 @@ class _CreateGroupDialogState extends State<_CreateGroupDialog> {
 
   bool _creating = false;
 
+  // Audience
+  List<Person>? _allPeople;
+  AudienceFilters<Person>? _audience;
+  Map<String, String> _countriesByCode = const {};
+
   @override
   void initState() {
     super.initState();
     _titleCtrl = TextEditingController();
     _firstMsgCtrl = TextEditingController();
+    _loadAudienceDataset();
+  }
+
+  Future<void> _loadAudienceDataset() async {
+    try {
+      final listPerson = await TabularApi.fetchPeopleMapRepresentation();
+      final people = listPerson.items;
+
+      // countries translated (optionnel)
+      Map<String, String> cMap = const {};
+      try {
+        final locale = Localizations.localeOf(context).languageCode;
+        cMap = await TabularApi.fetchCountriesTranslated(locale: locale);
+      } catch (_) {}
+
+      if (!mounted) return;
+
+      final initial = AudienceFilters.defaultAll<Person>(
+        people,
+        countryOf: (p) => p.countryCode,
+        ageOf: (p) => p.age,
+        genotypeOf: (p) => p.genotype,
+      );
+
+      setState(() {
+        _allPeople = people;
+        _countriesByCode = cMap;
+        _audience = initial;
+      });
+    } catch (_) {
+      // si ça échoue, on garde null et on créera "tout le monde"
+    }
   }
 
   @override
@@ -469,6 +504,65 @@ class _CreateGroupDialogState extends State<_CreateGroupDialog> {
     _titleCtrl.dispose();
     _firstMsgCtrl.dispose();
     super.dispose();
+  }
+
+  Future<void> _openAudienceFilters() async {
+    final all = _allPeople;
+    final current = _audience;
+    if (all == null || current == null) return;
+
+    final updated = await AudienceFiltersSheet.open<Person>(
+      context: context,
+      allPeople: all,
+      initial: current,
+      countryOf: (p) => p.countryCode,
+      ageOf: (p) => p.age,
+      genotypeOf: (p) => p.genotype,
+      latOf: (p) => p.latitude,
+      lngOf: (p) => p.longitude,
+      countriesByCode: _countriesByCode,
+      // si tu veux brancher la géoloc plus tard, tu mets resolveMyLocation ici
+      resolveMyLocation: null,
+    );
+
+    if (!mounted) return;
+    if (updated != null) {
+      setState(() => _audience = updated);
+    }
+  }
+
+  List<int> _buildAudienceIdsOrFallbackAll({required int pid}) {
+    final all = _allPeople;
+    final f = _audience;
+
+    // fallback: tout le monde (ou seulement pid si dataset pas prêt)
+    if (all == null || f == null) return <int>[pid];
+
+    final ageDomain = AudienceFilters.ageDomain(all, (p) => p.age);
+    final countryOpts = AudienceFilters.countryOptions(
+      all,
+      (p) => p.countryCode,
+    );
+    final genoOpts = AudienceFilters.genotypeOptions(all, (p) => p.genotype);
+
+    final ids = <int>[];
+    for (final p in all) {
+      final ok = f.matchesPerson(
+        p,
+        countryOf: (pp) => pp.countryCode,
+        ageOf: (pp) => pp.age,
+        genotypeOf: (pp) => pp.genotype,
+        latOf: (pp) => pp.latitude,
+        lngOf: (pp) => pp.longitude,
+        datasetAgeDomain: ageDomain,
+        datasetCountryOptions: countryOpts,
+        datasetGenotypeOptions: genoOpts,
+      );
+      if (ok) ids.add(p.id);
+    }
+
+    if (!ids.contains(pid)) ids.add(pid);
+    return ids;
   }
 
   Future<void> _onCreate() async {
@@ -488,14 +582,8 @@ class _CreateGroupDialogState extends State<_CreateGroupDialog> {
     setState(() => _creating = true);
 
     try {
-      final members = await ConversationApi.fetchPeopleIdsForGroupFilters(
-        peoplePublicId: pid,
-      );
-
-      if (!members.contains(pid)) members.add(pid);
-      if (members.isEmpty) {
-        throw Exception(l10n.groupCreateNoMembers);
-      }
+      final members = _buildAudienceIdsOrFallbackAll(pid: pid);
+      if (members.isEmpty) throw Exception(l10n.groupCreateNoMembers);
 
       final conv = await ConversationApi.createGroupConversation(
         peoplePublicId: pid,
@@ -512,7 +600,6 @@ class _CreateGroupDialogState extends State<_CreateGroupDialog> {
       }
 
       if (!mounted) return;
-
       Navigator.of(context, rootNavigator: true).pop(conv.id);
     } catch (e) {
       if (!mounted) return;
@@ -527,6 +614,8 @@ class _CreateGroupDialogState extends State<_CreateGroupDialog> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
 
+    final audienceReady = _allPeople != null && _audience != null;
+
     return PopScope(
       canPop: !_creating,
       child: AlertDialog(
@@ -537,6 +626,28 @@ class _CreateGroupDialogState extends State<_CreateGroupDialog> {
             children: [
               Text(l10n.groupCreateIntro),
               const SizedBox(height: 16),
+
+              // Audience section
+              Row(
+                children: [
+                  const Icon(Icons.tune, size: 18),
+                  const SizedBox(width: 8),
+                  const Text(
+                    'Audience',
+                    style: TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                  const Spacer(),
+                  TextButton(
+                    onPressed: (_creating || !audienceReady)
+                        ? null
+                        : _openAudienceFilters,
+                    child: Text(audienceReady ? 'Modifier' : 'Chargement...'),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 8),
+
               TextField(
                 controller: _titleCtrl,
                 maxLength: 255,
@@ -546,7 +657,9 @@ class _CreateGroupDialogState extends State<_CreateGroupDialog> {
                 ),
                 enabled: !_creating,
               ),
+
               const SizedBox(height: 12),
+
               TextField(
                 controller: _firstMsgCtrl,
                 maxLines: 3,
