@@ -2420,6 +2420,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Audience'**
   String get audience;
+
+  /// Generic title for a user profile
+  ///
+  /// In en, this message translates to:
+  /// **'Profile'**
+  String get profile;
+
+  /// Age suffix (e.g., 12 years old)
+  ///
+  /// In en, this message translates to:
+  /// **'years old'**
+  String get yearsOld;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

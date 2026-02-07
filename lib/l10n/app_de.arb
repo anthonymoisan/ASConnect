@@ -648,6 +648,15 @@
   "groupCreateButton": "Erstellen",
   "groupTitleRequired": "Titel ist erforderlich",
   "groupCreateNoMembers": "Eine Gruppe kann nicht ohne Mitglieder erstellt werden",
-  "audience": "Zielgruppe"
+  "audience": "Zielgruppe",
+  "profile": "Profil",
+  "yearsOld": "Jahre",
+
+  "@profile": {
+    "description": "Allgemeiner Titel für ein Benutzerprofil"
+  },
+  "@yearsOld": {
+    "description": "Alters-Suffix (z.B. 12 Jahre)"
+  }
 
 }

@@ -1307,4 +1307,10 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get audience => 'Audiencia';
+
+  @override
+  String get profile => 'Perfil';
+
+  @override
+  String get yearsOld => 'años';
 }

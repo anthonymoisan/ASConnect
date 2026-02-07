@@ -647,5 +647,14 @@
   "groupCreateButton": "Utwórz",
   "groupTitleRequired": "Tytuł jest wymagany",
   "groupCreateNoMembers": "Nie można utworzyć grupy bez członków",
-  "audience": "Público"
+  "audience": "Público",
+  "profile": "Profil",
+  "yearsOld": "lat",
+
+  "@profile": {
+    "description": "Ogólny tytuł profilu użytkownika"
+  },
+  "@yearsOld": {
+    "description": "Sufiks wieku (np. 12 lat)"
+  }
 }

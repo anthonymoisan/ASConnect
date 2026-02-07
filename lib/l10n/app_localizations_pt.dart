@@ -1307,4 +1307,10 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get audience => 'Público';
+
+  @override
+  String get profile => 'Perfil';
+
+  @override
+  String get yearsOld => 'anos';
 }

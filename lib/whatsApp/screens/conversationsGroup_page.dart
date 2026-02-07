@@ -1,7 +1,11 @@
+// lib/whatsApp/screens/conversationsGroup_page.dart
+
 import 'dart:async';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:http/http.dart' as http;
 
 import '../../l10n/app_localizations.dart';
 import '../../tabular/services/tabular_api.dart';
@@ -35,6 +39,11 @@ class _ConversationsgroupPageState extends State<ConversationsgroupPage>
 
   static const Duration _pollInterval = Duration(seconds: 10);
 
+  // ✅ cache infos admin (pseudo/age/localisation)
+  final Map<int, Person> _peopleCache = {};
+  Map<String, String> _countriesByCode = const {};
+  bool _profileLoading = false;
+
   void _onRefreshTick() => _reload(silent: true);
 
   @override
@@ -63,6 +72,7 @@ class _ConversationsgroupPageState extends State<ConversationsgroupPage>
       _items = [];
       _error = null;
       _initialLoading = true;
+      _peopleCache.clear();
       _loadInitial();
       _startPolling();
     }
@@ -317,11 +327,234 @@ class _ConversationsgroupPageState extends State<ConversationsgroupPage>
     return raw;
   }
 
-  String _membersLine(ConversationSummary conv) {
+  String _membersInline(ConversationSummary conv) {
     final mc = conv.memberCount;
     if (mc == null || mc <= 0) return '';
     final l10n = AppLocalizations.of(context)!;
     return l10n.groupMembersCount(mc);
+  }
+
+  // ---------------------------------------------------------------------------
+  // ✅ Admin profile: charger pseudo/age/localisation puis afficher une sheet
+  // ---------------------------------------------------------------------------
+
+  Future<void> _ensureCountriesLoaded() async {
+    if (_countriesByCode.isNotEmpty) return;
+    try {
+      final locale = Localizations.localeOf(context).languageCode;
+      final map = await TabularApi.fetchCountriesTranslated(locale: locale);
+      if (!mounted) return;
+      setState(() => _countriesByCode = map);
+    } catch (_) {
+      // ok: on gardera ISO2
+    }
+  }
+
+  Future<Person?> _getPersonFromDataset(int id) async {
+    // cache
+    final cached = _peopleCache[id];
+    if (cached != null) return cached;
+
+    // ⚠️ si ton API a un endpoint "get person by id" c'est mieux.
+    // Là on réutilise le dataset mapRepresentation (simple, mais peut être lourd).
+    final list = await TabularApi.fetchPeopleMapRepresentation();
+    for (final p in list.items) {
+      if (p.id == id) {
+        _peopleCache[id] = p;
+        return p;
+      }
+    }
+    return null;
+  }
+
+  String _countryLabelIso2(String? iso2) {
+    final code = (iso2 ?? '').trim().toUpperCase();
+    if (code.length != 2) return '';
+    final translated = _countriesByCode[code];
+    return (translated == null || translated.trim().isEmpty)
+        ? code
+        : translated.trim();
+  }
+
+  String _locationLine(Person p) {
+    final parts = <String>[];
+
+    final c = _countryLabelIso2(p.countryCode);
+    if (c.isNotEmpty) parts.add(c);
+
+    // si tu as d'autres champs (ville / région) dans Person, tu peux les ajouter ici.
+    // Ex:
+    // final city = (p.city ?? '').trim();
+    // if (city.isNotEmpty) parts.insert(0, city);
+
+    final lat = p.latitude;
+    final lng = p.longitude;
+    if (lat != null && lng != null) {
+      parts.add('${lat.toStringAsFixed(4)}, ${lng.toStringAsFixed(4)}');
+    }
+
+    return parts.join(' • ');
+  }
+
+  Future<void> _openAdminProfile(int adminId) async {
+    if (_profileLoading) return;
+    setState(() => _profileLoading = true);
+
+    try {
+      await _ensureCountriesLoaded();
+      final p = await _getPersonFromDataset(adminId);
+      if (!mounted) return;
+
+      if (p == null) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Profil indisponible')));
+        return;
+      }
+
+      await showModalBottomSheet<void>(
+        context: context,
+        isScrollControlled: true,
+        useSafeArea: true,
+        builder: (ctx) {
+          final l10n = AppLocalizations.of(ctx)!;
+
+          final pseudo = (p.pseudo ?? '').trim(); // supposé exister dans Person
+          final age = p.age;
+          final loc = _locationLine(p);
+
+          return Padding(
+            padding: EdgeInsets.only(
+              left: 16,
+              right: 16,
+              top: 16,
+              bottom: 16 + MediaQuery.of(ctx).viewInsets.bottom,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  children: [
+                    PeoplePhotoAvatar(
+                      peopleId: adminId,
+                      radius: 32,
+                      onTap: () {
+                        // plein écran photo
+                        _openAvatarFullScreen(adminId);
+                      },
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            pseudo.isEmpty ? l10n.profile : pseudo,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w800,
+                              fontSize: 16,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          if (age != null)
+                            Text(
+                              '${age.toString()} ${l10n.yearsOld}',
+                              style: TextStyle(color: Colors.grey.shade700),
+                            ),
+                          if (loc.isNotEmpty) ...[
+                            const SizedBox(height: 2),
+                            Text(
+                              loc,
+                              style: TextStyle(color: Colors.grey.shade700),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: () => Navigator.of(ctx).pop(),
+                      icon: const Icon(Icons.close),
+                      tooltip: l10n.close,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+              ],
+            ),
+          );
+        },
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Erreur chargement profil')));
+    } finally {
+      if (mounted) setState(() => _profileLoading = false);
+    }
+  }
+
+  // ✅ plein écran avatar (même UX que ConversationsPage)
+  void _openAvatarFullScreen(int peopleId) {
+    final l10n = AppLocalizations.of(context)!;
+    final url = personPhotoUrl(peopleId);
+
+    showGeneralDialog(
+      context: context,
+      barrierDismissible: true,
+      barrierLabel: l10n.photo,
+      barrierColor: Colors.black,
+      transitionDuration: const Duration(milliseconds: 180),
+      pageBuilder: (ctx, _, __) {
+        final l10n2 = AppLocalizations.of(ctx)!;
+        return Scaffold(
+          backgroundColor: Colors.black,
+          body: SafeArea(
+            child: Stack(
+              children: [
+                Center(
+                  child: InteractiveViewer(
+                    minScale: 1.0,
+                    maxScale: 4.0,
+                    child: Image.network(
+                      url,
+                      headers: {'X-App-Key': publicAppKey},
+                      fit: BoxFit.contain,
+                      errorBuilder: (_, __, ___) => const Icon(
+                        Icons.person,
+                        size: 120,
+                        color: Colors.white54,
+                      ),
+                      loadingBuilder: (ctx, child, prog) {
+                        if (prog == null) return child;
+                        return const SizedBox(
+                          width: 36,
+                          height: 36,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+                Positioned(
+                  top: 8,
+                  right: 8,
+                  child: IconButton(
+                    icon: const Icon(Icons.close, color: Colors.white),
+                    onPressed: () => Navigator.of(ctx).pop(),
+                    tooltip: l10n2.close,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+      transitionBuilder: (ctx, anim, _, child) =>
+          FadeTransition(opacity: anim, child: child),
+    );
   }
 
   @override
@@ -373,52 +606,78 @@ class _ConversationsgroupPageState extends State<ConversationsgroupPage>
       );
     }
 
+    final adminId = widget.personId!; // ✅ admin = current personId (people/1)
+
     return ListView.separated(
       physics: const AlwaysScrollableScrollPhysics(),
       itemCount: _items.length,
       separatorBuilder: (_, __) => const Divider(height: 1),
       itemBuilder: (context, index) {
         final conv = _items[index];
-        final members = _membersLine(conv);
+        final membersInline = _membersInline(conv);
+        final last = conv.lastMessage;
+
+        // texte du dernier message
+        final pseudo = (last?.pseudo ?? '').trim();
+        final prefix = pseudo.isEmpty ? '' : '$pseudo : ';
+        final lastText = last == null ? '' : '$prefix${last.bodyText}';
 
         return ListTile(
           contentPadding: const EdgeInsets.symmetric(
             horizontal: 16,
-            vertical: 8,
+            vertical: 10,
           ),
+
+          // ✅ Avatar admin gros à gauche (cliquable => sheet infos)
+          leading: PeoplePhotoAvatar(
+            peopleId: adminId,
+            radius: 26,
+            onTap: () => _openAdminProfile(adminId),
+          ),
+
+          // ✅ ligne du haut : titre + membres (même ligne) + date à droite
           title: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Expanded(
                 child: Text(
                   _groupTitle(context, conv),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontWeight: FontWeight.w600),
+                  style: const TextStyle(fontWeight: FontWeight.w700),
                 ),
               ),
+              if (membersInline.isNotEmpty) ...[
+                const SizedBox(width: 8),
+                Text(
+                  membersInline,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: Colors.orange.shade800,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+              const SizedBox(width: 10),
               Text(
                 _formatConversationDate(conv.lastMessageAt),
                 style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
               ),
             ],
           ),
-          subtitle: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (members.isNotEmpty) ...[
-                const SizedBox(height: 2),
-                Text(
-                  members,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(color: Colors.orange.shade800, fontSize: 12),
-                ),
-              ],
-              const SizedBox(height: 2),
-              _GroupLastLine(conv: conv),
-            ],
+
+          // ✅ dessous à droite : dernier message
+          subtitle: Padding(
+            padding: const EdgeInsets.only(top: 4),
+            child: Text(
+              last == null ? l10n.conversationsNoMessage : lastText,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(color: Colors.grey.shade700),
+            ),
           ),
+
           trailing: conv.unreadCount > 0
               ? _UnreadBubble(count: conv.unreadCount)
               : null,
@@ -688,7 +947,6 @@ class _CreateGroupDialogState extends State<_CreateGroupDialog> {
 
     final buttonEnabled = _allPeople != null && _audience != null;
 
-    // ✅ FIX: on affiche le compteur dès que le dataset est chargé
     final datasetLoaded = _allPeople != null;
     final countLabel = datasetLoaded
         ? l10n.groupMembersCount(_audienceCount)
@@ -704,7 +962,6 @@ class _CreateGroupDialogState extends State<_CreateGroupDialog> {
             children: [
               Text(l10n.groupCreateIntro),
               const SizedBox(height: 16),
-
               Row(
                 children: [
                   const Icon(Icons.tune, size: 18),
@@ -734,9 +991,7 @@ class _CreateGroupDialogState extends State<_CreateGroupDialog> {
                   ),
                 ],
               ),
-
               const SizedBox(height: 8),
-
               TextField(
                 controller: _titleCtrl,
                 maxLength: 255,
@@ -746,9 +1001,7 @@ class _CreateGroupDialogState extends State<_CreateGroupDialog> {
                 ),
                 enabled: !_creating,
               ),
-
               const SizedBox(height: 12),
-
               TextField(
                 controller: _firstMsgCtrl,
                 maxLines: 3,
@@ -818,35 +1071,103 @@ class _UnreadBubble extends StatelessWidget {
   }
 }
 
-class _GroupLastLine extends StatelessWidget {
-  final ConversationSummary conv;
+// ✅ Avatar robuste (headers X-App-Key + cache mémoire)
+class PeoplePhotoAvatar extends StatefulWidget {
+  const PeoplePhotoAvatar({
+    super.key,
+    required this.peopleId,
+    required this.radius,
+    this.onTap,
+  });
 
-  const _GroupLastLine({required this.conv});
+  final int? peopleId;
+  final double radius;
+  final VoidCallback? onTap;
+
+  @override
+  State<PeoplePhotoAvatar> createState() => _PeoplePhotoAvatarState();
+}
+
+class _PeoplePhotoAvatarState extends State<PeoplePhotoAvatar> {
+  static final Map<int, Uint8List> _memCache = {};
+  Future<Uint8List?>? _future;
+
+  @override
+  void initState() {
+    super.initState();
+    _future = _load();
+  }
+
+  @override
+  void didUpdateWidget(covariant PeoplePhotoAvatar oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.peopleId != widget.peopleId) {
+      _future = _load();
+    }
+  }
+
+  Future<Uint8List?> _load() async {
+    final id = widget.peopleId;
+    if (id == null) return null;
+
+    final cached = _memCache[id];
+    if (cached != null) return cached;
+
+    final url = personPhotoUrl(id);
+
+    final resp = await http.get(
+      Uri.parse(url),
+      headers: {'X-App-Key': publicAppKey},
+    );
+
+    if (resp.statusCode == 200 && resp.bodyBytes.isNotEmpty) {
+      _memCache[id] = resp.bodyBytes;
+      return resp.bodyBytes;
+    }
+
+    return null;
+  }
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
+    final r = widget.radius;
 
-    final last = conv.lastMessage;
+    Widget fallback({Widget? child}) => CircleAvatar(
+      radius: r,
+      backgroundColor: Colors.grey.shade200,
+      child: child ?? Icon(Icons.person, color: Colors.black54, size: r * 1.2),
+    );
 
-    if (last == null) {
-      return Text(
-        l10n.conversationsNoMessage,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        style: TextStyle(color: Colors.grey.shade600),
-      );
-    }
+    final id = widget.peopleId;
+    if (id == null) return fallback(child: const Icon(Icons.person));
 
-    final pseudo = (last.pseudo).trim();
-    final prefix = pseudo.isEmpty ? '' : '$pseudo : ';
-    final text = '$prefix${last.bodyText}';
+    return GestureDetector(
+      onTap: widget.onTap,
+      child: FutureBuilder<Uint8List?>(
+        future: _future,
+        builder: (ctx, snap) {
+          if (snap.connectionState != ConnectionState.done) {
+            return fallback(
+              child: const SizedBox(
+                width: 14,
+                height: 14,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+            );
+          }
 
-    return Text(
-      text,
-      maxLines: 1,
-      overflow: TextOverflow.ellipsis,
-      style: TextStyle(color: Colors.grey.shade700),
+          final bytes = snap.data;
+          if (bytes == null) {
+            return fallback();
+          }
+
+          return CircleAvatar(
+            radius: r,
+            backgroundColor: Colors.grey.shade200,
+            backgroundImage: MemoryImage(bytes),
+          );
+        },
+      ),
     );
   }
 }

@@ -647,5 +647,14 @@
   "groupCreateButton": "Crear",
   "groupTitleRequired": "El título es obligatorio",
   "groupCreateNoMembers": "No se puede crear un grupo sin miembros",
-  "audience": "Audiencia"
+  "audience": "Audiencia",
+  "profile": "Perfil",
+  "yearsOld": "años",
+
+  "@profile": {
+    "description": "Título genérico para un perfil de usuario"
+  },
+  "@yearsOld": {
+    "description": "Sufijo de edad (ej.: 12 años)"
+  }
 }
