@@ -119,6 +119,32 @@ class _TabularViewState extends State<TabularView> with WidgetsBindingObserver {
   static const double _headerHeight = 46;
   static const double _filtersHeight = 72;
 
+  // ---------------------------------------------------------------------------
+  // ✅ Horizontal scroll (mobile) + hint overlays
+  // ---------------------------------------------------------------------------
+  final ScrollController _hScrollCtrl = ScrollController();
+  bool _showRightHint = false;
+  bool _showLeftHint = false;
+
+  void _updateHorizontalHints() {
+    if (!_hScrollCtrl.hasClients) return;
+
+    final maxExtent = _hScrollCtrl.position.maxScrollExtent;
+    final offset = _hScrollCtrl.offset;
+
+    // show right hint if there is content to the right
+    final showR = maxExtent > 0 && offset < (maxExtent - 2);
+    // show left hint if user has scrolled right
+    final showL = maxExtent > 0 && offset > 2;
+
+    if (showR != _showRightHint || showL != _showLeftHint) {
+      setState(() {
+        _showRightHint = showR;
+        _showLeftHint = showL;
+      });
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -126,12 +152,21 @@ class _TabularViewState extends State<TabularView> with WidgetsBindingObserver {
 
     _loadPeople();
     _startPolling();
+
+    _hScrollCtrl.addListener(_updateHorizontalHints);
+    WidgetsBinding.instance.addPostFrameCallback(
+      (_) => _updateHorizontalHints(),
+    );
   }
 
   @override
   void dispose() {
     _stopPolling();
     WidgetsBinding.instance.removeObserver(this);
+
+    _hScrollCtrl.removeListener(_updateHorizontalHints);
+    _hScrollCtrl.dispose();
+
     super.dispose();
   }
 
@@ -142,6 +177,7 @@ class _TabularViewState extends State<TabularView> with WidgetsBindingObserver {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       _loadCountriesIfNeeded();
+      _updateHorizontalHints();
     });
   }
 
@@ -248,6 +284,29 @@ class _TabularViewState extends State<TabularView> with WidgetsBindingObserver {
     return 190;
   }
 
+  /// ✅ total width used by horizontal scroll
+  double _tableMinWidth(BuildContext context) {
+    final pseudoW = _maxPseudoWidth(context) + 16;
+    final genoW = _maxGenotypeWidth(context) + 16;
+    final countryW = _maxCountryWidth(context) + 16;
+    final cityW = _maxCityWidth(context) + 16;
+
+    return _avatarCol +
+        _gap +
+        pseudoW +
+        _gap +
+        _ageCol +
+        _gapAgeGenotype +
+        genoW +
+        _gap +
+        countryW +
+        _gap +
+        cityW +
+        _gap +
+        _actionCol +
+        16; // marge de sécurité
+  }
+
   Widget _ellipsisCell(
     String text, {
     required double maxWidth,
@@ -299,6 +358,10 @@ class _TabularViewState extends State<TabularView> with WidgetsBindingObserver {
         _selectedCountries.addAll(_countryOptions);
       }
       _applyTabularFilters(keepSort: true);
+
+      WidgetsBinding.instance.addPostFrameCallback(
+        (_) => _updateHorizontalHints(),
+      );
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -356,6 +419,10 @@ class _TabularViewState extends State<TabularView> with WidgetsBindingObserver {
       }
 
       _applyTabularFilters(keepSort: true);
+
+      WidgetsBinding.instance.addPostFrameCallback(
+        (_) => _updateHorizontalHints(),
+      );
     } catch (e) {
       if (!mounted) return;
       if (!silent) {
@@ -908,6 +975,30 @@ class _TabularViewState extends State<TabularView> with WidgetsBindingObserver {
     );
   }
 
+  // ✅ little gradient hint overlay
+  Widget _horizontalHintOverlay({required bool left, required bool visible}) {
+    return IgnorePointer(
+      ignoring: true,
+      child: AnimatedOpacity(
+        duration: const Duration(milliseconds: 200),
+        opacity: visible ? 1.0 : 0.0,
+        child: Align(
+          alignment: left ? Alignment.centerLeft : Alignment.centerRight,
+          child: Container(
+            width: 26,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: left ? Alignment.centerLeft : Alignment.centerRight,
+                end: left ? Alignment.centerRight : Alignment.centerLeft,
+                colors: [Colors.white, Colors.white.withOpacity(0.0)],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
@@ -932,40 +1023,64 @@ class _TabularViewState extends State<TabularView> with WidgetsBindingObserver {
       );
     }
 
+    final tableWidth = _tableMinWidth(context);
+    final screenW = MediaQuery.of(context).size.width;
+    final effectiveW = max(tableWidth, screenW);
+
     return RefreshIndicator(
       onRefresh: () async {
         await _loadCountriesIfNeeded();
         await _reload(silent: false);
       },
-      child: CustomScrollView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        slivers: [
-          // ✅ Filters pinned (always visible)
-          SliverPersistentHeader(
-            pinned: true,
-            delegate: _PinnedHeaderDelegate(
-              height: _filtersHeight,
-              child: _filtersBarPinned(l10n),
+      child: Stack(
+        children: [
+          SingleChildScrollView(
+            controller: _hScrollCtrl,
+            scrollDirection: Axis.horizontal,
+            physics: const BouncingScrollPhysics(),
+            child: SizedBox(
+              width: effectiveW,
+              child: CustomScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                slivers: [
+                  // ✅ Filters pinned (always visible)
+                  SliverPersistentHeader(
+                    pinned: true,
+                    delegate: _PinnedHeaderDelegate(
+                      height: _filtersHeight,
+                      child: _filtersBarPinned(l10n),
+                    ),
+                  ),
+
+                  // ✅ Columns pinned (always visible under filters)
+                  SliverPersistentHeader(
+                    pinned: true,
+                    delegate: _PinnedHeaderDelegate(
+                      height: _headerHeight,
+                      child: _tableHeader(l10n, context),
+                    ),
+                  ),
+
+                  // ✅ Virtualized rows
+                  SliverList(
+                    delegate: SliverChildBuilderDelegate(
+                      (ctx, i) => _personRow(l10n, ctx, _view[i], i),
+                      childCount: _view.length,
+                    ),
+                  ),
+                  const SliverToBoxAdapter(child: SizedBox(height: 24)),
+                ],
+              ),
             ),
           ),
 
-          // ✅ Columns pinned (always visible under filters)
-          SliverPersistentHeader(
-            pinned: true,
-            delegate: _PinnedHeaderDelegate(
-              height: _headerHeight,
-              child: _tableHeader(l10n, context),
-            ),
+          // ✅ light hints (left/right)
+          Positioned.fill(
+            child: _horizontalHintOverlay(left: true, visible: _showLeftHint),
           ),
-
-          // ✅ Virtualized rows
-          SliverList(
-            delegate: SliverChildBuilderDelegate(
-              (ctx, i) => _personRow(l10n, ctx, _view[i], i),
-              childCount: _view.length,
-            ),
+          Positioned.fill(
+            child: _horizontalHintOverlay(left: false, visible: _showRightHint),
           ),
-          const SliverToBoxAdapter(child: SizedBox(height: 24)),
         ],
       ),
     );
