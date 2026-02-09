@@ -8,7 +8,7 @@ import '../../l10n/app_localizations.dart';
 import '../models/conversation_summary.dart';
 import '../services/conversation_api.dart';
 import '../services/conversation_events.dart';
-import 'chat_page.dart';
+import 'chat_pageGroup.dart';
 
 class ConversationsPage extends StatefulWidget {
   final int? personId;
@@ -207,7 +207,7 @@ class _ConversationsPageState extends State<ConversationsPage>
     await Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) =>
-            ChatPage(conversationId: conversationId, currentPersonId: pid),
+            ChatPageGroup(conversationId: conversationId, currentPersonId: pid),
       ),
     );
 
@@ -292,7 +292,7 @@ class _ConversationsPageState extends State<ConversationsPage>
     final raw = conv.title.trim();
     if (raw.isEmpty) return l10n.chatWithName('—');
 
-    // ✅ enlève le préfixe FR si déjà présent (API renvoie "Chat avec Pseudo")
+    // ✅ enlève le préfixe FR si déjà présent (API renvoie "ChatPageGroup avec Pseudo")
     final pseudo = raw
         .replaceFirst(RegExp(r'^Chat\s+avec\s+', caseSensitive: false), '')
         .trim();
