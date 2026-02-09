@@ -6,6 +6,9 @@
 // - Messages de moi : toujours à droite (sans avatar)
 // - Dans la bulle : "~Pseudo" en marron, puis à la ligne le message
 // - Réactions / reply / "vu" conservés
+// - ✅ Bouton "quitter" :
+//    - si je suis admin => confirmer + DELETE group conversation
+//    - sinon => confirmer + LEAVE conversation
 
 import 'dart:async';
 import 'dart:convert';
@@ -68,12 +71,14 @@ class _ChatPageGroupState extends State<ChatPageGroup>
   bool _userScrollingUp = false; // when true: do not autoscroll
   bool _forceScrollAfterNextReload = false; // used after send/reply
 
+  // ✅ admin check (lazy)
+  bool? _iAmAdmin;
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
 
-    // (garde si tu en as besoin ailleurs; ici plus utilisé pour le titre)
     _otherPseudoFuture = ConversationApi.fetchOtherMemberPseudo(
       conversationId: widget.conversationId,
       currentPersonId: widget.currentPersonId,
@@ -81,6 +86,32 @@ class _ChatPageGroupState extends State<ChatPageGroup>
 
     _loadInitial();
     _startPolling();
+
+    // best-effort: resolve admin once
+    unawaited(_resolveAdminStatus());
+  }
+
+  Future<void> _resolveAdminStatus() async {
+    try {
+      // 👉 IMPORTANT:
+      // Cette méthode est supposée exister chez toi car utilisée dans ConversationsgroupPage
+      // (fetchConversationsGroupSummaryForPerson). On réutilise la même pour trouver idAdmin.
+      final list =
+          await ConversationApi.fetchConversationsGroupSummaryForPerson(
+            widget.currentPersonId,
+          );
+      final conv = list.firstWhere((c) => c.id == widget.conversationId);
+      final adminId = conv.idAdmin;
+      if (!mounted) return;
+      setState(
+        () =>
+            _iAmAdmin = (adminId != null && adminId == widget.currentPersonId),
+      );
+    } catch (_) {
+      // si on ne peut pas déterminer, on considère "non admin"
+      if (!mounted) return;
+      setState(() => _iAmAdmin ??= false);
+    }
   }
 
   @override
@@ -132,13 +163,11 @@ class _ChatPageGroupState extends State<ChatPageGroup>
   bool _isSameDay(DateTime a, DateTime b) =>
       a.year == b.year && a.month == b.month && a.day == b.day;
 
-  // ✅ Heure selon locale
   String _formatTime(BuildContext context, DateTime date) {
     final locale = Localizations.localeOf(context).toLanguageTag();
     return DateFormat.Hm(locale).format(date);
   }
 
-  // ✅ Date selon locale + today/yesterday via l10n
   String _formatDayLabel(BuildContext context, DateTime date) {
     final l10n = AppLocalizations.of(context)!;
     final locale = Localizations.localeOf(context).toLanguageTag();
@@ -234,9 +263,7 @@ class _ChatPageGroupState extends State<ChatPageGroup>
         peoplePublicId: widget.currentPersonId,
         lastReadMessageId: lastId,
       );
-    } catch (_) {
-      // silencieux
-    }
+    } catch (_) {}
   }
 
   Future<void> _loadInitial() async {
@@ -301,7 +328,6 @@ class _ChatPageGroupState extends State<ChatPageGroup>
         _scheduleScrollToBottom(animated: true);
       }
     } catch (_) {
-      // silent during polling
     } finally {
       _reloading = false;
     }
@@ -337,6 +363,161 @@ class _ChatPageGroupState extends State<ChatPageGroup>
     } finally {
       if (mounted) setState(() => _sending = false);
     }
+  }
+
+  // ---------------------------------------------------------------------------
+  // ✅ Quitter / Supprimer selon admin
+  // ---------------------------------------------------------------------------
+
+  Future<void> _confirmDeleteGroup() async {
+    final l10n = AppLocalizations.of(context)!;
+
+    final ok = await showDialog<bool>(
+      context: context,
+      useRootNavigator: true,
+      builder: (ctx) {
+        final l10n2 = AppLocalizations.of(ctx)!;
+        return AlertDialog(
+          title: Text(l10n2.groupDeleteTitle),
+          content: Text(l10n2.groupDeleteBody),
+          actions: [
+            TextButton(
+              onPressed: () =>
+                  Navigator.of(ctx, rootNavigator: true).pop(false),
+              child: Text(l10n2.cancel),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(ctx, rootNavigator: true).pop(true),
+              child: Text(
+                l10n2.groupDeleteConfirm,
+                style: const TextStyle(color: Colors.red),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (ok != true) return;
+
+    try {
+      // 👉 IMPORTANT: méthode supposée exister (déjà utilisée dans ConversationsgroupPage)
+      await ConversationApi.deleteGroupConversation(
+        conversationId: widget.conversationId,
+        peoplePublicId: widget.currentPersonId,
+      );
+
+      ConversationEvents.bump();
+      if (!mounted) return;
+      Navigator.of(context).pop(true);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(l10n.genericError(e.toString()))));
+    }
+  }
+
+  Future<void> _confirmLeaveGroup() async {
+    final l10n = AppLocalizations.of(context)!;
+
+    final ok = await showDialog<bool>(
+      context: context,
+      useRootNavigator: true,
+      builder: (ctx) {
+        final l10n2 = AppLocalizations.of(ctx)!;
+        return AlertDialog(
+          title: Text(l10n2.conversationsLeaveTitle),
+          content: Text(l10n2.chatLeaveConversationBody),
+          actions: [
+            TextButton(
+              onPressed: () =>
+                  Navigator.of(ctx, rootNavigator: true).pop(false),
+              child: Text(l10n2.cancel),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(ctx, rootNavigator: true).pop(true),
+              child: Text(
+                l10n2.conversationsLeaveConfirm,
+                style: const TextStyle(color: Colors.red),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (ok != true) return;
+
+    try {
+      await ConversationApi.leaveConversation(
+        conversationId: widget.conversationId,
+        peoplePublicId: widget.currentPersonId,
+        softDeleteOwnMessages: true,
+        deleteEmptyConversation: true,
+      );
+
+      ConversationEvents.bump();
+      if (!mounted) return;
+      Navigator.of(context).pop(true);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.chatLeaveError(e.toString()))),
+      );
+    }
+  }
+
+  Future<void> _onQuitOrDeletePressed() async {
+    // si status inconnu -> on tente de le résoudre rapidement
+    if (_iAmAdmin == null) {
+      await _resolveAdminStatus();
+    }
+
+    final isAdmin = _iAmAdmin == true;
+
+    if (isAdmin) {
+      await _confirmDeleteGroup();
+    } else {
+      await _confirmLeaveGroup();
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+
+  void _showMyMessageMenu(ChatMessage msg) {
+    showModalBottomSheet<void>(
+      context: context,
+      builder: (ctx) {
+        final l10n2 = AppLocalizations.of(ctx)!;
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.edit),
+                title: Text(l10n2.edit),
+                onTap: () {
+                  Navigator.of(ctx).pop();
+                  _editMessage(msg);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.delete_outline, color: Colors.red),
+                title: Text(
+                  l10n2.delete,
+                  style: const TextStyle(color: Colors.red),
+                ),
+                onTap: () {
+                  Navigator.of(ctx).pop();
+                  _deleteMessage(msg);
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 
   Future<void> _editMessage(ChatMessage msg) async {
@@ -446,41 +627,6 @@ class _ChatPageGroupState extends State<ChatPageGroup>
     }
   }
 
-  void _showMyMessageMenu(ChatMessage msg) {
-    showModalBottomSheet<void>(
-      context: context,
-      builder: (ctx) {
-        final l10n2 = AppLocalizations.of(ctx)!;
-        return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ListTile(
-                leading: const Icon(Icons.edit),
-                title: Text(l10n2.edit),
-                onTap: () {
-                  Navigator.of(ctx).pop();
-                  _editMessage(msg);
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.delete_outline, color: Colors.red),
-                title: Text(
-                  l10n2.delete,
-                  style: const TextStyle(color: Colors.red),
-                ),
-                onTap: () {
-                  Navigator.of(ctx).pop();
-                  _deleteMessage(msg);
-                },
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
   void _showOtherMessageMenu(ChatMessage msg) {
     showModalBottomSheet<void>(
       context: context,
@@ -509,12 +655,6 @@ class _ChatPageGroupState extends State<ChatPageGroup>
     setState(() => _replyToMessage = msg);
     _forceScrollAfterNextReload = true;
     _scheduleScrollToBottom(animated: true);
-  }
-
-  bool _userHasReacted(ChatMessage msg, String emoji) {
-    return msg.reactions.any(
-      (r) => r.peoplePublicId == widget.currentPersonId && r.emoji == emoji,
-    );
   }
 
   Future<void> _showEmojiPicker(ChatMessage msg) async {
@@ -566,53 +706,10 @@ class _ChatPageGroupState extends State<ChatPageGroup>
     }
   }
 
-  Future<void> _leaveConversation() async {
-    final l10n = AppLocalizations.of(context)!;
-
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (ctx) {
-        final l10n2 = AppLocalizations.of(ctx)!;
-        return AlertDialog(
-          title: Text(l10n2.conversationsLeaveTitle),
-          content: Text(l10n2.chatLeaveConversationBody),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(ctx).pop(false),
-              child: Text(l10n2.cancel),
-            ),
-            TextButton(
-              onPressed: () => Navigator.of(ctx).pop(true),
-              child: Text(
-                l10n2.conversationsLeaveConfirm,
-                style: const TextStyle(color: Colors.red),
-              ),
-            ),
-          ],
-        );
-      },
+  bool _userHasReacted(ChatMessage msg, String emoji) {
+    return msg.reactions.any(
+      (r) => r.peoplePublicId == widget.currentPersonId && r.emoji == emoji,
     );
-
-    if (confirm != true) return;
-
-    try {
-      await ConversationApi.leaveConversation(
-        conversationId: widget.conversationId,
-        peoplePublicId: widget.currentPersonId,
-        softDeleteOwnMessages: true,
-        deleteEmptyConversation: true,
-      );
-
-      ConversationEvents.bump();
-
-      if (!mounted) return;
-      Navigator.of(context).pop(true);
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.chatLeaveError(e.toString()))),
-      );
-    }
   }
 
   bool _handleScrollNotification(ScrollNotification n) {
@@ -688,12 +785,10 @@ class _ChatPageGroupState extends State<ChatPageGroup>
                         ),
                       );
 
-                      // ✅ Avatar collé à la bulle : pas de SizedBox entre avatar et bulle
                       final line = isMine
                           ? bubble
                           : Row(
                               crossAxisAlignment: CrossAxisAlignment.start,
-                              mainAxisSize: MainAxisSize.max,
                               children: [
                                 Padding(
                                   padding: const EdgeInsets.only(top: 6),
@@ -702,10 +797,9 @@ class _ChatPageGroupState extends State<ChatPageGroup>
                                     radius: 14,
                                   ),
                                 ),
-                                // collé = 0 (ou 2 si tu veux un mini souffle)
                                 const SizedBox(width: 0),
                                 Expanded(child: bubble),
-                                const SizedBox(width: 36), // marge côté droit
+                                const SizedBox(width: 36),
                               ],
                             );
 
@@ -756,9 +850,14 @@ class _ChatPageGroupState extends State<ChatPageGroup>
         ),
         actions: [
           IconButton(
-            tooltip: l10n.conversationsLeaveConfirm,
-            icon: const Icon(Icons.exit_to_app),
-            onPressed: _leaveConversation,
+            tooltip: (_iAmAdmin == true)
+                ? (l10n.groupDeleteConfirm)
+                : (l10n.conversationsLeaveConfirm),
+            icon: Icon(
+              (_iAmAdmin == true) ? Icons.delete_outline : Icons.exit_to_app,
+              color: (_iAmAdmin == true) ? Colors.red.shade400 : null,
+            ),
+            onPressed: _onQuitOrDeletePressed,
           ),
         ],
       ),
@@ -960,7 +1059,6 @@ class _MessageBubble extends StatelessWidget {
                     crossAxisAlignment: textAlign,
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      // ✅ "~Pseudo" marron puis à la ligne le message
                       if (!isDeleted) ...[
                         Text(
                           '~${message.pseudo}'.trim(),
@@ -972,7 +1070,6 @@ class _MessageBubble extends StatelessWidget {
                         ),
                         const SizedBox(height: 4),
                       ],
-
                       if (hasReply) ...[
                         Container(
                           margin: const EdgeInsets.only(bottom: 4),
@@ -1001,7 +1098,6 @@ class _MessageBubble extends StatelessWidget {
                           ),
                         ),
                       ],
-
                       Text(
                         isDeleted ? l10n.deletedMessage : message.bodyText,
                         style: TextStyle(
@@ -1014,7 +1110,6 @@ class _MessageBubble extends StatelessWidget {
                               : Colors.black,
                         ),
                       ),
-
                       const SizedBox(height: 2),
                       Row(
                         mainAxisSize: MainAxisSize.min,
@@ -1050,7 +1145,6 @@ class _MessageBubble extends StatelessWidget {
                   ),
                 ),
               ),
-
               if (showEmojiIcon)
                 Positioned(
                   bottom: -6,
@@ -1080,7 +1174,6 @@ class _MessageBubble extends StatelessWidget {
                 ),
             ],
           ),
-
           if (hasReactions)
             Padding(
               padding: const EdgeInsets.only(top: 3),
@@ -1119,7 +1212,6 @@ class _MessageBubble extends StatelessWidget {
 }
 
 // ✅ Avatar mini (cache mémoire + header X-App-Key)
-// Utilise personPhotoUrl + publicAppKey depuis tabular/models/person.dart
 class PeopleMiniAvatar extends StatefulWidget {
   const PeopleMiniAvatar({super.key, required this.peopleId, this.radius = 14});
 
