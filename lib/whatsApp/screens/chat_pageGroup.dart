@@ -2,7 +2,7 @@
 //
 // ✅ Modifs demandées :
 // - Titre AppBar = conversationTitle (passé depuis la liste)
-// - Messages des autres : avatar miniature à gauche, COLLÉ à la bulle
+// - Messages des autres : avatar miniature à gauche, COLLÉ à la bulle + ✅ clic => AvatarViewer.open()
 // - Messages de moi : toujours à droite (sans avatar)
 // - Dans la bulle : "~Pseudo" en marron, puis à la ligne le message
 // - Réactions / reply / "vu" conservés
@@ -25,6 +25,7 @@ import '../../tabular/models/person.dart'; // personPhotoUrl + publicAppKey
 import '../models/chat_message.dart';
 import '../services/conversation_api.dart';
 import '../services/conversation_events.dart';
+import 'widget_avatar_viewer.dart'; // ✅ AvatarViewer.open
 
 class ChatPageGroup extends StatefulWidget {
   final int conversationId;
@@ -93,9 +94,7 @@ class _ChatPageGroupState extends State<ChatPageGroup>
 
   Future<void> _resolveAdminStatus() async {
     try {
-      // 👉 IMPORTANT:
       // Cette méthode est supposée exister chez toi car utilisée dans ConversationsgroupPage
-      // (fetchConversationsGroupSummaryForPerson). On réutilise la même pour trouver idAdmin.
       final list =
           await ConversationApi.fetchConversationsGroupSummaryForPerson(
             widget.currentPersonId,
@@ -108,7 +107,6 @@ class _ChatPageGroupState extends State<ChatPageGroup>
             _iAmAdmin = (adminId != null && adminId == widget.currentPersonId),
       );
     } catch (_) {
-      // si on ne peut pas déterminer, on considère "non admin"
       if (!mounted) return;
       setState(() => _iAmAdmin ??= false);
     }
@@ -401,7 +399,6 @@ class _ChatPageGroupState extends State<ChatPageGroup>
     if (ok != true) return;
 
     try {
-      // 👉 IMPORTANT: méthode supposée exister (déjà utilisée dans ConversationsgroupPage)
       await ConversationApi.deleteGroupConversation(
         conversationId: widget.conversationId,
         peoplePublicId: widget.currentPersonId,
@@ -469,7 +466,6 @@ class _ChatPageGroupState extends State<ChatPageGroup>
   }
 
   Future<void> _onQuitOrDeletePressed() async {
-    // si status inconnu -> on tente de le résoudre rapidement
     if (_iAmAdmin == null) {
       await _resolveAdminStatus();
     }
@@ -785,6 +781,7 @@ class _ChatPageGroupState extends State<ChatPageGroup>
                         ),
                       );
 
+                      // ✅ Avatar cliquable => plein écran (AvatarViewer.open)
                       final line = isMine
                           ? bubble
                           : Row(
@@ -795,6 +792,10 @@ class _ChatPageGroupState extends State<ChatPageGroup>
                                   child: PeopleMiniAvatar(
                                     peopleId: msg.senderPeopleId,
                                     radius: 14,
+                                    onTap: () => AvatarViewer.open(
+                                      context,
+                                      peopleId: msg.senderPeopleId,
+                                    ),
                                   ),
                                 ),
                                 const SizedBox(width: 0),
@@ -1211,12 +1212,18 @@ class _MessageBubble extends StatelessWidget {
   }
 }
 
-// ✅ Avatar mini (cache mémoire + header X-App-Key)
+// ✅ Avatar mini (cache mémoire + header X-App-Key) + ✅ onTap pour ouvrir en plein écran
 class PeopleMiniAvatar extends StatefulWidget {
-  const PeopleMiniAvatar({super.key, required this.peopleId, this.radius = 14});
+  const PeopleMiniAvatar({
+    super.key,
+    required this.peopleId,
+    this.radius = 14,
+    this.onTap,
+  });
 
   final int peopleId;
   final double radius;
+  final VoidCallback? onTap;
 
   @override
   State<PeopleMiniAvatar> createState() => _PeopleMiniAvatarState();
@@ -1269,30 +1276,34 @@ class _PeopleMiniAvatarState extends State<PeopleMiniAvatar> {
       child: Icon(Icons.person, size: r * 1.2, color: Colors.black54),
     );
 
-    return FutureBuilder<Uint8List?>(
-      future: _future,
-      builder: (ctx, snap) {
-        if (snap.connectionState != ConnectionState.done) {
-          return CircleAvatar(
-            radius: r,
-            backgroundColor: Colors.grey.shade200,
-            child: const SizedBox(
-              width: 10,
-              height: 10,
-              child: CircularProgressIndicator(strokeWidth: 2),
-            ),
-          );
-        }
+    Widget avatarFromBytes(Uint8List bytes) => CircleAvatar(
+      radius: r,
+      backgroundColor: Colors.grey.shade200,
+      backgroundImage: MemoryImage(bytes),
+    );
 
-        final bytes = snap.data;
-        if (bytes == null) return fallback();
+    return GestureDetector(
+      onTap: widget.onTap,
+      child: FutureBuilder<Uint8List?>(
+        future: _future,
+        builder: (ctx, snap) {
+          if (snap.connectionState != ConnectionState.done) {
+            return CircleAvatar(
+              radius: r,
+              backgroundColor: Colors.grey.shade200,
+              child: const SizedBox(
+                width: 10,
+                height: 10,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+            );
+          }
 
-        return CircleAvatar(
-          radius: r,
-          backgroundColor: Colors.grey.shade200,
-          backgroundImage: MemoryImage(bytes),
-        );
-      },
+          final bytes = snap.data;
+          if (bytes == null) return fallback();
+          return avatarFromBytes(bytes);
+        },
+      ),
     );
   }
 }
