@@ -1,11 +1,24 @@
+// lib/whatsApp/screens/chat_pageGroup.dart
+//
+// ✅ Modifs demandées :
+// - Titre AppBar = conversationTitle (passé depuis la liste)
+// - Messages des autres : avatar miniature à gauche, COLLÉ à la bulle
+// - Messages de moi : toujours à droite (sans avatar)
+// - Dans la bulle : "~Pseudo" en marron, puis à la ligne le message
+// - Réactions / reply / "vu" conservés
+
 import 'dart:async';
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 
 import '../../l10n/app_localizations.dart';
+import '../../tabular/models/person.dart'; // personPhotoUrl + publicAppKey
+
 import '../models/chat_message.dart';
 import '../services/conversation_api.dart';
 import '../services/conversation_events.dart';
@@ -60,6 +73,7 @@ class _ChatPageGroupState extends State<ChatPageGroup>
     super.initState();
     WidgetsBinding.instance.addObserver(this);
 
+    // (garde si tu en as besoin ailleurs; ici plus utilisé pour le titre)
     _otherPseudoFuture = ConversationApi.fetchOtherMemberPseudo(
       conversationId: widget.conversationId,
       currentPersonId: widget.currentPersonId,
@@ -137,10 +151,6 @@ class _ChatPageGroupState extends State<ChatPageGroup>
     if (diff == 0) return l10n.today;
     if (diff == 1) return l10n.yesterday;
 
-    // Exemple:
-    // FR: 8 janv. 2026
-    // EN: Jan 8, 2026
-    // ES: 8 ene 2026
     return DateFormat.yMMMd(locale).format(date);
   }
 
@@ -194,7 +204,7 @@ class _ChatPageGroupState extends State<ChatPageGroup>
     int sig = list.length;
     for (final m in list) {
       sig = (sig * 31) ^ m.id;
-      sig = (sig * 31) ^ (m.senderPeopleId ?? 0);
+      sig = (sig * 31) ^ m.senderPeopleId;
       sig = (sig * 31) ^ _hashStr(m.bodyText);
       sig = (sig * 31) ^ (m.createdAt.millisecondsSinceEpoch);
       sig = (sig * 31) ^ (m.editedAt?.millisecondsSinceEpoch ?? 0);
@@ -660,6 +670,45 @@ class _ChatPageGroupState extends State<ChatPageGroup>
 
                       final canReact = !isMine && !isDeleted;
 
+                      final bubble = GestureDetector(
+                        onLongPress: onLongPress,
+                        child: _MessageBubble(
+                          message: msg,
+                          isMine: isMine,
+                          timeLabel: _formatTime(
+                            context,
+                            (msg.editedAt != null && !_isDeleted(msg))
+                                ? msg.editedAt!
+                                : msg.createdAt,
+                          ),
+                          showEdited: msg.editedAt != null && !_isDeleted(msg),
+                          onAddReaction: canReact
+                              ? () => _showEmojiPicker(msg)
+                              : null,
+                        ),
+                      );
+
+                      // ✅ Avatar collé à la bulle : pas de SizedBox entre avatar et bulle
+                      final line = isMine
+                          ? bubble
+                          : Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.max,
+                              children: [
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 6),
+                                  child: PeopleMiniAvatar(
+                                    peopleId: msg.senderPeopleId,
+                                    radius: 14,
+                                  ),
+                                ),
+                                // collé = 0 (ou 2 si tu veux un mini souffle)
+                                const SizedBox(width: 0),
+                                Expanded(child: bubble),
+                                const SizedBox(width: 36), // marge côté droit
+                              ],
+                            );
+
                       return Column(
                         children: [
                           if (showDateHeader)
@@ -685,24 +734,7 @@ class _ChatPageGroupState extends State<ChatPageGroup>
                                 ),
                               ),
                             ),
-                          GestureDetector(
-                            onLongPress: onLongPress,
-                            child: _MessageBubble(
-                              message: msg,
-                              isMine: isMine,
-                              timeLabel: _formatTime(
-                                context,
-                                (msg.editedAt != null && !_isDeleted(msg))
-                                    ? msg.editedAt!
-                                    : msg.createdAt,
-                              ),
-                              showEdited:
-                                  msg.editedAt != null && !_isDeleted(msg),
-                              onAddReaction: canReact
-                                  ? () => _showEmojiPicker(msg)
-                                  : null,
-                            ),
-                          ),
+                          line,
                         ],
                       );
                     },
@@ -928,17 +960,19 @@ class _MessageBubble extends StatelessWidget {
                     crossAxisAlignment: textAlign,
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      if (!isMine && !isDeleted) ...[
+                      // ✅ "~Pseudo" marron puis à la ligne le message
+                      if (!isDeleted) ...[
                         Text(
-                          message.pseudo,
+                          '~${message.pseudo}'.trim(),
                           style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.teal.shade700,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.brown.shade700,
                           ),
                         ),
-                        const SizedBox(height: 2),
+                        const SizedBox(height: 4),
                       ],
+
                       if (hasReply) ...[
                         Container(
                           margin: const EdgeInsets.only(bottom: 4),
@@ -967,6 +1001,7 @@ class _MessageBubble extends StatelessWidget {
                           ),
                         ),
                       ],
+
                       Text(
                         isDeleted ? l10n.deletedMessage : message.bodyText,
                         style: TextStyle(
@@ -979,6 +1014,7 @@ class _MessageBubble extends StatelessWidget {
                               : Colors.black,
                         ),
                       ),
+
                       const SizedBox(height: 2),
                       Row(
                         mainAxisSize: MainAxisSize.min,
@@ -1014,6 +1050,7 @@ class _MessageBubble extends StatelessWidget {
                   ),
                 ),
               ),
+
               if (showEmojiIcon)
                 Positioned(
                   bottom: -6,
@@ -1043,6 +1080,7 @@ class _MessageBubble extends StatelessWidget {
                 ),
             ],
           ),
+
           if (hasReactions)
             Padding(
               padding: const EdgeInsets.only(top: 3),
@@ -1076,6 +1114,93 @@ class _MessageBubble extends StatelessWidget {
             ),
         ],
       ),
+    );
+  }
+}
+
+// ✅ Avatar mini (cache mémoire + header X-App-Key)
+// Utilise personPhotoUrl + publicAppKey depuis tabular/models/person.dart
+class PeopleMiniAvatar extends StatefulWidget {
+  const PeopleMiniAvatar({super.key, required this.peopleId, this.radius = 14});
+
+  final int peopleId;
+  final double radius;
+
+  @override
+  State<PeopleMiniAvatar> createState() => _PeopleMiniAvatarState();
+}
+
+class _PeopleMiniAvatarState extends State<PeopleMiniAvatar> {
+  static final Map<int, Uint8List> _memCache = {};
+  Future<Uint8List?>? _future;
+
+  @override
+  void initState() {
+    super.initState();
+    _future = _load();
+  }
+
+  @override
+  void didUpdateWidget(covariant PeopleMiniAvatar oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.peopleId != widget.peopleId) {
+      _future = _load();
+    }
+  }
+
+  Future<Uint8List?> _load() async {
+    final id = widget.peopleId;
+
+    final cached = _memCache[id];
+    if (cached != null) return cached;
+
+    final url = personPhotoUrl(id);
+    final resp = await http.get(
+      Uri.parse(url),
+      headers: {'X-App-Key': publicAppKey},
+    );
+
+    if (resp.statusCode == 200 && resp.bodyBytes.isNotEmpty) {
+      _memCache[id] = resp.bodyBytes;
+      return resp.bodyBytes;
+    }
+    return null;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final r = widget.radius;
+
+    Widget fallback() => CircleAvatar(
+      radius: r,
+      backgroundColor: Colors.grey.shade200,
+      child: Icon(Icons.person, size: r * 1.2, color: Colors.black54),
+    );
+
+    return FutureBuilder<Uint8List?>(
+      future: _future,
+      builder: (ctx, snap) {
+        if (snap.connectionState != ConnectionState.done) {
+          return CircleAvatar(
+            radius: r,
+            backgroundColor: Colors.grey.shade200,
+            child: const SizedBox(
+              width: 10,
+              height: 10,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
+          );
+        }
+
+        final bytes = snap.data;
+        if (bytes == null) return fallback();
+
+        return CircleAvatar(
+          radius: r,
+          backgroundColor: Colors.grey.shade200,
+          backgroundImage: MemoryImage(bytes),
+        );
+      },
     );
   }
 }
