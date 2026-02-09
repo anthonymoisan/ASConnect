@@ -657,5 +657,7 @@
   },
   "@yearsOld": {
     "description": "Sufijo de edad (ej.: 12 años)"
-  }
+  },
+  "mapLocationResolverMissing": "La ubicación no está disponible.",
+  "mapLocationUnableToGet": "No se pudo obtener la ubicación. Verifica el GPS y los permisos."
 }

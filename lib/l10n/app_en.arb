@@ -656,5 +656,8 @@
   },
   "@yearsOld": {
     "description": "Age suffix (e.g., 12 years old)"
-  }
+  },
+  
+  "mapLocationResolverMissing": "Location is not available.",
+  "mapLocationUnableToGet": "Unable to get your location. Check GPS services and permissions."
 }

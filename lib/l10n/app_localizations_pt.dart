@@ -1316,4 +1316,10 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get loadingGroup => 'Carregando...';
+
+  @override
+  String get mapLocationResolverMissing => 'A localização não está disponível.';
+
+  @override
+  String get mapLocationUnableToGet => 'Não foi possível obter a localização. Verifique o GPS e as permissões.';
 }

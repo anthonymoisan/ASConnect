@@ -659,5 +659,8 @@
   },
   "@yearsOld": {
     "description": "Suffixe d’âge (ex: 12 ans)"
-  }
+  },
+  
+  "mapLocationResolverMissing": "Géolocalisation non disponible.",
+  "mapLocationUnableToGet": "Impossible d’obtenir la position. Vérifie services GPS + autorisations."
 }

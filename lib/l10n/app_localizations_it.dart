@@ -1316,4 +1316,10 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get loadingGroup => 'Caricamento...';
+
+  @override
+  String get mapLocationResolverMissing => 'La geolocalizzazione non è disponibile.';
+
+  @override
+  String get mapLocationUnableToGet => 'Impossibile ottenere la posizione. Controlla GPS e autorizzazioni.';
 }

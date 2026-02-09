@@ -202,7 +202,7 @@ class AudienceFilters<T> {
 }
 
 // ============================================================================
-// UI: BottomSheet Audience Filters
+// UI: BottomSheet Audience Filters (i18n, réutilise les clés TabularView)
 // ============================================================================
 
 class AudienceFiltersSheet<T> extends StatefulWidget {
@@ -278,7 +278,7 @@ class _AudienceFiltersSheetState<T> extends State<AudienceFiltersSheet<T>> {
   int _resultsCount = 0;
   Timer? _countDebounce;
 
-  bool _resolvingLocation = false; // ✅ évite double tap / état “bloqué”
+  bool _resolvingLocation = false;
 
   @override
   void initState() {
@@ -335,6 +335,23 @@ class _AudienceFiltersSheetState<T> extends State<AudienceFiltersSheet<T>> {
     final name = widget.countriesByCode?[code];
     if (name == null || name.trim().isEmpty) return code;
     return name.trim();
+  }
+
+  // ✅ Réutilise tes libellés de génotype (comme tabular_view_filters.dart)
+  String _genoLabel(BuildContext ctx, String raw) {
+    final l10n = AppLocalizations.of(ctx)!;
+    final g = raw.trim().toLowerCase();
+
+    if (g.contains('dél') || g.contains('del') || g.contains('deletion')) {
+      return l10n.genotypeDeletion;
+    }
+    if (g.contains('mut')) return l10n.genotypeMutation;
+    if (g.contains('upd')) return l10n.genotypeUpd;
+    if (g.contains('icd')) return l10n.genotypeIcd;
+    if (g.contains('clin')) return l10n.genotypeClinical;
+    if (g.contains('mosa')) return l10n.genotypeMosaic;
+
+    return raw;
   }
 
   int _countResultsOptimized(AudienceFilters<T> f) {
@@ -443,15 +460,15 @@ class _AudienceFiltersSheetState<T> extends State<AudienceFiltersSheet<T>> {
   }
 
   Future<void> _ensureLocationOrExplain() async {
+    final l10n = AppLocalizations.of(context)!;
+
     if (_resolvingLocation) return;
 
     if (widget.resolveMyLocation == null) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Géolocalisation non disponible (resolver manquant)."),
-        ),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(l10n.mapLocationResolverMissing)));
       return;
     }
 
@@ -461,14 +478,9 @@ class _AudienceFiltersSheetState<T> extends State<AudienceFiltersSheet<T>> {
       if (!mounted) return;
 
       if (loc == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              "Impossible d’obtenir la position. Vérifie services GPS + autorisations.",
-            ),
-          ),
-        );
-        // On laisse distanceEnabled à false si pas de loc
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(l10n.mapLocationUnableToGet)));
         _setLocal(_local.copyWith(distanceEnabled: false));
         return;
       }
@@ -513,19 +525,24 @@ class _AudienceFiltersSheetState<T> extends State<AudienceFiltersSheet<T>> {
             padding: EdgeInsets.zero,
             keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
             children: [
+              // Title
               Row(
                 children: [
                   const Icon(Icons.groups),
                   const SizedBox(width: 8),
-                  const Text(
-                    'Audience',
-                    style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
+                  Text(
+                    l10n.audience, // ✅ déjà utilisé dans conversationsGroup_page.dart
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w800,
+                      fontSize: 16,
+                    ),
                   ),
                 ],
               ),
 
               const SizedBox(height: 8),
 
+              // Results line
               Row(
                 children: [
                   Icon(
@@ -539,8 +556,8 @@ class _AudienceFiltersSheetState<T> extends State<AudienceFiltersSheet<T>> {
                   Expanded(
                     child: Text(
                       resultsCount > 0
-                          ? '${resultsCount.toString()} ${resultsCount > 1 ? "personnes" : "personne"}'
-                          : "Aucun résultat avec ces filtres",
+                          ? l10n.mapResultsCount(resultsCount)
+                          : l10n.mapNoResultsWithTheseFilters,
                       style: TextStyle(
                         fontWeight: FontWeight.w600,
                         color: resultsCount > 0
@@ -555,16 +572,16 @@ class _AudienceFiltersSheetState<T> extends State<AudienceFiltersSheet<T>> {
               const SizedBox(height: 16),
 
               // Distance
-              const Text(
-                'Distance',
-                style: TextStyle(fontWeight: FontWeight.w700),
+              Text(
+                l10n.mapDistanceTitle,
+                style: const TextStyle(fontWeight: FontWeight.w700),
               ),
               SwitchListTile(
                 contentPadding: EdgeInsets.zero,
-                title: const Text('Activer le filtre distance'),
+                title: Text(l10n.mapEnableDistanceFilter),
                 value: _local.distanceEnabled,
                 onChanged: _resolvingLocation
-                    ? null // pendant l’obtention de la loc, on désactive temporairement
+                    ? null
                     : (v) async {
                         if (!v) {
                           _setLocal(
@@ -577,7 +594,6 @@ class _AudienceFiltersSheetState<T> extends State<AudienceFiltersSheet<T>> {
                           );
                           return;
                         }
-                        // si on active => on force la résolution de la position (sinon filtre inutile)
                         await _ensureLocationOrExplain();
                       },
               ),
@@ -588,8 +604,11 @@ class _AudienceFiltersSheetState<T> extends State<AudienceFiltersSheet<T>> {
                   contentPadding: EdgeInsets.zero,
                   title: Text(
                     (_local.originLat != null && _local.originLng != null)
-                        ? 'Origine: ${_local.originLat!.toStringAsFixed(4)}, ${_local.originLng!.toStringAsFixed(4)}'
-                        : 'Origine non définie',
+                        ? l10n.mapOriginDefined(
+                            _local.originLat!.toStringAsFixed(4),
+                            _local.originLng!.toStringAsFixed(4),
+                          )
+                        : l10n.mapOriginUndefined,
                   ),
                   trailing: TextButton.icon(
                     icon: _resolvingLocation
@@ -599,7 +618,7 @@ class _AudienceFiltersSheetState<T> extends State<AudienceFiltersSheet<T>> {
                             child: CircularProgressIndicator(strokeWidth: 2),
                           )
                         : const Icon(Icons.my_location),
-                    label: const Text('Ma position'),
+                    label: Text(l10n.mapMyPosition),
                     onPressed: _resolvingLocation
                         ? null
                         : _ensureLocationOrExplain,
@@ -613,15 +632,18 @@ class _AudienceFiltersSheetState<T> extends State<AudienceFiltersSheet<T>> {
                         min: 1,
                         max: 1000,
                         divisions: 999,
-                        label:
-                            '${(_local.maxKm ?? 100.0).toStringAsFixed(0)} km',
+                        label: l10n.mapKmLabel(
+                          (_local.maxKm ?? 100.0).toStringAsFixed(0),
+                        ),
                         onChanged: (v) => _setLocal(_local.copyWith(maxKm: v)),
                       ),
                     ),
                     SizedBox(
                       width: 72,
                       child: Text(
-                        '${(_local.maxKm ?? 100.0).toStringAsFixed(0)} km',
+                        l10n.mapKmLabel(
+                          (_local.maxKm ?? 100.0).toStringAsFixed(0),
+                        ),
                         textAlign: TextAlign.right,
                       ),
                     ),
@@ -631,8 +653,11 @@ class _AudienceFiltersSheetState<T> extends State<AudienceFiltersSheet<T>> {
 
               const SizedBox(height: 16),
 
-              // Pays
-              const Text('Pays', style: TextStyle(fontWeight: FontWeight.w700)),
+              // Countries
+              Text(
+                l10n.mapCountryTitle,
+                style: const TextStyle(fontWeight: FontWeight.w700),
+              ),
               const SizedBox(height: 6),
               Theme(
                 data: Theme.of(
@@ -642,8 +667,10 @@ class _AudienceFiltersSheetState<T> extends State<AudienceFiltersSheet<T>> {
                   tilePadding: EdgeInsets.zero,
                   title: Text(
                     _local.countriesIso2.length == _countryOptions.length
-                        ? 'Tous les pays'
-                        : '${_local.countriesIso2.length} sélectionné(s)',
+                        ? l10n.mapAllCountriesSelected
+                        : l10n.mapCountriesSelectedCount(
+                            _local.countriesIso2.length,
+                          ),
                   ),
                   children: [
                     Row(
@@ -654,13 +681,13 @@ class _AudienceFiltersSheetState<T> extends State<AudienceFiltersSheet<T>> {
                               countriesIso2: _countryOptions.toSet(),
                             ),
                           ),
-                          child: const Text('Tout sélectionner'),
+                          child: Text(l10n.mapSelectAll),
                         ),
                         TextButton(
                           onPressed: () => _setLocal(
                             _local.copyWith(countriesIso2: <String>{}),
                           ),
-                          child: const Text('Effacer'),
+                          child: Text(l10n.mapClear),
                         ),
                       ],
                     ),
@@ -689,17 +716,17 @@ class _AudienceFiltersSheetState<T> extends State<AudienceFiltersSheet<T>> {
 
               const SizedBox(height: 16),
 
-              // Génotype
-              const Text(
-                'Génotype',
-                style: TextStyle(fontWeight: FontWeight.w700),
+              // Genotype
+              Text(
+                l10n.mapGenotypeTitle,
+                style: const TextStyle(fontWeight: FontWeight.w700),
               ),
               const SizedBox(height: 6),
               ..._genotypeOptions.map((g) {
                 final checked = _local.genotypes.contains(g);
                 return CheckboxListTile(
                   value: checked,
-                  title: Text(g),
+                  title: Text(_genoLabel(context, g)),
                   dense: true,
                   controlAffinity: ListTileControlAffinity.leading,
                   onChanged: (v) {
@@ -716,8 +743,11 @@ class _AudienceFiltersSheetState<T> extends State<AudienceFiltersSheet<T>> {
 
               const SizedBox(height: 16),
 
-              // Âge
-              const Text('Âge', style: TextStyle(fontWeight: FontWeight.w700)),
+              // Age
+              Text(
+                l10n.mapAgeTitle,
+                style: const TextStyle(fontWeight: FontWeight.w700),
+              ),
               const SizedBox(height: 6),
               if (!hasAges)
                 const Padding(
@@ -728,8 +758,8 @@ class _AudienceFiltersSheetState<T> extends State<AudienceFiltersSheet<T>> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text('Min: ${_local.minAge}'),
-                    Text('Max: ${_local.maxAge}'),
+                    Text(l10n.mapMinValue(_local.minAge ?? minAge)),
+                    Text(l10n.mapMaxValue(_local.maxAge ?? maxAge)),
                   ],
                 ),
                 RangeSlider(
@@ -755,6 +785,7 @@ class _AudienceFiltersSheetState<T> extends State<AudienceFiltersSheet<T>> {
 
               const SizedBox(height: 12),
 
+              // Actions
               Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [

@@ -2438,6 +2438,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Loading...'**
   String get loadingGroup;
+
+  /// No description provided for @mapLocationResolverMissing.
+  ///
+  /// In en, this message translates to:
+  /// **'Location is not available.'**
+  String get mapLocationResolverMissing;
+
+  /// No description provided for @mapLocationUnableToGet.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to get your location. Check GPS services and permissions.'**
+  String get mapLocationUnableToGet;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

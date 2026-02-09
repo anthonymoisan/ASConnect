@@ -658,6 +658,9 @@
   },
   "@yearsOld": {
     "description": "Alters-Suffix (z.B. 12 Jahre)"
-  }
+  },
+  
+  "mapLocationResolverMissing": "Standort ist nicht verfügbar.",
+  "mapLocationUnableToGet": "Standort konnte nicht abgerufen werden. Prüfe GPS und Berechtigungen."
 
 }
