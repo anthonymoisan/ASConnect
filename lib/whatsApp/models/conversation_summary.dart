@@ -4,6 +4,7 @@ class ConversationSummary {
   final int id;
   final String title;
   final bool isGroup;
+  final int? idAdmin;
   final DateTime? createdAt;
   final DateTime? lastMessageAt;
 
@@ -20,6 +21,7 @@ class ConversationSummary {
     required this.id,
     required this.title,
     required this.isGroup,
+    required this.idAdmin,
     required this.createdAt,
     required this.lastMessageAt,
     required this.unreadCount,
@@ -34,6 +36,7 @@ class ConversationSummary {
       id: (json['id'] as int),
       title: (json['title'] ?? '') as String,
       isGroup: (json['is_group'] ?? false) as bool,
+      idAdmin: (json["idAdmin"] as int?) ?? 0,
       createdAt: json['created_at'] == null
           ? null
           : DateTime.parse(json['created_at']),

@@ -606,8 +606,6 @@ class _ConversationsgroupPageState extends State<ConversationsgroupPage>
       );
     }
 
-    final adminId = widget.personId!; // ✅ admin = current personId (people/1)
-
     return ListView.separated(
       physics: const AlwaysScrollableScrollPhysics(),
       itemCount: _items.length,
@@ -621,6 +619,7 @@ class _ConversationsgroupPageState extends State<ConversationsgroupPage>
         final pseudo = (last?.pseudo ?? '').trim();
         final prefix = pseudo.isEmpty ? '' : '$pseudo : ';
         final lastText = last == null ? '' : '$prefix${last.bodyText}';
+        final adminId = conv.idAdmin;
 
         return ListTile(
           contentPadding: const EdgeInsets.symmetric(
@@ -632,7 +631,7 @@ class _ConversationsgroupPageState extends State<ConversationsgroupPage>
           leading: PeoplePhotoAvatar(
             peopleId: adminId,
             radius: 26,
-            onTap: () => _openAdminProfile(adminId),
+            onTap: adminId == null ? null : () => _openAdminProfile(adminId),
           ),
 
           // ✅ ligne du haut : titre + membres (même ligne) + date à droite

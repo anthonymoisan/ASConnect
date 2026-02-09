@@ -565,7 +565,7 @@ class ConversationApi {
     final uri = Uri.parse('$_baseUrl/conversations/group');
 
     final body = <String, dynamic>{
-      'people_public_id': peoplePublicId,
+      'people_public_admin_id': peoplePublicId,
       'listIdPeoplesMember': listIdPeoplesMember,
       'title': title,
     };
@@ -604,7 +604,7 @@ class ConversationApi {
     final resp = await _client.delete(
       uri,
       headers: {'X-App-Key': _appKey, 'Content-Type': 'application/json'},
-      body: jsonEncode({'people_public_id': peoplePublicId}),
+      body: jsonEncode({'people_public_admin_id': peoplePublicId}),
     );
 
     if (resp.statusCode == 200) {
@@ -629,35 +629,5 @@ class ConversationApi {
       'Erreur deleteGroupConversation '
       '(${resp.statusCode}) : ${resp.body}',
     );
-  }
-
-  /// ✅ GET /api/public/people/conversations/group/filters
-  /// Body JSON: { "people_public_id": 1 }
-  /// Retour attendu: liste d'IDs (ex: [2,3,4])
-  static Future<List<int>> fetchPeopleIdsForGroupFilters({
-    required int peoplePublicId,
-  }) async {
-    final uri = Uri.parse(
-      '$_baseUrl/people/conversations/group/filters',
-    ).replace(queryParameters: {'people_public_id': peoplePublicId.toString()});
-
-    final cacheKey = 'groupFiltersIds:$peoplePublicId';
-    final cached = _getCache<List<int>>(cacheKey);
-    if (cached != null) return cached;
-
-    return _dedup<List<int>>(cacheKey, () async {
-      final resp = await _client.get(uri, headers: _headers);
-
-      if (resp.statusCode == 200) {
-        final List<dynamic> jsonList = jsonDecode(resp.body) as List<dynamic>;
-        final ids = jsonList.map((e) => e as int).toList();
-        _setCache(cacheKey, ids, _ttlLong);
-        return ids;
-      }
-
-      throw Exception(
-        'Erreur fetchPeopleIdsForGroupFilters (${resp.statusCode}) : ${resp.body}',
-      );
-    });
   }
 }
