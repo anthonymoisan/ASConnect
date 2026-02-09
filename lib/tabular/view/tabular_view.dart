@@ -15,6 +15,9 @@ import '../models/listPerson.dart';
 import '../models/person.dart';
 import '../services/tabular_api.dart';
 
+import '../../whatsApp/screens/widget_avatar_viewer.dart'; // AvatarViewer
+import 'person_avatar_with_status.dart'; // PersonAvatarWithStatus
+
 // ✅ Filters logic lives here (single source of truth)
 part 'tabular_view_filters.dart';
 
@@ -574,127 +577,13 @@ class _TabularViewState extends State<TabularView> with WidgetsBindingObserver {
     );
   }
 
-  // ---------------------------------------------------------------------------
-  // Photo plein écran
-  // ---------------------------------------------------------------------------
-
-  void _openPersonPhotoFullScreen(Person p) {
-    final l10n = AppLocalizations.of(context)!;
-
-    final url = personPhotoUrl(p.id);
-
-    final pseudo = _pseudo(p);
-    final ageLabel = (p.age == null) ? '—' : l10n.mapPersonTileAge(p.age!);
-    final genotype = _genotypeLabel(l10n, p);
-
-    final country = _countryLabel(p);
-    final city = _cityLabel(p);
-
-    showGeneralDialog(
-      context: context,
-      barrierDismissible: true,
-      barrierLabel: l10n.photo,
-      barrierColor: Colors.black,
-      transitionDuration: const Duration(milliseconds: 180),
-      pageBuilder: (ctx, _, __) {
-        final l10n2 = AppLocalizations.of(ctx)!;
-
-        return Scaffold(
-          backgroundColor: Colors.black,
-          body: SafeArea(
-            child: Stack(
-              children: [
-                Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Expanded(
-                        child: InteractiveViewer(
-                          minScale: 1.0,
-                          maxScale: 4.0,
-                          child: Image.network(
-                            url,
-                            headers: const {'X-App-Key': publicAppKey},
-                            fit: BoxFit.contain,
-                            errorBuilder: (_, __, ___) => const Icon(
-                              Icons.person,
-                              size: 120,
-                              color: Colors.white54,
-                            ),
-                            loadingBuilder: (ctx2, child, prog) {
-                              if (prog == null) return child;
-                              return const SizedBox(
-                                width: 36,
-                                height: 36,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                ),
-                              );
-                            },
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        child: Column(
-                          children: [
-                            Text(
-                              '$pseudo  •  $ageLabel  •  $genotype',
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w800,
-                                fontSize: 16,
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
-                            const SizedBox(height: 6),
-                            Text(
-                              '$country  •  $city',
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                color: Colors.white70,
-                                fontWeight: FontWeight.w600,
-                                fontSize: 14,
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
-                            const SizedBox(height: 14),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Positioned(
-                  top: 8,
-                  right: 8,
-                  child: IconButton(
-                    icon: const Icon(Icons.close, color: Colors.white),
-                    onPressed: () => Navigator.of(ctx).pop(),
-                    tooltip: l10n2.close,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-      transitionBuilder: (ctx, anim, _, child) =>
-          FadeTransition(opacity: anim, child: child),
-    );
-  }
-
-  // Avatar + dot
+  // Avatar + dot (plein écran factorisé via AvatarViewer)
   Widget _photoCell(Person p) {
     final url = personPhotoUrl(p.id);
-    return _PeoplePhotoAvatarWithStatus(
+    return PersonAvatarWithStatus(
       url: url,
       isConnected: p.isConnected,
-      onTap: () => _openPersonPhotoFullScreen(p),
+      onTap: () => AvatarViewer.open(context, peopleId: p.id),
     );
   }
 
@@ -1300,130 +1189,6 @@ class _ComposeMessageSheetState extends State<_ComposeMessageSheet> {
             );
           },
         ),
-      ),
-    );
-  }
-}
-
-// -----------------------------------------------------------------------------
-// Dot + avatar
-// -----------------------------------------------------------------------------
-class _StatusDot extends StatelessWidget {
-  const _StatusDot({
-    required this.isOnline,
-    required this.tooltipOnline,
-    required this.tooltipOffline,
-    this.size = 12,
-  });
-
-  final bool isOnline;
-  final String tooltipOnline;
-  final String tooltipOffline;
-  final double size;
-
-  @override
-  Widget build(BuildContext context) {
-    return Tooltip(
-      message: isOnline ? tooltipOnline : tooltipOffline,
-      child: Container(
-        width: size,
-        height: size,
-        decoration: BoxDecoration(
-          color: isOnline ? Colors.green : Colors.red,
-          shape: BoxShape.circle,
-          border: Border.all(color: Colors.white, width: 2),
-          boxShadow: const [
-            BoxShadow(
-              color: Colors.black26,
-              blurRadius: 3,
-              offset: Offset(0, 1),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _PeoplePhotoAvatarWithStatus extends StatelessWidget {
-  final String url;
-  final bool isConnected;
-  final VoidCallback? onTap;
-
-  const _PeoplePhotoAvatarWithStatus({
-    required this.url,
-    required this.isConnected,
-    this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    const double radius = 18;
-    final box = radius * 2;
-
-    final dotSize = (radius * 0.55).clamp(10.0, 14.0).toDouble();
-    final dotPadding = (radius * 0.12).clamp(1.0, 4.0).toDouble();
-
-    final l10n = AppLocalizations.of(context)!;
-
-    return SizedBox(
-      width: box,
-      height: box,
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          Align(
-            alignment: Alignment.center,
-            child: InkWell(
-              onTap: onTap,
-              customBorder: const CircleBorder(),
-              child: ClipOval(
-                child: Image.network(
-                  url,
-                  headers: const {'X-App-Key': publicAppKey},
-                  width: box,
-                  height: box,
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => Container(
-                    width: box,
-                    height: box,
-                    color: Colors.grey.shade200,
-                    alignment: Alignment.center,
-                    child: const Icon(
-                      Icons.person,
-                      size: 20,
-                      color: Colors.black45,
-                    ),
-                  ),
-                  loadingBuilder: (ctx, child, prog) {
-                    if (prog == null) return child;
-                    return Container(
-                      width: box,
-                      height: box,
-                      color: Colors.grey.shade200,
-                      alignment: Alignment.center,
-                      child: const SizedBox(
-                        width: 14,
-                        height: 14,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      ),
-                    );
-                  },
-                ),
-              ),
-            ),
-          ),
-          Positioned(
-            right: dotPadding,
-            top: dotPadding,
-            child: _StatusDot(
-              isOnline: isConnected,
-              size: dotSize,
-              tooltipOnline: l10n.statusOnline,
-              tooltipOffline: l10n.statusOffline,
-            ),
-          ),
-        ],
       ),
     );
   }

@@ -1,4 +1,9 @@
 // lib/whatsApp/screens/conversationsGroup_page.dart
+//
+// ✅ Optimisé selon ta demande :
+// - PAS de bottom sheet profil
+// - Tap sur l’avatar => ouverture plein écran (AvatarViewer.open)
+// - Nettoyage du code mort lié au profil (cache people, countries, _openAdminProfile, etc.)
 
 import 'dart:async';
 import 'dart:typed_data';
@@ -8,15 +13,15 @@ import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
 
 import '../../l10n/app_localizations.dart';
-import '../../tabular/services/tabular_api.dart';
 import '../../tabular/models/person.dart';
+import '../../tabular/services/tabular_api.dart';
 
 import '../models/conversation_summary.dart';
 import '../services/conversation_api.dart';
 import '../services/conversation_events.dart';
-import 'chat_page.dart';
-
 import 'audience_filters.dart';
+import 'chat_page.dart';
+import 'widget_avatar_viewer.dart';
 
 class ConversationsgroupPage extends StatefulWidget {
   final int? personId;
@@ -38,11 +43,6 @@ class _ConversationsgroupPageState extends State<ConversationsgroupPage>
   bool _reloading = false;
 
   static const Duration _pollInterval = Duration(seconds: 10);
-
-  // ✅ cache infos admin (pseudo/age/localisation)
-  final Map<int, Person> _peopleCache = {};
-  Map<String, String> _countriesByCode = const {};
-  bool _profileLoading = false;
 
   void _onRefreshTick() => _reload(silent: true);
 
@@ -72,7 +72,6 @@ class _ConversationsgroupPageState extends State<ConversationsgroupPage>
       _items = [];
       _error = null;
       _initialLoading = true;
-      _peopleCache.clear();
       _loadInitial();
       _startPolling();
     }
@@ -113,7 +112,7 @@ class _ConversationsgroupPageState extends State<ConversationsgroupPage>
       s = (s * 31) ^ c.id;
       s = (s * 31) ^ c.unreadCount;
       s = (s * 31) ^ (c.lastMessageAt?.millisecondsSinceEpoch ?? 0);
-      s = (s * 31) ^ ((c.memberCount ?? 0));
+      s = (s * 31) ^ (c.memberCount ?? 0);
 
       final lm = c.lastMessage;
       if (lm != null) {
@@ -334,229 +333,6 @@ class _ConversationsgroupPageState extends State<ConversationsgroupPage>
     return l10n.groupMembersCount(mc);
   }
 
-  // ---------------------------------------------------------------------------
-  // ✅ Admin profile: charger pseudo/age/localisation puis afficher une sheet
-  // ---------------------------------------------------------------------------
-
-  Future<void> _ensureCountriesLoaded() async {
-    if (_countriesByCode.isNotEmpty) return;
-    try {
-      final locale = Localizations.localeOf(context).languageCode;
-      final map = await TabularApi.fetchCountriesTranslated(locale: locale);
-      if (!mounted) return;
-      setState(() => _countriesByCode = map);
-    } catch (_) {
-      // ok: on gardera ISO2
-    }
-  }
-
-  Future<Person?> _getPersonFromDataset(int id) async {
-    // cache
-    final cached = _peopleCache[id];
-    if (cached != null) return cached;
-
-    // ⚠️ si ton API a un endpoint "get person by id" c'est mieux.
-    // Là on réutilise le dataset mapRepresentation (simple, mais peut être lourd).
-    final list = await TabularApi.fetchPeopleMapRepresentation();
-    for (final p in list.items) {
-      if (p.id == id) {
-        _peopleCache[id] = p;
-        return p;
-      }
-    }
-    return null;
-  }
-
-  String _countryLabelIso2(String? iso2) {
-    final code = (iso2 ?? '').trim().toUpperCase();
-    if (code.length != 2) return '';
-    final translated = _countriesByCode[code];
-    return (translated == null || translated.trim().isEmpty)
-        ? code
-        : translated.trim();
-  }
-
-  String _locationLine(Person p) {
-    final parts = <String>[];
-
-    final c = _countryLabelIso2(p.countryCode);
-    if (c.isNotEmpty) parts.add(c);
-
-    // si tu as d'autres champs (ville / région) dans Person, tu peux les ajouter ici.
-    // Ex:
-    // final city = (p.city ?? '').trim();
-    // if (city.isNotEmpty) parts.insert(0, city);
-
-    final lat = p.latitude;
-    final lng = p.longitude;
-    if (lat != null && lng != null) {
-      parts.add('${lat.toStringAsFixed(4)}, ${lng.toStringAsFixed(4)}');
-    }
-
-    return parts.join(' • ');
-  }
-
-  Future<void> _openAdminProfile(int adminId) async {
-    if (_profileLoading) return;
-    setState(() => _profileLoading = true);
-
-    try {
-      await _ensureCountriesLoaded();
-      final p = await _getPersonFromDataset(adminId);
-      if (!mounted) return;
-
-      if (p == null) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Profil indisponible')));
-        return;
-      }
-
-      await showModalBottomSheet<void>(
-        context: context,
-        isScrollControlled: true,
-        useSafeArea: true,
-        builder: (ctx) {
-          final l10n = AppLocalizations.of(ctx)!;
-
-          final pseudo = (p.pseudo ?? '').trim(); // supposé exister dans Person
-          final age = p.age;
-          final loc = _locationLine(p);
-
-          return Padding(
-            padding: EdgeInsets.only(
-              left: 16,
-              right: 16,
-              top: 16,
-              bottom: 16 + MediaQuery.of(ctx).viewInsets.bottom,
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Row(
-                  children: [
-                    PeoplePhotoAvatar(
-                      peopleId: adminId,
-                      radius: 32,
-                      onTap: () {
-                        // plein écran photo
-                        _openAvatarFullScreen(adminId);
-                      },
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            pseudo.isEmpty ? l10n.profile : pseudo,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.w800,
-                              fontSize: 16,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          if (age != null)
-                            Text(
-                              '${age.toString()} ${l10n.yearsOld}',
-                              style: TextStyle(color: Colors.grey.shade700),
-                            ),
-                          if (loc.isNotEmpty) ...[
-                            const SizedBox(height: 2),
-                            Text(
-                              loc,
-                              style: TextStyle(color: Colors.grey.shade700),
-                            ),
-                          ],
-                        ],
-                      ),
-                    ),
-                    IconButton(
-                      onPressed: () => Navigator.of(ctx).pop(),
-                      icon: const Icon(Icons.close),
-                      tooltip: l10n.close,
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-              ],
-            ),
-          );
-        },
-      );
-    } catch (_) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Erreur chargement profil')));
-    } finally {
-      if (mounted) setState(() => _profileLoading = false);
-    }
-  }
-
-  // ✅ plein écran avatar (même UX que ConversationsPage)
-  void _openAvatarFullScreen(int peopleId) {
-    final l10n = AppLocalizations.of(context)!;
-    final url = personPhotoUrl(peopleId);
-
-    showGeneralDialog(
-      context: context,
-      barrierDismissible: true,
-      barrierLabel: l10n.photo,
-      barrierColor: Colors.black,
-      transitionDuration: const Duration(milliseconds: 180),
-      pageBuilder: (ctx, _, __) {
-        final l10n2 = AppLocalizations.of(ctx)!;
-        return Scaffold(
-          backgroundColor: Colors.black,
-          body: SafeArea(
-            child: Stack(
-              children: [
-                Center(
-                  child: InteractiveViewer(
-                    minScale: 1.0,
-                    maxScale: 4.0,
-                    child: Image.network(
-                      url,
-                      headers: {'X-App-Key': publicAppKey},
-                      fit: BoxFit.contain,
-                      errorBuilder: (_, __, ___) => const Icon(
-                        Icons.person,
-                        size: 120,
-                        color: Colors.white54,
-                      ),
-                      loadingBuilder: (ctx, child, prog) {
-                        if (prog == null) return child;
-                        return const SizedBox(
-                          width: 36,
-                          height: 36,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        );
-                      },
-                    ),
-                  ),
-                ),
-                Positioned(
-                  top: 8,
-                  right: 8,
-                  child: IconButton(
-                    icon: const Icon(Icons.close, color: Colors.white),
-                    onPressed: () => Navigator.of(ctx).pop(),
-                    tooltip: l10n2.close,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-      transitionBuilder: (ctx, anim, _, child) =>
-          FadeTransition(opacity: anim, child: child),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
@@ -615,10 +391,10 @@ class _ConversationsgroupPageState extends State<ConversationsgroupPage>
         final membersInline = _membersInline(conv);
         final last = conv.lastMessage;
 
-        // texte du dernier message
         final pseudo = (last?.pseudo ?? '').trim();
         final prefix = pseudo.isEmpty ? '' : '$pseudo : ';
         final lastText = last == null ? '' : '$prefix${last.bodyText}';
+
         final adminId = conv.idAdmin;
 
         return ListTile(
@@ -627,14 +403,15 @@ class _ConversationsgroupPageState extends State<ConversationsgroupPage>
             vertical: 10,
           ),
 
-          // ✅ Avatar admin gros à gauche (cliquable => sheet infos)
+          // ✅ TAP avatar => plein écran direct (sans sheet)
           leading: PeoplePhotoAvatar(
             peopleId: adminId,
             radius: 26,
-            onTap: adminId == null ? null : () => _openAdminProfile(adminId),
+            onTap: adminId == null
+                ? null
+                : () => AvatarViewer.open(context, peopleId: adminId),
           ),
 
-          // ✅ ligne du haut : titre + membres (même ligne) + date à droite
           title: Row(
             children: [
               Expanded(
@@ -666,7 +443,6 @@ class _ConversationsgroupPageState extends State<ConversationsgroupPage>
             ],
           ),
 
-          // ✅ dessous à droite : dernier message
           subtitle: Padding(
             padding: const EdgeInsets.only(top: 4),
             child: Text(
@@ -680,6 +456,7 @@ class _ConversationsgroupPageState extends State<ConversationsgroupPage>
           trailing: conv.unreadCount > 0
               ? _UnreadBubble(count: conv.unreadCount)
               : null,
+
           onTap: () => _openConversation(conv.id),
           onLongPress: () => _confirmLeaveConversation(conv.id),
         );
@@ -689,7 +466,7 @@ class _ConversationsgroupPageState extends State<ConversationsgroupPage>
 }
 
 // ============================================================================
-// Dialog : controllers + Audience Filters
+// Dialog : controllers + Audience Filters (inchangé)
 // ============================================================================
 
 class _CreateGroupDialog extends StatefulWidget {
@@ -712,7 +489,7 @@ class _CreateGroupDialogState extends State<_CreateGroupDialog> {
   AudienceFilters<Person>? _audience;
   Map<String, String> _countriesByCode = const {};
 
-  int _audienceCount = 0; // ✅ compteur stable
+  int _audienceCount = 0;
 
   @override
   void initState() {
@@ -785,8 +562,6 @@ class _CreateGroupDialogState extends State<_CreateGroupDialog> {
         _allPeople = people;
         _countriesByCode = cMap;
         _audience = initial;
-
-        // ✅ important: dès que le dataset est là, on affiche sa taille
         _audienceCount = people.length;
       });
     } catch (e) {
@@ -945,7 +720,6 @@ class _CreateGroupDialogState extends State<_CreateGroupDialog> {
     final l10n = AppLocalizations.of(context)!;
 
     final buttonEnabled = _allPeople != null && _audience != null;
-
     final datasetLoaded = _allPeople != null;
     final countLabel = datasetLoaded
         ? l10n.groupMembersCount(_audienceCount)
@@ -1156,9 +930,7 @@ class _PeoplePhotoAvatarState extends State<PeoplePhotoAvatar> {
           }
 
           final bytes = snap.data;
-          if (bytes == null) {
-            return fallback();
-          }
+          if (bytes == null) return fallback();
 
           return CircleAvatar(
             radius: r,
