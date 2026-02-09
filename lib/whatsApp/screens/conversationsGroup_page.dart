@@ -22,7 +22,7 @@ import '../models/conversation_summary.dart';
 import '../services/conversation_api.dart';
 import '../services/conversation_events.dart';
 import 'audience_filters.dart';
-import 'chat_page.dart';
+import 'chat_pageGroup.dart';
 import 'widget_avatar_viewer.dart';
 
 class ConversationsgroupPage extends StatefulWidget {
@@ -212,14 +212,17 @@ class _ConversationsgroupPageState extends State<ConversationsgroupPage>
     }
   }
 
-  Future<void> _openConversation(int conversationId) async {
+  Future<void> _openConversation(ConversationSummary conv) async {
     final pid = widget.personId;
     if (pid == null) return;
 
     await Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) =>
-            ChatPage(conversationId: conversationId, currentPersonId: pid),
+        builder: (_) => ChatPageGroup(
+          conversationId: conv.id,
+          currentPersonId: pid,
+          conversationTitle: conv.title, // ✅ ici
+        ),
       ),
     );
 
@@ -356,7 +359,21 @@ class _ConversationsgroupPageState extends State<ConversationsgroupPage>
     if (createdConversationId != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) async {
         if (!mounted) return;
-        await _openConversation(createdConversationId);
+
+        final pid2 = widget.personId;
+        if (pid2 == null) return;
+
+        await Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => ChatPageGroup(
+              conversationId: createdConversationId,
+              currentPersonId: pid2,
+              conversationTitle:
+                  '', // on met vide, le reload rafraîchira la liste ensuite
+            ),
+          ),
+        );
+
         if (mounted) _reload(silent: true);
       });
     }
@@ -532,7 +549,7 @@ class _ConversationsgroupPageState extends State<ConversationsgroupPage>
           ),
 
           // ✅ Tap => chat
-          onTap: () => _openConversation(conv.id),
+          onTap: () => _openConversation(conv),
 
           // ✅ Long press => delete si admin / leave si membre
           onLongPress: () => _handleLongPress(conv),

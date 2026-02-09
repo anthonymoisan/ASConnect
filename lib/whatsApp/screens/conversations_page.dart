@@ -8,7 +8,7 @@ import '../../l10n/app_localizations.dart';
 import '../models/conversation_summary.dart';
 import '../services/conversation_api.dart';
 import '../services/conversation_events.dart';
-import 'chat_pageGroup.dart';
+import 'chat_page.dart';
 
 class ConversationsPage extends StatefulWidget {
   final int? personId;
@@ -207,7 +207,7 @@ class _ConversationsPageState extends State<ConversationsPage>
     await Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) =>
-            ChatPageGroup(conversationId: conversationId, currentPersonId: pid),
+            ChatPage(conversationId: conversationId, currentPersonId: pid),
       ),
     );
 

@@ -13,11 +13,13 @@ import '../services/conversation_events.dart';
 class ChatPageGroup extends StatefulWidget {
   final int conversationId;
   final int currentPersonId;
+  final String conversationTitle;
 
   const ChatPageGroup({
     super.key,
     required this.conversationId,
     required this.currentPersonId,
+    required this.conversationTitle,
   });
 
   @override
@@ -709,21 +711,16 @@ class _ChatPageGroupState extends State<ChatPageGroup>
 
     return Scaffold(
       appBar: AppBar(
-        title: FutureBuilder<String?>(
-          future: _otherPseudoFuture,
-          builder: (context, snapshot) {
-            final pseudo = (snapshot.data ?? '').trim();
-            final name = pseudo.isEmpty ? '—' : pseudo;
-            final title = l10n.chatWithName(name);
-
-            return Text(
-              title,
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w700,
-                color: Colors.black,
-              ),
-            );
-          },
+        title: Text(
+          (widget.conversationTitle.trim().isEmpty)
+              ? AppLocalizations.of(context)!.tabGroup
+              : widget.conversationTitle.trim(),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.w700,
+            color: Colors.black,
+          ),
         ),
         actions: [
           IconButton(
