@@ -661,6 +661,10 @@
   },
   
   "mapLocationResolverMissing": "Standort ist nicht verfügbar.",
-  "mapLocationUnableToGet": "Standort konnte nicht abgerufen werden. Prüfe GPS und Berechtigungen."
+  "mapLocationUnableToGet": "Standort konnte nicht abgerufen werden. Prüfe GPS und Berechtigungen.",
+  
+  "groupDeleteTitle": "Gruppe löschen?",
+  "groupDeleteBody": "Dadurch wird die Gruppenkonversation dauerhaft für alle Mitglieder gelöscht.",
+  "groupDeleteConfirm": "Löschen"
 
 }

@@ -2450,6 +2450,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Unable to get your location. Check GPS services and permissions.'**
   String get mapLocationUnableToGet;
+
+  /// No description provided for @groupDeleteTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete this group?'**
+  String get groupDeleteTitle;
+
+  /// No description provided for @groupDeleteBody.
+  ///
+  /// In en, this message translates to:
+  /// **'This will permanently delete the group conversation for all members.'**
+  String get groupDeleteBody;
+
+  /// No description provided for @groupDeleteConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete'**
+  String get groupDeleteConfirm;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

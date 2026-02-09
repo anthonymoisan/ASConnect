@@ -662,5 +662,9 @@
   },
   
   "mapLocationResolverMissing": "Géolocalisation non disponible.",
-  "mapLocationUnableToGet": "Impossible d’obtenir la position. Vérifie services GPS + autorisations."
+  "mapLocationUnableToGet": "Impossible d’obtenir la position. Vérifie services GPS + autorisations.",
+  
+  "groupDeleteTitle": "Supprimer le groupe ?",
+  "groupDeleteBody": "Cette action supprimera définitivement la conversation de groupe pour tous les membres.",
+  "groupDeleteConfirm": "Supprimer"
 }

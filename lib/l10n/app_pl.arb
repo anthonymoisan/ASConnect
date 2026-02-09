@@ -659,5 +659,9 @@
     "description": "Sufiks wieku (np. 12 lat)"
   },
   "mapLocationResolverMissing": "Lokalizacja jest niedostępna.",
-  "mapLocationUnableToGet": "Nie udało się uzyskać lokalizacji. Sprawdź GPS i uprawnienia."
+  "mapLocationUnableToGet": "Nie udało się uzyskać lokalizacji. Sprawdź GPS i uprawnienia.",
+  
+  "groupDeleteTitle": "Usunąć grupę?",
+  "groupDeleteBody": "Spowoduje to trwałe usunięcie rozmowy grupowej dla wszystkich członków.",
+  "groupDeleteConfirm": "Usuń"
 }

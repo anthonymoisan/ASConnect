@@ -659,5 +659,9 @@
     "description": "Sufijo de edad (ej.: 12 años)"
   },
   "mapLocationResolverMissing": "La ubicación no está disponible.",
-  "mapLocationUnableToGet": "No se pudo obtener la ubicación. Verifica el GPS y los permisos."
+  "mapLocationUnableToGet": "No se pudo obtener la ubicación. Verifica el GPS y los permisos.",
+  
+  "groupDeleteTitle": "¿Eliminar el grupo?",
+  "groupDeleteBody": "Esto eliminará permanentemente la conversación del grupo para todos los miembros.",
+  "groupDeleteConfirm": "Eliminar"
 }

@@ -1,9 +1,11 @@
 // lib/whatsApp/screens/conversationsGroup_page.dart
 //
-// ✅ Optimisé selon ta demande :
-// - PAS de bottom sheet profil
-// - Tap sur l’avatar => ouverture plein écran (AvatarViewer.open)
-// - Nettoyage du code mort lié au profil (cache people, countries, _openAdminProfile, etc.)
+// ✅ Comportement demandé :
+// - TAP (onTap) sur la ligne => ouvrir le chat
+// - TAP LONG (onLongPress) sur la ligne =>
+//    - si je suis ADMIN => confirmer + DELETE le groupe
+//    - sinon => confirmer + LEAVE le groupe
+// - Tap sur l’avatar => plein écran (AvatarViewer.open)
 
 import 'dart:async';
 import 'dart:typed_data';
@@ -225,7 +227,62 @@ class _ConversationsgroupPageState extends State<ConversationsgroupPage>
     _reload(silent: true);
   }
 
-  Future<void> _confirmLeaveConversation(int conversationId) async {
+  bool _amIAdmin(ConversationSummary conv) {
+    final pid = widget.personId;
+    final adminId = conv.idAdmin;
+    if (pid == null || adminId == null) return false;
+    return pid == adminId;
+  }
+
+  Future<void> _confirmDeleteGroupConversation(ConversationSummary conv) async {
+    final pid = widget.personId;
+    if (pid == null) return;
+
+    final confirm = await showDialog<bool>(
+      context: context,
+      useRootNavigator: true,
+      builder: (ctx) {
+        final l10n2 = AppLocalizations.of(ctx)!;
+        return AlertDialog(
+          title: Text(l10n2.groupDeleteTitle),
+          content: Text(l10n2.groupDeleteBody),
+          actions: [
+            TextButton(
+              onPressed: () =>
+                  Navigator.of(ctx, rootNavigator: true).pop(false),
+              child: Text(l10n2.cancel),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(ctx, rootNavigator: true).pop(true),
+              child: Text(
+                l10n2.groupDeleteConfirm,
+                style: const TextStyle(color: Colors.red),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirm != true) return;
+
+    try {
+      await ConversationApi.deleteGroupConversation(
+        conversationId: conv.id,
+        peoplePublicId: pid,
+      );
+      if (!mounted) return;
+      _reload(silent: true);
+    } catch (e) {
+      if (!mounted) return;
+      final l10n = AppLocalizations.of(context)!;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(l10n.genericError(e.toString()))));
+    }
+  }
+
+  Future<void> _confirmLeaveGroupConversation(ConversationSummary conv) async {
     final pid = widget.personId;
     if (pid == null) return;
 
@@ -259,11 +316,12 @@ class _ConversationsgroupPageState extends State<ConversationsgroupPage>
 
     try {
       await ConversationApi.leaveGroupConversation(
-        conversationId: conversationId,
+        conversationId: conv.id,
         peoplePublicId: pid,
         softDeleteOwnMessages: true,
         deleteEmptyConversation: true,
       );
+      if (!mounted) return;
       _reload(silent: true);
     } catch (e) {
       if (!mounted) return;
@@ -271,6 +329,14 @@ class _ConversationsgroupPageState extends State<ConversationsgroupPage>
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text(l10n.genericError(e.toString()))));
+    }
+  }
+
+  Future<void> _handleLongPress(ConversationSummary conv) async {
+    if (_amIAdmin(conv)) {
+      await _confirmDeleteGroupConversation(conv);
+    } else {
+      await _confirmLeaveGroupConversation(conv);
     }
   }
 
@@ -346,7 +412,7 @@ class _ConversationsgroupPageState extends State<ConversationsgroupPage>
         title: Text(l10n.tabGroup),
         actions: [
           IconButton(
-            tooltip: 'Créer un groupe',
+            tooltip: l10n.groupCreateTooltip,
             icon: const Icon(Icons.add),
             onPressed: _openCreateGroupDialog,
           ),
@@ -365,9 +431,9 @@ class _ConversationsgroupPageState extends State<ConversationsgroupPage>
     if (_initialLoading && _items.isEmpty) {
       return ListView(
         physics: const AlwaysScrollableScrollPhysics(),
-        children: const [
-          SizedBox(height: 160),
-          Center(child: Text('Chargement...')),
+        children: [
+          const SizedBox(height: 160),
+          Center(child: Text(l10n.loadingGroup)),
         ],
       );
     }
@@ -396,6 +462,7 @@ class _ConversationsgroupPageState extends State<ConversationsgroupPage>
         final lastText = last == null ? '' : '$prefix${last.bodyText}';
 
         final adminId = conv.idAdmin;
+        final isAdmin = _amIAdmin(conv);
 
         return ListTile(
           contentPadding: const EdgeInsets.symmetric(
@@ -403,7 +470,6 @@ class _ConversationsgroupPageState extends State<ConversationsgroupPage>
             vertical: 10,
           ),
 
-          // ✅ TAP avatar => plein écran direct (sans sheet)
           leading: PeoplePhotoAvatar(
             peopleId: adminId,
             radius: 26,
@@ -453,12 +519,23 @@ class _ConversationsgroupPageState extends State<ConversationsgroupPage>
             ),
           ),
 
-          trailing: conv.unreadCount > 0
-              ? _UnreadBubble(count: conv.unreadCount)
-              : null,
+          trailing: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (conv.unreadCount > 0) _UnreadBubble(count: conv.unreadCount),
+              const SizedBox(width: 10),
+              Icon(
+                isAdmin ? Icons.delete_outline : Icons.exit_to_app,
+                color: isAdmin ? Colors.red.shade400 : Colors.grey.shade600,
+              ),
+            ],
+          ),
 
+          // ✅ Tap => chat
           onTap: () => _openConversation(conv.id),
-          onLongPress: () => _confirmLeaveConversation(conv.id),
+
+          // ✅ Long press => delete si admin / leave si membre
+          onLongPress: () => _handleLongPress(conv),
         );
       },
     );

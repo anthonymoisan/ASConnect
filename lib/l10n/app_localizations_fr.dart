@@ -1322,4 +1322,13 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get mapLocationUnableToGet => 'Impossible d’obtenir la position. Vérifie services GPS + autorisations.';
+
+  @override
+  String get groupDeleteTitle => 'Supprimer le groupe ?';
+
+  @override
+  String get groupDeleteBody => 'Cette action supprimera définitivement la conversation de groupe pour tous les membres.';
+
+  @override
+  String get groupDeleteConfirm => 'Supprimer';
 }

@@ -1324,4 +1324,13 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get mapLocationUnableToGet => 'Nie udało się uzyskać lokalizacji. Sprawdź GPS i uprawnienia.';
+
+  @override
+  String get groupDeleteTitle => 'Usunąć grupę?';
+
+  @override
+  String get groupDeleteBody => 'Spowoduje to trwałe usunięcie rozmowy grupowej dla wszystkich członków.';
+
+  @override
+  String get groupDeleteConfirm => 'Usuń';
 }

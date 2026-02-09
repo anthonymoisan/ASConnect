@@ -659,5 +659,9 @@
   },
   
   "mapLocationResolverMissing": "Location is not available.",
-  "mapLocationUnableToGet": "Unable to get your location. Check GPS services and permissions."
+  "mapLocationUnableToGet": "Unable to get your location. Check GPS services and permissions.",
+  
+  "groupDeleteTitle": "Delete this group?",
+  "groupDeleteBody": "This will permanently delete the group conversation for all members.",
+  "groupDeleteConfirm": "Delete"
 }

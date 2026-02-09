@@ -660,5 +660,9 @@
     "description": "Sufixo de idade (ex.: 12 anos)"
   },
   "mapLocationResolverMissing": "A localização não está disponível.",
-  "mapLocationUnableToGet": "Não foi possível obter a localização. Verifique o GPS e as permissões."
+  "mapLocationUnableToGet": "Não foi possível obter a localização. Verifique o GPS e as permissões.",
+  
+  "groupDeleteTitle": "Excluir o grupo?",
+  "groupDeleteBody": "Isso excluirá permanentemente a conversa do grupo para todos os membros.",
+  "groupDeleteConfirm": "Excluir"
 }
