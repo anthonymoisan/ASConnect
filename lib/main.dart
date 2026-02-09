@@ -4,7 +4,7 @@ import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/scheduler.dart'; // ✅ NEW
+import 'package:flutter/scheduler.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:http/http.dart' as http;
 import 'package:ionicons/ionicons.dart';
@@ -27,6 +27,9 @@ import 'whatsApp/screens/conversations_page.dart';
 import 'whatsApp/screens/conversationsGroup_page.dart';
 
 import 'tabular/view/tabular_view.dart';
+
+// ✅ NEW: service centralisé (unread chats + groups)
+import 'whatsApp/services/conversation_api.dart';
 
 // L10n
 import 'l10n/app_localizations.dart';
@@ -78,9 +81,6 @@ Future<void> main() async {
 
 // ============================================================================
 // ✅ 3 modes d'affichage web desktop
-// - mobileCard : carte mobile centrée (le reste)  ✅ CONTACT = petit
-// - wideCard   : carte large centrée            ✅ HOME = grand
-// - fullScreen : plein écran                    ✅ LOGIN = grand
 // ============================================================================
 
 enum AppFrameMode { mobileCard, wideCard, fullScreen }
@@ -127,15 +127,9 @@ AppFrameMode frameModeForRouteName(String? name) {
   if (name == null || name.isEmpty) return AppFrameMode.mobileCard;
   if (name == '/login') return AppFrameMode.fullScreen;
   if (name == '/home') return AppFrameMode.wideCard;
-  // contact explicit pour être sûr
   if (name == '/contact') return AppFrameMode.mobileCard;
   return AppFrameMode.mobileCard;
 }
-
-// ============================================================================
-// ✅ NavigatorObserver : resync mode sur PUSH/POP/REPLACE
-// ✅ MODIF: applique immédiatement quand possible (évite flash)
-// ============================================================================
 
 class FrameRouteObserver extends NavigatorObserver {
   FrameRouteObserver(this.controller);
@@ -183,10 +177,6 @@ class FrameRouteObserver extends NavigatorObserver {
   }
 }
 
-// ============================================================================
-// ✅ Web shell : carte mobile OU wide OU fullScreen selon controller.value
-// ============================================================================
-
 class WebResponsiveShell extends StatelessWidget {
   const WebResponsiveShell({
     super.key,
@@ -204,8 +194,6 @@ class WebResponsiveShell extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final isDesktop = constraints.maxWidth >= 900;
-
-        // Web étroit => plein écran (mobile-like)
         if (!isDesktop) return child;
 
         return AnimatedBuilder(
@@ -213,12 +201,10 @@ class WebResponsiveShell extends StatelessWidget {
           builder: (_, __) {
             const bg = BoxDecoration(color: Color(0xFFF2F3F5));
 
-            // FULL SCREEN
             if (controller.value == AppFrameMode.fullScreen) {
               return Container(decoration: bg, child: child);
             }
 
-            // MOBILE CARD
             if (controller.value == AppFrameMode.mobileCard) {
               return Container(
                 decoration: bg,
@@ -240,7 +226,6 @@ class WebResponsiveShell extends StatelessWidget {
               );
             }
 
-            // WIDE CARD
             return Container(
               decoration: bg,
               child: Center(
@@ -270,10 +255,6 @@ class WebResponsiveShell extends StatelessWidget {
   }
 }
 
-// ============================================================================
-// ✅ Route sans animation (évite flash quand le mode change)
-// ============================================================================
-
 class _NoAnimMaterialPageRoute<T> extends MaterialPageRoute<T> {
   _NoAnimMaterialPageRoute({required super.builder, super.settings});
 
@@ -300,15 +281,13 @@ class _ASConnexionState extends State<ASConnexion> with WidgetsBindingObserver {
   Locale? _locale;
 
   final AppFrameController _frameCtrl = AppFrameController(
-    initial: AppFrameMode.fullScreen, // ✅ login grand au démarrage
+    initial: AppFrameMode.fullScreen,
   );
 
   late final FrameRouteObserver _frameObserver = FrameRouteObserver(_frameCtrl);
 
-  // ✅ Empêche d’envoyer 10 fois le "disconnect" en rafale
   bool _disconnectSent = false;
 
-  // ✅ un navigatorKey évite d’avoir des ctx “dans le vide” pendant les transitions
   final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
   @override
@@ -316,7 +295,6 @@ class _ASConnexionState extends State<ASConnexion> with WidgetsBindingObserver {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
 
-    // ✅ Force le mode "grand" dès le 1er frame (utile si cache/hot reload)
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       _applyFrameMode(frameModeForRouteName('/login'));
@@ -329,10 +307,8 @@ class _ASConnexionState extends State<ASConnexion> with WidgetsBindingObserver {
     super.dispose();
   }
 
-  // ✅ Détecte fermeture / arrière-plan (mobile) + parfois fermeture onglet (web)
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    // Quand on quitte / ferme / met en arrière plan => on notifie "déconnecté"
     if (state == AppLifecycleState.paused ||
         state == AppLifecycleState.detached ||
         state == AppLifecycleState.inactive ||
@@ -361,15 +337,13 @@ class _ASConnexionState extends State<ASConnexion> with WidgetsBindingObserver {
             body: jsonEncode({'id': pid, 'is_connected': false}),
           )
           .timeout(const Duration(seconds: 12));
-    } catch (_) {
-      // On ne bloque pas la fermeture
-    }
+    } catch (_) {}
   }
 
   Future<void> _handleLogin(String email, String pass, int id) async {
     setState(() {
       _personId = id;
-      _disconnectSent = false; // ✅ on "réarme" après un nouveau login
+      _disconnectSent = false;
     });
   }
 
@@ -393,7 +367,6 @@ class _ASConnexionState extends State<ASConnexion> with WidgetsBindingObserver {
     } catch (_) {}
   }
 
-  // ✅ Applique le mode immédiatement quand possible (évite flash)
   void _applyFrameMode(AppFrameMode nextMode) {
     if (_frameCtrl.value == nextMode) return;
 
@@ -416,11 +389,9 @@ class _ASConnexionState extends State<ASConnexion> with WidgetsBindingObserver {
   Route<dynamic> _onGenerateRoute(RouteSettings settings) {
     final name = settings.name ?? '/login';
 
-    // ✅ calcule le mode depuis le nom
     final nextMode = frameModeForRouteName(name);
     final bool modeChanged = _frameCtrl.value != nextMode;
 
-    // ✅ applique le mode tout de suite si possible
     _applyFrameMode(nextMode);
 
     Widget page;
@@ -437,10 +408,7 @@ class _ASConnexionState extends State<ASConnexion> with WidgetsBindingObserver {
             await _handleLogin(email, pass, id);
             if (!mounted) return;
 
-            // ✅ IMPORTANT: on force le mode HOME avant d'afficher la route
             _applyFrameMode(AppFrameMode.wideCard);
-
-            // ✅ pushReplacementNamed via navigatorKey = nom de route OK
             navigatorKey.currentState?.pushReplacementNamed('/home');
           },
         );
@@ -475,7 +443,6 @@ class _ASConnexionState extends State<ASConnexion> with WidgetsBindingObserver {
           page = HomeScreen(
             personId: pid,
             onLogout: () async {
-              // ✅ quand on se logout "proprement", on notifie aussi déconnecté
               await _notifyDisconnectedIfNeeded();
               _handleLogout();
             },
@@ -501,7 +468,6 @@ class _ASConnexionState extends State<ASConnexion> with WidgetsBindingObserver {
             },
           );
         } else {
-          // ✅ /contact = petit
           page = ContactPage(personId: pid);
         }
         break;
@@ -564,7 +530,6 @@ class _ASConnexionState extends State<ASConnexion> with WidgetsBindingObserver {
         navigatorKey: navigatorKey,
         debugShowCheckedModeBanner: false,
         locale: _locale,
-
         supportedLocales: AppLocalizations.supportedLocales,
         localizationsDelegates: [
           AppLocalizations.delegate,
@@ -573,18 +538,14 @@ class _ASConnexionState extends State<ASConnexion> with WidgetsBindingObserver {
           GlobalCupertinoLocalizations.delegate,
           GlobalWidgetsLocalizations.delegate,
         ],
-
         onGenerateTitle: (ctx) => AppLocalizations.of(ctx)!.appTitle,
         navigatorObservers: [_frameObserver],
-
         builder: (ctx, child) {
           if (child == null) return const SizedBox.shrink();
           return WebResponsiveShell(controller: _frameCtrl, child: child);
         },
-
         initialRoute: '/login',
         onGenerateRoute: _onGenerateRoute,
-
         theme: ThemeData(
           useMaterial3: true,
           colorSchemeSeed: const Color(0xFF3F51B5),
@@ -595,7 +556,7 @@ class _ASConnexionState extends State<ASConnexion> with WidgetsBindingObserver {
 }
 
 // ============================================================================
-// Home (tabs)
+// Home (tabs) — ✅ SIMPLIFIÉ: utilise ConversationApi
 // ============================================================================
 
 class HomeScreen extends StatefulWidget {
@@ -610,6 +571,8 @@ class HomeScreen extends StatefulWidget {
 
   final int personId;
   final VoidCallback onLogout;
+
+  /// Badge OS (icône app). On l'alimente avec la somme chats + groupes.
   final void Function(int count) onBadgeUpdate;
 
   final Locale? currentLocale;
@@ -623,7 +586,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   final _scaffoldKey = GlobalKey<ScaffoldState>();
 
   int _currentIndex = 0;
-  int _unreadMessagesTotal = 0;
+
+  int _unreadChatsTotal = 0;
+  int _unreadGroupsTotal = 0;
 
   Timer? _unreadTimer;
   bool _pollingEnabled = true;
@@ -652,7 +617,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
 
-    _refreshUnreadMessagesTotal();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _refreshUnreadAll();
+    });
+
     _startPolling();
   }
 
@@ -668,7 +637,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     if (state == AppLifecycleState.resumed) {
       _pollingEnabled = true;
       _startPolling();
-      _refreshUnreadMessagesTotal();
+      _refreshUnreadAll();
     } else if (state == AppLifecycleState.paused ||
         state == AppLifecycleState.inactive ||
         state == AppLifecycleState.hidden) {
@@ -682,7 +651,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     if (_unreadTimer != null) return;
 
     _unreadTimer = Timer.periodic(_pollInterval, (_) {
-      _refreshUnreadMessagesTotal();
+      _refreshUnreadAll();
     });
   }
 
@@ -691,40 +660,39 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     _unreadTimer = null;
   }
 
-  Future<int> _fetchUnreadMessagesTotal(int peopleId) async {
-    final uri = Uri.parse('$_publicBase/people/$peopleId/conversationsUnRead');
-    final resp = await http.get(uri, headers: {'X-App-Key': _publicAppKey});
-
-    if (resp.statusCode != 200) {
-      throw Exception(
-        'Erreur unread total (${resp.statusCode}) : ${resp.body}',
-      );
-    }
-
-    final List<dynamic> list = jsonDecode(resp.body) as List<dynamic>;
-    int total = 0;
-    for (final item in list) {
-      final m = item as Map<String, dynamic>;
-      total += (m['unread_count'] as int?) ?? 0;
-    }
-    return total;
+  void _pushLauncherBadge() {
+    widget.onBadgeUpdate(_unreadChatsTotal + _unreadGroupsTotal);
   }
 
-  Future<void> _refreshUnreadMessagesTotal() async {
+  Future<void> _refreshUnreadAll() async {
     try {
-      final total = await _fetchUnreadMessagesTotal(widget.personId);
+      // ✅ on s'appuie sur ConversationApi (cache/dedup déjà dedans)
+      final results = await Future.wait<int>([
+        ConversationApi.fetchUnreadTotalForPerson(widget.personId),
+        ConversationApi.fetchUnreadTotalGroupForPerson(widget.personId),
+      ]);
+
       if (!mounted) return;
 
-      widget.onBadgeUpdate(total);
+      final chats = results[0];
+      final groups = results[1];
 
-      if (total == _unreadMessagesTotal) return;
-      setState(() => _unreadMessagesTotal = total);
-    } catch (_) {}
+      if (chats != _unreadChatsTotal || groups != _unreadGroupsTotal) {
+        setState(() {
+          _unreadChatsTotal = chats;
+          _unreadGroupsTotal = groups;
+        });
+      }
+
+      _pushLauncherBadge();
+    } catch (_) {
+      // silencieux (comme avant)
+    }
   }
 
   Future<void> _logoutAndGoToLogin() async {
     widget.onBadgeUpdate(0);
-    widget.onLogout(); // ✅ dans ASConnexionState, on notifie déjà le backend
+    widget.onLogout();
 
     if (_scaffoldKey.currentState?.isDrawerOpen ?? false) {
       Navigator.of(context).pop();
@@ -782,7 +750,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     final t = AppLocalizations.of(context)!;
     final titles = _titles(context);
 
-    // ✅ Sécurise les index pour éviter RangeError si mismatch temporaire
     final safeIndex = _currentIndex.clamp(0, titles.length - 1);
     final safeTabIndex = _currentIndex.clamp(0, _tabs.length - 1);
 
@@ -919,20 +886,29 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                               selected: _currentIndex == 2,
                               onTap: () {
                                 _setIndex(2);
-                                _refreshUnreadMessagesTotal();
+                                _refreshUnreadAll();
                               },
                             ),
-                            _Badge(count: _unreadMessagesTotal),
+                            _Badge(count: _unreadChatsTotal),
                           ],
                         ),
 
                         const SizedBox(width: 20),
 
-                        // 👥 Groupes (icône visuellement plus "pleine")
-                        _NavIcon(
-                          icon: Ionicons.people,
-                          selected: _currentIndex == 3,
-                          onTap: () => _setIndex(3),
+                        // 👥 Groupes
+                        Stack(
+                          clipBehavior: Clip.none,
+                          children: [
+                            _NavIcon(
+                              icon: Ionicons.people,
+                              selected: _currentIndex == 3,
+                              onTap: () {
+                                _setIndex(3);
+                                _refreshUnreadAll();
+                              },
+                            ),
+                            _Badge(count: _unreadGroupsTotal),
+                          ],
                         ),
                       ],
                     ),

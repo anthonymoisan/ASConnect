@@ -471,6 +471,66 @@ class ConversationApi {
     });
   }
 
+  static Future<List<Conversation>> fetchConversationsUnreadGroupForPerson(
+    int personId,
+  ) async {
+    final uri = Uri.parse(
+      '$_baseUrl/people/$personId/conversationsUnReadGroup',
+    );
+    final cacheKey = 'unreadListGroup:$personId';
+
+    final cached = _getCache<List<Conversation>>(cacheKey);
+    if (cached != null) return cached;
+
+    return _dedup<List<Conversation>>(cacheKey, () async {
+      final response = await _client.get(uri, headers: _headers);
+
+      if (response.statusCode == 200) {
+        final List<dynamic> jsonList =
+            jsonDecode(response.body) as List<dynamic>;
+        final convs = jsonList
+            .map((json) => Conversation.fromJson(json as Map<String, dynamic>))
+            .toList();
+
+        _setCache(cacheKey, convs, _ttlShort);
+        return convs;
+      }
+      throw Exception('Erreur API (${response.statusCode}) : ${response.body}');
+    });
+  }
+
+  // ✅ Total des messages non lus pour les groupes (somme des unread_count)
+  static Future<int> fetchUnreadTotalGroupForPerson(int personId) async {
+    final uri = Uri.parse(
+      '$_baseUrl/people/$personId/conversationsUnReadGroup',
+    );
+    final cacheKey = 'unreadTotalGroup:$personId';
+
+    final cached = _getCache<int>(cacheKey);
+    if (cached != null) return cached;
+
+    return _dedup<int>(cacheKey, () async {
+      final response = await _client.get(uri, headers: _headers);
+
+      if (response.statusCode == 200) {
+        final List<dynamic> jsonList =
+            jsonDecode(response.body) as List<dynamic>;
+        int total = 0;
+        for (final item in jsonList) {
+          final m = item as Map<String, dynamic>;
+          total += (m['unread_count'] as int?) ?? 0;
+        }
+
+        _setCache(cacheKey, total, _ttlShort);
+        return total;
+      }
+
+      throw Exception(
+        'Erreur fetchUnreadTotalGroupForPerson (${response.statusCode}) : ${response.body}',
+      );
+    });
+  }
+
   static Future<List<ConversationSummary>> fetchConversationsSummaryForPerson(
     int personId,
   ) async {
