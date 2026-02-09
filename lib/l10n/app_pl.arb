@@ -650,6 +650,7 @@
   "audience": "Público",
   "profile": "Profil",
   "yearsOld": "lat",
+  "loadingGroup": "Ładowanie...",
 
   "@profile": {
     "description": "Ogólny tytuł profilu użytkownika"

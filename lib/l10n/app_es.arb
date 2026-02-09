@@ -650,6 +650,7 @@
   "audience": "Audiencia",
   "profile": "Perfil",
   "yearsOld": "años",
+  "loadingGroup": "Cargando...",
 
   "@profile": {
     "description": "Título genérico para un perfil de usuario"

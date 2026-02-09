@@ -651,6 +651,7 @@
   "audience": "Pubblico",
   "profile": "Profilo",
   "yearsOld": "anni",
+  "loadingGroup": "Caricamento...",
 
   "@profile": {
     "description": "Titolo generico per un profilo utente"

@@ -2432,6 +2432,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'years old'**
   String get yearsOld;
+
+  /// No description provided for @loadingGroup.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading...'**
+  String get loadingGroup;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

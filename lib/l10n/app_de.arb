@@ -651,6 +651,7 @@
   "audience": "Zielgruppe",
   "profile": "Profil",
   "yearsOld": "Jahre",
+  "loadingGroup": "Wird geladen...",
 
   "@profile": {
     "description": "Allgemeiner Titel für ein Benutzerprofil"

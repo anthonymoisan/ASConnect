@@ -649,6 +649,7 @@
   "audience": "Audience",
   "profile": "Profile",
   "yearsOld": "years old",
+  "loadingGroup": "Loading...",
 
   "@profile": {
     "description": "Generic title for a user profile"

@@ -1313,4 +1313,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get yearsOld => 'años';
+
+  @override
+  String get loadingGroup => 'Cargando...';
 }

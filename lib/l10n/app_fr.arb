@@ -652,6 +652,7 @@
   "audience": "Audience",
   "profile": "Profil",
   "yearsOld": "ans",
+  "loadingGroup": "Chargement...",
 
   "@profile": {
     "description": "Titre générique pour un profil utilisateur"

@@ -1315,4 +1315,7 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get yearsOld => 'lat';
+
+  @override
+  String get loadingGroup => 'Ładowanie...';
 }
