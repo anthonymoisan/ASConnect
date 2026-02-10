@@ -663,5 +663,7 @@
   
   "groupDeleteTitle": "Usunąć grupę?",
   "groupDeleteBody": "Spowoduje to trwałe usunięcie rozmowy grupowej dla wszystkich członków.",
-  "groupDeleteConfirm": "Usuń"
+  "groupDeleteConfirm": "Usuń",
+  
+  "editProfilePhotoConverting": "Trwa konwersja…"
 }

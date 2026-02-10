@@ -663,5 +663,7 @@
   
   "groupDeleteTitle": "Delete this group?",
   "groupDeleteBody": "This will permanently delete the group conversation for all members.",
-  "groupDeleteConfirm": "Delete"
+  "groupDeleteConfirm": "Delete",
+  
+  "editProfilePhotoConverting": "Converting…"
 }

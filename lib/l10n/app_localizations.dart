@@ -2468,6 +2468,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Delete'**
   String get groupDeleteConfirm;
+
+  /// No description provided for @editProfilePhotoConverting.
+  ///
+  /// In en, this message translates to:
+  /// **'Converting…'**
+  String get editProfilePhotoConverting;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

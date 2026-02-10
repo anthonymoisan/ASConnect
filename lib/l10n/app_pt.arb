@@ -664,5 +664,7 @@
   
   "groupDeleteTitle": "Excluir o grupo?",
   "groupDeleteBody": "Isso excluirá permanentemente a conversa do grupo para todos os membros.",
-  "groupDeleteConfirm": "Excluir"
+  "groupDeleteConfirm": "Excluir",
+  
+  "editProfilePhotoConverting": "A converter…"
 }

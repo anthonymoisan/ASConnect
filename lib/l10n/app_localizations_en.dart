@@ -1331,4 +1331,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get groupDeleteConfirm => 'Delete';
+
+  @override
+  String get editProfilePhotoConverting => 'Converting…';
 }

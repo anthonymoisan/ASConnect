@@ -665,6 +665,8 @@
   
   "groupDeleteTitle": "Gruppe löschen?",
   "groupDeleteBody": "Dadurch wird die Gruppenkonversation dauerhaft für alle Mitglieder gelöscht.",
-  "groupDeleteConfirm": "Löschen"
+  "groupDeleteConfirm": "Löschen",
+  
+  "editProfilePhotoConverting": "Wird konvertiert…"
 
 }

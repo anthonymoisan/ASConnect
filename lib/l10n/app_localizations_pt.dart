@@ -1331,4 +1331,7 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get groupDeleteConfirm => 'Excluir';
+
+  @override
+  String get editProfilePhotoConverting => 'A converter…';
 }

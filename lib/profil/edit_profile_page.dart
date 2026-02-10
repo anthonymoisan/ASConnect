@@ -1169,7 +1169,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                           if (_photoConverting) ...[
                             const SizedBox(height: 6),
                             Text(
-                              'Conversion en cours…',
+                              context.l10n.editProfilePhotoConverting,
                               style: theme.textTheme.bodySmall?.copyWith(
                                 color: theme.colorScheme.onSurface.withOpacity(
                                   0.7,

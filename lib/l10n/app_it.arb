@@ -664,6 +664,8 @@
   
   "groupDeleteTitle": "Eliminare il gruppo?",
   "groupDeleteBody": "Questa azione eliminerà definitivamente la conversazione di gruppo per tutti i membri.",
-  "groupDeleteConfirm": "Elimina"
+  "groupDeleteConfirm": "Elimina",
+  
+  "editProfilePhotoConverting": "Conversione in corso…"
 
 }
