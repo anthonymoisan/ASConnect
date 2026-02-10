@@ -10,7 +10,8 @@ import 'package:http/http.dart' as http;
 import 'package:ionicons/ionicons.dart';
 
 import 'package:flutter_app_badger/flutter_app_badger.dart';
-import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart'
+    as fln;
 
 // Pages locales
 import 'profil/login_page.dart' show LoginPage;
@@ -49,33 +50,64 @@ const apiEnvMapTitleKey = String.fromEnvironment(
 const String _publicBase =
     'https://anthonymoisan.eu.pythonanywhere.com/api/public';
 
-// Local notifications (iOS badge)
-final FlutterLocalNotificationsPlugin _localNotifs =
-    FlutterLocalNotificationsPlugin();
+// Local notifications (iOS badge + Android badge via notification)
+final fln.FlutterLocalNotificationsPlugin _localNotifs =
+    fln.FlutterLocalNotificationsPlugin();
 
-Future<void> _initIosBadgePermission() async {
-  const android = AndroidInitializationSettings('@mipmap/ic_launcher');
+// Android badge notification constants
+const String _badgeChannelId = 'badge_channel';
+const String _badgeChannelName = 'Badges';
+const int _badgeNotificationId = 999910; // id fixe
 
-  const ios = DarwinInitializationSettings(
+Future<void> _initLocalNotifications() async {
+  const android = fln.AndroidInitializationSettings('@mipmap/ic_launcher');
+
+  const ios = fln.DarwinInitializationSettings(
     requestAlertPermission: false,
     requestSoundPermission: false,
     requestBadgePermission: true,
   );
 
-  const initSettings = InitializationSettings(android: android, iOS: ios);
-
+  const initSettings = fln.InitializationSettings(android: android, iOS: ios);
   await _localNotifs.initialize(initSettings);
 
+  // iOS: demande badge
   await _localNotifs
       .resolvePlatformSpecificImplementation<
-        IOSFlutterLocalNotificationsPlugin
+        fln.IOSFlutterLocalNotificationsPlugin
       >()
       ?.requestPermissions(alert: false, sound: false, badge: true);
+
+  // Android: create channel (badge via notification number)
+  final androidImpl = _localNotifs
+      .resolvePlatformSpecificImplementation<
+        fln.AndroidFlutterLocalNotificationsPlugin
+      >();
+
+  if (androidImpl != null) {
+    // Android 13+: permission notifications
+    // (si refusée, les badges via notifications ne fonctionneront pas)
+    try {
+      await androidImpl.requestNotificationsPermission();
+    } catch (_) {}
+
+    const channel = fln.AndroidNotificationChannel(
+      _badgeChannelId,
+      _badgeChannelName,
+      description: 'Channel used to update app icon badge count',
+      importance: fln.Importance.low,
+      playSound: false,
+      enableVibration: false,
+      showBadge: true,
+    );
+
+    await androidImpl.createNotificationChannel(channel);
+  }
 }
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await _initIosBadgePermission();
+  await _initLocalNotifications();
   runApp(const ASConnexion());
 }
 
@@ -354,17 +386,61 @@ class _ASConnexionState extends State<ASConnexion> with WidgetsBindingObserver {
 
   void _setLocale(Locale? locale) => setState(() => _locale = locale);
 
-  void _setLauncherBadge(int count) async {
+  /// ✅ Badge app icon :
+  /// - flutter_app_badger (selon launcher)
+  /// - + Android: notification silencieuse avec "number" pour déclencher badge
+  Future<void> _setLauncherBadge(int count) async {
+    // WEB => rien
+    if (kIsWeb) return;
+
+    // 1) flutter_app_badger (best effort)
     try {
       final supported = await FlutterAppBadger.isAppBadgeSupported();
-      if (!supported) return;
-
-      if (count <= 0) {
-        FlutterAppBadger.removeBadge();
-      } else {
-        FlutterAppBadger.updateBadgeCount(count);
+      if (supported) {
+        if (count <= 0) {
+          FlutterAppBadger.removeBadge();
+        } else {
+          FlutterAppBadger.updateBadgeCount(count);
+        }
       }
     } catch (_) {}
+
+    // 2) Android: badge via notification "number"
+    if (defaultTargetPlatform == TargetPlatform.android) {
+      try {
+        final androidImpl = _localNotifs
+            .resolvePlatformSpecificImplementation<
+              fln.AndroidFlutterLocalNotificationsPlugin
+            >();
+
+        if (androidImpl == null) return;
+
+        if (count <= 0) {
+          await _localNotifs.cancel(_badgeNotificationId);
+          return;
+        }
+
+        final details = fln.NotificationDetails(
+          android: fln.AndroidNotificationDetails(
+            _badgeChannelId,
+            _badgeChannelName,
+            channelDescription: 'Badge counter',
+            importance: fln.Importance.low,
+            priority: fln.Priority.low,
+            playSound: false,
+            enableVibration: false,
+            showWhen: false,
+            ongoing: true,
+            onlyAlertOnce: true,
+            // ⭐️ C’est ça qui alimente le badge (si launcher compatible)
+            number: count,
+          ),
+        );
+
+        // Titre/texte vides ou discrets (sinon tu “pollues” la zone de notif)
+        await _localNotifs.show(_badgeNotificationId, '', '', details);
+      } catch (_) {}
+    }
   }
 
   void _applyFrameMode(AppFrameMode nextMode) {
@@ -446,7 +522,7 @@ class _ASConnexionState extends State<ASConnexion> with WidgetsBindingObserver {
               await _notifyDisconnectedIfNeeded();
               _handleLogout();
             },
-            onBadgeUpdate: _setLauncherBadge,
+            onBadgeUpdate: (count) async => _setLauncherBadge(count),
             currentLocale: _locale,
             onLocaleChanged: _setLocale,
           );
@@ -686,7 +762,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
       _pushLauncherBadge();
     } catch (_) {
-      // silencieux (comme avant)
+      // silencieux
     }
   }
 
@@ -763,7 +839,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           _ => null,
         },
         privacyUrl: 'https://www.example.com/politique-de-confidentialite',
-        contactEmail: 'contact@fastfrance.org',
+        contactEmail: 'contact@angelmananalytics.org',
         appVersion: '0.9',
         currentLocale: widget.currentLocale,
         onLocaleChanged: widget.onLocaleChanged,
@@ -966,7 +1042,7 @@ class _Badge extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
         decoration: BoxDecoration(
-          color: Colors.green.shade600,
+          color: Colors.green,
           borderRadius: BorderRadius.circular(10),
           border: Border.all(color: Colors.white, width: 2),
         ),

@@ -426,7 +426,9 @@ class _ConversationsgroupPageState extends State<ConversationsgroupPage>
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(l10n.tabGroup),
+        automaticallyImplyLeading: false,
+        title: const SizedBox.shrink(),
+        centerTitle: true,
         actions: [
           IconButton(
             tooltip: l10n.groupCreateTooltip,
