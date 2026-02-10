@@ -15,6 +15,11 @@ import 'package:geolocator/geolocator.dart';
 // ✅ AppLocalizations
 import '../l10n/app_localizations.dart';
 
+// Utils
+import 'package:path/path.dart' as p;
+// ⚠️ Mobile only (Android/iOS). Sur Web on convertit via backend.
+import 'package:heif_converter/heif_converter.dart';
+
 // =====================
 //   CONFIG PUBLIQUE
 // =====================
@@ -31,6 +36,10 @@ Uri _publicSignupUri() => Uri.parse('$kPublicApiBase/people');
 Uri _publicLookupUri(String email) => Uri.parse(
   '$kPublicApiBase/people/lookup?emailAddress=${Uri.encodeQueryComponent(email)}',
 );
+
+// ✅ Endpoint backend qui convertit une image (HEIC/HEIF ou autre) vers JPEG
+Uri _publicConvertPhotoUri() =>
+    Uri.parse('$kPublicApiBase/utils/convert-photo');
 
 // =====================
 //   DATA
@@ -229,6 +238,61 @@ class _SignUpPageState extends State<SignUpPage> {
     return t.signupPasswordTooWeak;
   }
 
+  // --------------------
+  //  HEIC HELPERS
+  // --------------------
+  bool _isHeicName(String? name) {
+    final n = (name ?? '').toLowerCase();
+    return n.endsWith('.heic') || n.endsWith('.heif');
+  }
+
+  // ✅ WEB + fallback : conversion via backend (renvoie JPEG bytes)
+  Future<Uint8List> _convertHeicViaBackend(XFile file) async {
+    final req = http.MultipartRequest('POST', _publicConvertPhotoUri())
+      ..headers['X-App-Key'] = _publicAppKey;
+
+    final bytes = await file.readAsBytes();
+
+    // Content-type “best effort”
+    final ext = p.extension(file.name).toLowerCase();
+    final mediaType = (ext == '.heif')
+        ? http_parser.MediaType('image', 'heif')
+        : http_parser.MediaType('image', 'heic');
+
+    req.files.add(
+      http.MultipartFile.fromBytes(
+        'photo',
+        bytes,
+        filename: file.name,
+        contentType: mediaType,
+      ),
+    );
+
+    final streamed = await req.send().timeout(const Duration(seconds: 20));
+    final resp = await http.Response.fromStream(streamed);
+
+    if (resp.statusCode != 200) {
+      throw Exception('Convert failed (${resp.statusCode}) : ${resp.body}');
+    }
+
+    return resp.bodyBytes;
+  }
+
+  // ✅ Mobile (Android/iOS) : conversion native HEIF/HEIC -> JPG
+  Future<Uint8List> _convertHeicToJpegBytesMobile(XFile file) async {
+    final String? outPath = await HeifConverter.convert(
+      file.path,
+      format: 'jpg',
+    );
+    if (outPath == null) {
+      throw Exception('HEIC conversion failed');
+    }
+    return File(outPath).readAsBytes();
+  }
+
+  // --------------------
+  //  DATE PICKER
+  // --------------------
   Future<void> _pickBirthDate() async {
     final t = AppLocalizations.of(context)!;
     final now = DateTime.now();
@@ -257,23 +321,52 @@ class _SignUpPageState extends State<SignUpPage> {
     }
   }
 
+  // --------------------
+  //  PICK PHOTO (avec conversion HEIC)
+  // --------------------
   Future<void> _selectPhoto(ImageSource source) async {
     final t = AppLocalizations.of(context)!;
-
     setState(() => _photoError = null);
+
     try {
       final file = await _picker.pickImage(source: source, imageQuality: 92);
       if (file == null) return;
 
       Uint8List bytes;
       int size;
+
       if (kIsWeb) {
-        bytes = await file.readAsBytes();
-        size = bytes.length;
+        // ✅ WEB : si HEIC/HEIF -> conversion backend pour preview + upload
+        if (_isHeicName(file.name)) {
+          bytes = await _convertHeicViaBackend(file);
+          size = bytes.length;
+
+          // on “renomme” côté UI en jpg (utile pour inferMime + affichage)
+          _pickedFile = XFile(
+            file.path,
+            name: '${p.basenameWithoutExtension(file.name)}.jpg',
+            mimeType: 'image/jpeg',
+          );
+        } else {
+          bytes = await file.readAsBytes();
+          size = bytes.length;
+        }
       } else {
-        final f = File(file.path);
-        size = await f.length();
-        bytes = await f.readAsBytes();
+        // ✅ Mobile : HEIC -> conversion native (ou tu peux aussi appeler le backend si tu préfères)
+        if (_isHeicName(file.name) || _isHeicName(file.path)) {
+          bytes = await _convertHeicToJpegBytesMobile(file);
+          size = bytes.length;
+
+          _pickedFile = XFile(
+            file.path,
+            name: '${p.basenameWithoutExtension(file.name)}.jpg',
+            mimeType: 'image/jpeg',
+          );
+        } else {
+          final f = File(file.path);
+          size = await f.length();
+          bytes = await f.readAsBytes();
+        }
       }
 
       if (size > _maxPhotoBytes) {
@@ -288,7 +381,7 @@ class _SignUpPageState extends State<SignUpPage> {
       }
 
       setState(() {
-        _pickedFile = file;
+        _pickedFile ??= file;
         _photoBytes = bytes;
       });
     } catch (e) {
@@ -391,7 +484,6 @@ class _SignUpPageState extends State<SignUpPage> {
     if (resp.statusCode == 200) return;
 
     if (resp.statusCode == 409) {
-      // course condition : email créé entre lookup et post
       throw Exception(t.signupEmailAlreadyExistsRedirect);
     }
 
@@ -428,7 +520,6 @@ class _SignUpPageState extends State<SignUpPage> {
     if (!_progressOpen) return;
     setState(() => _progressStep = step);
 
-    // Refresh fiable : pop + re-open (simple, robuste)
     Navigator.of(context, rootNavigator: true).pop();
     showDialog<void>(
       context: context,
@@ -456,7 +547,6 @@ class _SignUpPageState extends State<SignUpPage> {
 
     if (!(_formKey.currentState?.validate() ?? false)) return;
 
-    // ✅ Sexe obligatoire
     if (_genderKey == null || _genderKey!.isEmpty) {
       ScaffoldMessenger.of(
         context,
@@ -529,13 +619,10 @@ class _SignUpPageState extends State<SignUpPage> {
       acceptAngelmanInfo: _acceptAngelmanInfo,
     );
 
-    // ✅ Modale de progression (toujours visible)
     _openProgressDialog(t);
 
     try {
-      // Hook custom (si tu veux overrider)
       if (widget.onSubmit != null) {
-        // dans ce cas, on ne sait pas les étapes internes
         setState(() => _submitting = true);
         await widget.onSubmit!(data);
         if (!mounted) return;
@@ -543,7 +630,6 @@ class _SignUpPageState extends State<SignUpPage> {
         return;
       }
 
-      // STEP 0: Check Email
       _updateProgressDialogStep(0, t);
       final exists = await _emailExists(data.email);
       if (!mounted) return;
@@ -557,7 +643,6 @@ class _SignUpPageState extends State<SignUpPage> {
         return;
       }
 
-      // STEP 1: Check GPS
       _updateProgressDialogStep(1, t);
       final coords = await _getLatLon();
       if (!mounted) return;
@@ -571,17 +656,13 @@ class _SignUpPageState extends State<SignUpPage> {
         return;
       }
 
-      // STEP 2: Create
       _updateProgressDialogStep(2, t);
-
-      // Optionnel : état local (si tu veux aussi griser le bouton)
       setState(() => _submitting = true);
 
       await _createAccount(data, coords);
       if (!mounted) return;
 
       _closeProgressDialog();
-
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text(t.signupSuccess)));
@@ -602,7 +683,6 @@ class _SignUpPageState extends State<SignUpPage> {
       if (mounted) {
         setState(() => _submitting = false);
       }
-      // sécurité : si encore ouverte
       if (_progressOpen && mounted) {
         _closeProgressDialog();
       }
@@ -610,14 +690,17 @@ class _SignUpPageState extends State<SignUpPage> {
   }
 
   // --------------------
-  //  HELPERS
+  //  HELPERS (mime/labels)
   // --------------------
   String? _inferMime(String? filename) {
     final name = (filename ?? '').toLowerCase();
     if (name.endsWith('.png')) return 'image/png';
     if (name.endsWith('.jpg') || name.endsWith('.jpeg')) return 'image/jpeg';
     if (name.endsWith('.webp')) return 'image/webp';
-    return null;
+
+    // HEIC/HEIF : après conversion on met .jpg, mais on garde un fallback sûr
+    if (name.endsWith('.heic') || name.endsWith('.heif')) return 'image/jpeg';
+    return 'image/jpeg';
   }
 
   String _genotypeLabel(AppLocalizations t, String key) {
@@ -693,7 +776,6 @@ class _SignUpPageState extends State<SignUpPage> {
             keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
             padding: EdgeInsets.fromLTRB(16, 12, 16, 24 + viewInsets.bottom),
             children: [
-              // -------- Section 1 --------
               Row(
                 children: [
                   Icon(Ionicons.medical, color: theme.colorScheme.primary),
@@ -708,7 +790,6 @@ class _SignUpPageState extends State<SignUpPage> {
               ),
               const SizedBox(height: 12),
 
-              // ✅ SEXE
               DropdownButtonFormField<String>(
                 value: _genderKey,
                 isExpanded: true,
@@ -808,6 +889,7 @@ class _SignUpPageState extends State<SignUpPage> {
                 ),
               ),
               const SizedBox(height: 8),
+
               Wrap(
                 spacing: 8,
                 runSpacing: 8,
@@ -834,6 +916,7 @@ class _SignUpPageState extends State<SignUpPage> {
                     ),
                 ],
               ),
+
               if (_photoError != null) ...[
                 const SizedBox(height: 8),
                 Text(
@@ -841,6 +924,7 @@ class _SignUpPageState extends State<SignUpPage> {
                   style: TextStyle(color: theme.colorScheme.error),
                 ),
               ],
+
               if (_photoBytes != null) ...[
                 const SizedBox(height: 12),
                 Center(
