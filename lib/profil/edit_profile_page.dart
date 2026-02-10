@@ -14,6 +14,9 @@ import 'package:ionicons/ionicons.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart' as geocoding;
 
+// ⚠️ Mobile only (Android/iOS). Sur Web on convertit via backend.
+import 'package:heif_converter/heif_converter.dart';
+
 // =====================
 //   CONFIG PUBLIQUE
 // =====================
@@ -67,6 +70,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
   // State
   bool _loading = true;
   bool _saving = false;
+  bool _photoConverting = false;
 
   DateTime? _birthDate;
   String? _genotype;
@@ -197,44 +201,122 @@ class _EditProfilePageState extends State<EditProfilePage> {
     return null;
   }
 
+  bool _isHeicName(String? name) {
+    final n = (name ?? '').toLowerCase();
+    return n.endsWith('.heic') || n.endsWith('.heif');
+  }
+
+  Future<Uint8List> _convertHeicViaBackend(XFile file) async {
+    final uri = Uri.parse('$kPublicApiBase/utils/convert-photo');
+
+    final req = http.MultipartRequest('POST', uri)
+      ..headers['X-App-Key'] = _publicAppKey;
+
+    final bytes = await file.readAsBytes();
+
+    req.files.add(
+      http.MultipartFile.fromBytes(
+        'photo',
+        bytes,
+        filename: file.name,
+        contentType: http_parser.MediaType(
+          'image',
+          _isHeicName(file.name) ? 'heic' : 'jpeg',
+        ),
+      ),
+    );
+
+    final streamed = await req.send().timeout(const Duration(seconds: 20));
+    final resp = await http.Response.fromStream(streamed);
+
+    if (resp.statusCode != 200) {
+      throw Exception('HEIC convert failed (${resp.statusCode})');
+    }
+
+    return resp.bodyBytes; // JPEG
+  }
+
   Future<void> _selectPhoto(ImageSource source) async {
-    // En sélection de photo, on efface les erreurs (y compris "photo obligatoire")
     setState(() => _photoError = null);
+
     try {
       final file = await _picker.pickImage(source: source, imageQuality: 92);
       if (file == null) return;
 
+      // ✅ on passe immédiatement en mode "conversion" si HEIC sur web,
+      // pour ne pas afficher l'image serveur/fallback en attendant
+      final bool heic = _isHeicName(file.name);
+
+      if (kIsWeb && heic) {
+        setState(() {
+          _photoConverting = true;
+          _newPhotoBytes =
+              null; // force le widget preview à ne pas utiliser l'ancien état
+          _newPickedFile = file; // optionnel: garder le nom du fichier
+          _newPhotoMime = 'image/jpeg';
+        });
+      } else {
+        setState(() {
+          _photoConverting = false;
+          _photoError = null;
+        });
+      }
+
       Uint8List bytes;
       int size;
-      if (kIsWeb) {
-        bytes = await file.readAsBytes();
+
+      if (heic) {
+        if (kIsWeb) {
+          bytes = await _convertHeicViaBackend(file);
+        } else {
+          final outPath = await HeifConverter.convert(file.path, format: 'jpg');
+          if (outPath == null) throw Exception('HEIC conversion failed');
+          bytes = await File(outPath).readAsBytes();
+        }
+
         size = bytes.length;
+
+        _newPickedFile = XFile(
+          file.path,
+          name: '${file.name.split('.').first}.jpg',
+          mimeType: 'image/jpeg',
+        );
+        _newPhotoMime = 'image/jpeg';
       } else {
-        final f = File(file.path);
-        size = await f.length();
-        bytes = await f.readAsBytes();
+        if (kIsWeb) {
+          bytes = await file.readAsBytes();
+          size = bytes.length;
+        } else {
+          final f = File(file.path);
+          size = await f.length();
+          bytes = await f.readAsBytes();
+        }
+
+        _newPickedFile = file;
+        _newPhotoMime = _inferMime(file.name) ?? 'image/jpeg';
       }
 
       if (size > _maxPhotoBytes) {
         final sizeMb = (size / (1024 * 1024)).toStringAsFixed(2);
         setState(() {
+          _photoConverting = false;
           _newPickedFile = null;
           _newPhotoBytes = null;
+          _newPhotoMime = null;
           _photoError = context.l10n.editProfilePhotoTooLarge(sizeMb);
         });
         return;
       }
 
       setState(() {
-        _newPickedFile = file;
-        _newPhotoBytes = bytes;
-        _newPhotoMime = _inferMime(file.name) ?? 'image/jpeg';
+        _photoConverting = false;
+        _newPhotoBytes = bytes; // ✅ preview instant une fois prêt
       });
     } catch (e) {
-      setState(
-        () =>
-            _photoError = context.l10n.editProfilePhotoPickError(e.toString()),
-      );
+      setState(() {
+        _photoConverting = false;
+        _photoError = context.l10n.editProfilePhotoPickError(e.toString());
+      });
     }
   }
 
@@ -996,30 +1078,46 @@ class _EditProfilePageState extends State<EditProfilePage> {
                         children: [
                           ClipRRect(
                             borderRadius: BorderRadius.circular(80),
-                            child: _newPhotoBytes != null
-                                ? Image.memory(
-                                    _newPhotoBytes!,
+                            child: _photoConverting
+                                ? Container(
                                     width: 120,
                                     height: 120,
-                                    fit: BoxFit.cover,
-                                  )
-                                : Image.network(
-                                    photoUrl,
-                                    width: 120,
-                                    height: 120,
-                                    fit: BoxFit.cover,
-                                    headers: {'X-App-Key': _publicAppKey},
-                                    errorBuilder: (_, __, ___) => Container(
-                                      width: 120,
-                                      height: 120,
-                                      alignment: Alignment.center,
-                                      color: Colors.black12,
-                                      child: const Icon(
-                                        Ionicons.person_circle_outline,
-                                        size: 64,
+                                    alignment: Alignment.center,
+                                    color: Colors.black12,
+                                    child: const SizedBox(
+                                      width: 26,
+                                      height: 26,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
                                       ),
                                     ),
-                                  ),
+                                  )
+                                : (_newPhotoBytes != null
+                                      ? Image.memory(
+                                          _newPhotoBytes!,
+                                          width: 120,
+                                          height: 120,
+                                          fit: BoxFit.cover,
+                                        )
+                                      : Image.network(
+                                          photoUrl,
+                                          width: 120,
+                                          height: 120,
+                                          fit: BoxFit.cover,
+                                          headers: {'X-App-Key': _publicAppKey},
+                                          errorBuilder: (_, __, ___) =>
+                                              Container(
+                                                width: 120,
+                                                height: 120,
+                                                alignment: Alignment.center,
+                                                color: Colors.black12,
+                                                child: const Icon(
+                                                  Ionicons
+                                                      .person_circle_outline,
+                                                  size: 64,
+                                                ),
+                                              ),
+                                        )),
                           ),
                           const SizedBox(height: 8),
                           Wrap(
@@ -1028,14 +1126,14 @@ class _EditProfilePageState extends State<EditProfilePage> {
                               OutlinedButton.icon(
                                 icon: const Icon(Ionicons.folder_open_outline),
                                 label: Text(context.l10n.editProfileImport),
-                                onPressed: _saving
+                                onPressed: (_saving || _photoConverting)
                                     ? null
                                     : () => _selectPhoto(ImageSource.gallery),
                               ),
                               OutlinedButton.icon(
                                 icon: const Icon(Ionicons.camera_outline),
                                 label: Text(context.l10n.editProfileTakePhoto),
-                                onPressed: _saving
+                                onPressed: (_saving || _photoConverting)
                                     ? null
                                     : () => _selectPhoto(ImageSource.camera),
                               ),
@@ -1044,7 +1142,9 @@ class _EditProfilePageState extends State<EditProfilePage> {
                                 label: Text(
                                   context.l10n.editProfileDeletePhoto,
                                 ),
-                                onPressed: _saving ? null : _deletePhoto,
+                                onPressed: (_saving || _photoConverting)
+                                    ? null
+                                    : _deletePhoto,
                                 style: OutlinedButton.styleFrom(
                                   foregroundColor: theme.colorScheme.error,
                                   side: BorderSide(
@@ -1060,10 +1160,23 @@ class _EditProfilePageState extends State<EditProfilePage> {
                                   label: Text(
                                     context.l10n.editProfileCancelSelection,
                                   ),
-                                  onPressed: _saving ? null : _clearNewPhoto,
+                                  onPressed: (_saving || _photoConverting)
+                                      ? null
+                                      : _clearNewPhoto,
                                 ),
                             ],
                           ),
+                          if (_photoConverting) ...[
+                            const SizedBox(height: 6),
+                            Text(
+                              'Conversion en cours…',
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: theme.colorScheme.onSurface.withOpacity(
+                                  0.7,
+                                ),
+                              ),
+                            ),
+                          ],
                         ],
                       ),
                     ),
@@ -1108,8 +1221,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                     ),
                     const SizedBox(height: 12),
 
-                    // Sexe (listbox) — labels issus des ARB:
-                    // genderLabel / genderMale / genderFemale
+                    // Sexe
                     DropdownButtonFormField<String>(
                       value: (_gender == 'M' || _gender == 'F')
                           ? _gender
@@ -1230,7 +1342,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                     ),
                     const SizedBox(height: 12),
 
-                    // Ville non éditable + bouton géolocaliser + icône info
+                    // Ville
                     TextFormField(
                       controller: _cityCtrl,
                       enabled: false,
@@ -1247,7 +1359,9 @@ class _EditProfilePageState extends State<EditProfilePage> {
                         OutlinedButton.icon(
                           icon: const Icon(Ionicons.locate_outline),
                           label: Text(context.l10n.editProfileGeolocate),
-                          onPressed: _saving ? null : _geolocateAndFillCity,
+                          onPressed: (_saving || _photoConverting)
+                              ? null
+                              : _geolocateAndFillCity,
                         ),
                         const SizedBox(width: 8),
                         Tooltip(
@@ -1330,17 +1444,19 @@ class _EditProfilePageState extends State<EditProfilePage> {
                       child: OutlinedButton.icon(
                         icon: const Icon(Ionicons.key_outline),
                         label: Text(context.l10n.editProfileChangePassword),
-                        onPressed: _saving ? null : _changePasswordDialog,
+                        onPressed: (_saving || _photoConverting)
+                            ? null
+                            : _changePasswordDialog,
                       ),
                     ),
 
                     const SizedBox(height: 16),
 
-                    // ✅ NOUVEAU : Checkbox is_info juste avant les boutons
+                    // Checkbox is_info
                     CheckboxListTile(
                       contentPadding: EdgeInsets.zero,
                       value: _isInfo,
-                      onChanged: _saving
+                      onChanged: (_saving || _photoConverting)
                           ? null
                           : (v) => setState(() => _isInfo = v ?? false),
                       title: Text(context.l10n.acceptInfoAngelman),
@@ -1349,14 +1465,16 @@ class _EditProfilePageState extends State<EditProfilePage> {
 
                     const SizedBox(height: 28),
 
-                    // Actions: Annuler / Enregistrer
+                    // Actions
                     Row(
                       children: [
                         Expanded(
                           child: OutlinedButton.icon(
                             icon: const Icon(Ionicons.close_circle_outline),
                             label: Text(context.l10n.commonCancel),
-                            onPressed: _saving ? null : _cancel,
+                            onPressed: (_saving || _photoConverting)
+                                ? null
+                                : _cancel,
                           ),
                         ),
                         const SizedBox(width: 12),
@@ -1376,7 +1494,9 @@ class _EditProfilePageState extends State<EditProfilePage> {
                                   ? context.l10n.editProfileSaving
                                   : context.l10n.editProfileSave,
                             ),
-                            onPressed: _saving ? null : _save,
+                            onPressed: (_saving || _photoConverting)
+                                ? null
+                                : _save,
                           ),
                         ),
                       ],
