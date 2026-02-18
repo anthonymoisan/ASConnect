@@ -38,7 +38,15 @@ class _ContactPageState extends State<ContactPage> {
   String? _personEmail;
   bool _loadingEmail = false;
 
-  static const String _apiBase = 'https://anthonymoisan.eu.pythonanywhere.com';
+  static const String _env = String.fromEnvironment(
+    'ENV',
+    defaultValue: 'prod',
+  );
+
+  static const String _apiBase = _env == 'prod'
+      ? 'https://anthonymoisan.eu.pythonanywhere.com'
+      : 'https://test-anthonymoisan.eu.pythonanywhere.com';
+
   static const String _contactPath = '/api/public/contact';
   static const String _personInfoPathPrefix =
       '/api/public/people/'; // + <id> + /info

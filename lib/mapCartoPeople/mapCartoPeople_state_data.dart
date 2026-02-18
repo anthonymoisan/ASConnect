@@ -100,11 +100,15 @@ extension _MapPeopleData on _MapPeopleByCityState {
     _loadingCountryLabels = true;
 
     try {
-      final uri = Uri.https(
-        'anthonymoisan.eu.pythonanywhere.com',
-        '/api/public/people/countriesTranslated',
-        {'locale': locale},
-      );
+      const String _env = String.fromEnvironment('ENV', defaultValue: 'prod');
+
+      const String _base = _env == 'prod'
+          ? 'anthonymoisan.eu.pythonanywhere.com'
+          : 'test-anthonymoisan.eu.pythonanywhere.com';
+
+      final uri = Uri.https(_base, '/api/public/people/countriesTranslated', {
+        'locale': locale,
+      });
 
       final res = await http
           .get(

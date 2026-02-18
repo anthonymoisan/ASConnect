@@ -18,8 +18,11 @@ const String _publicAppKey = String.fromEnvironment(
 // Exposé au reste de l’app
 const String publicAppKey = _publicAppKey;
 
-// Base API publique
-const String _base = 'https://anthonymoisan.eu.pythonanywhere.com/api/public';
+const String _env = String.fromEnvironment('ENV', defaultValue: 'prod');
+
+const String _base = _env == 'prod'
+    ? 'https://anthonymoisan.eu.pythonanywhere.com/api/public'
+    : 'https://test-anthonymoisan.eu.pythonanywhere.com/api/public';
 
 // URL photo d’une personne
 String personPhotoUrl(int id) => '$_base/people/$id/photo';

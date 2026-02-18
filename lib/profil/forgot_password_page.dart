@@ -18,9 +18,11 @@ const String _publicAppKey = String.fromEnvironment(
   defaultValue: '',
 );
 
-// Base API publique
-const String kPublicApiBase =
-    'https://anthonymoisan.eu.pythonanywhere.com/api/public';
+const String _env = String.fromEnvironment('ENV', defaultValue: 'prod');
+
+const String kPublicApiBase = _env == 'prod'
+    ? 'https://anthonymoisan.eu.pythonanywhere.com/api/public'
+    : 'https://test-anthonymoisan.eu.pythonanywhere.com/api/public';
 
 // Helpers d'URL
 String _secretQuestionUrl(String email) =>

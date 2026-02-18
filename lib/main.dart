@@ -47,8 +47,11 @@ const apiEnvMapTitleKey = String.fromEnvironment(
   defaultValue: '',
 );
 
-const String _publicBase =
-    'https://anthonymoisan.eu.pythonanywhere.com/api/public';
+const String _env = String.fromEnvironment('ENV', defaultValue: 'prod');
+
+const String _publicBase = _env == 'prod'
+    ? 'https://anthonymoisan.eu.pythonanywhere.com/api/public'
+    : 'https://test-anthonymoisan.eu.pythonanywhere.com/api/public';
 
 // Local notifications (iOS badge + Android badge via notification)
 final fln.FlutterLocalNotificationsPlugin _localNotifs =

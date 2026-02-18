@@ -29,6 +29,11 @@ bash ~/bin/backup_mysql_to_gdrive.sh tâche managée qui permet de faire une cop
   gdrive:PythonAnywhereBackups/mysql/'AnthonyMoisan$ASConnexion'/mysql_'AnthonyMoisan$ASConnexion'_2025-12-22_15-12.sql.gz \
   /home/AnthonyMoisan/restore/
 
+~/bin/rclone copy \
+  gdrive:PythonAnywhereBackups/mysql/'AnthonyMoisan$ASConnexion'/mysql_'AnthonyMoisan$ASConnexion'_2026-02-17_02-30.sql.gz \
+  /home/AnthonyMoisan/restore/
+
+
 2) Sauvegarde rapide avant restauration
 mysqldump --no-tablespaces 'AnthonyMoisan$ASConnexion' | gzip > ~/restore/backup_before_restore.sql.gz
 
@@ -36,6 +41,10 @@ mysqldump --no-tablespaces 'AnthonyMoisan$ASConnexion' | gzip > ~/restore/backup
 a) recréer la base sous Database > ASConnexion
 
 b) regénérer la base de données à partir du fichier compressé
-gunzip -c ~/restore/mysql_'AnthonyMoisan$ASConnexion'_2025-12-22_15-12.sql.gz | mysql 'AnthonyMoisan$ASConnexion'
+gunzip -c ~/restore/mysql_'AnthonyMoisan$ASConnexion'_2026-02-17_02-30.sql.gz | \
+mysql -h AnthonyMoisan.mysql.eu.pythonanywhere-services.com -u AnthonyMoisan -p AnthonyMoisan\$ASConnexion
 
+//Pour la base de test
+gunzip -c ~/restore/mysql_'AnthonyMoisan$ASConnexion'_2026-02-17_02-30.sql.gz | \
+mysql -h AnthonyMoisan.mysql.eu.pythonanywhere-services.com -u AnthonyMoisan -p AnthonyMoisan\$ASConnexionTest
 

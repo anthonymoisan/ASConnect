@@ -51,8 +51,14 @@ class _LoginPageState extends State<LoginPage> {
   // ✅ état local du dropdown (rafraîchit immédiatement l’UI)
   String? _selectedLangCode; // null = système
 
-  // API publique (proxy)
-  static const String _apiBase = 'https://anthonymoisan.eu.pythonanywhere.com';
+  static const String _env = String.fromEnvironment(
+    'ENV',
+    defaultValue: 'prod',
+  );
+  static const String _apiBase = _env == 'prod'
+      ? 'https://anthonymoisan.eu.pythonanywhere.com'
+      : 'https://test-anthonymoisan.eu.pythonanywhere.com';
+
   static const String _loginPath = '/api/public/auth/login';
 
   // Clé d'application publique (passée au build/run via --dart-define)

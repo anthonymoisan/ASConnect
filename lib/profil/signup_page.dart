@@ -28,8 +28,11 @@ const String _publicAppKey = String.fromEnvironment(
   defaultValue: '',
 );
 
-const String kPublicApiBase =
-    'https://anthonymoisan.eu.pythonanywhere.com/api/public';
+const String _env = String.fromEnvironment('ENV', defaultValue: 'prod');
+
+const String kPublicApiBase = _env == 'prod'
+    ? 'https://anthonymoisan.eu.pythonanywhere.com/api/public'
+    : 'https://test-anthonymoisan.eu.pythonanywhere.com/api/public';
 
 Uri _publicSignupUri() => Uri.parse('$kPublicApiBase/people');
 

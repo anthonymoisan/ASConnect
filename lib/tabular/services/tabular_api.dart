@@ -8,7 +8,11 @@ import '../models/listPerson.dart';
 import '../../whatsApp/services/conversation_api.dart' show publicAppKey;
 import '../../whatsApp/models/conversation.dart';
 
-const String _base = 'https://anthonymoisan.eu.pythonanywhere.com/api/public';
+const String _env = String.fromEnvironment('ENV', defaultValue: 'prod');
+
+const String _base = _env == 'prod'
+    ? 'https://anthonymoisan.eu.pythonanywhere.com/api/public'
+    : 'https://test-anthonymoisan.eu.pythonanywhere.com/api/public';
 
 class _CacheEntry<T> {
   final T value;
