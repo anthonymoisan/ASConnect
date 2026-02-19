@@ -8,8 +8,31 @@ flutter build web --release `
   --dart-define=API_ENVMAPTITLE=GWrtWoRHjXDnksQzZqH8 `
   --dart-define=ENV='prod'
 
+Sur O2Switch, supprimer le répertoire test
+Refaire le clonage
+Se mettre à travers le gestionnaire de fichiers dans test/webVersion
+Sélectionner tous les fichiers et copier dans public_html/app/
 
 1) Faire une copie de webVersionProdPythonAnyWhere qui est sous le repo ASConnect
+
+pour pythonAnywhere en mode base de prod
+flutter build web --release `
+  --base-href /app/ `
+  --dart-define=PUBLIC_APP_KEY="je_vais_au_marcher_acheter_des_pommes_et_des_poires!123789" `
+  --dart-define=V6_LOGIN=admin `
+  --dart-define=V6_PASSWORD_B64=TW1hcyYzNzg0NDQ3NQ== `
+  --dart-define=API_ENVMAPTITLE=GWrtWoRHjXDnksQzZqH8 `
+  --dart-define=ENV='prod'
+
+pour pythonAnywhere en mode base de test
+flutter build web --release `
+  --base-href /app/ `
+  --dart-define=PUBLIC_APP_KEY="je_vais_au_marcher_acheter_des_pommes_et_des_poires!123789" `
+  --dart-define=V6_LOGIN=admin `
+  --dart-define=V6_PASSWORD_B64=TW1hcyYzNzg0NDQ3NQ== `
+  --dart-define=API_ENVMAPTITLE=GWrtWoRHjXDnksQzZqH8 `
+  --dart-define=ENV='test'
+
 
 git clone -b brancheGroup --single-branch https://github.com/anthonymoisan/ASConnect.git
 
