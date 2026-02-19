@@ -194,10 +194,6 @@ class _LoginPageState extends State<LoginPage> {
 
       if (resp.statusCode == 401) {
         String msg = t.invalidCredentials;
-        try {
-          final d = jsonDecode(resp.body);
-          msg = d['message']?.toString() ?? d['error']?.toString() ?? msg;
-        } catch (_) {}
         _showPersistentAuthError(msg);
         return;
       }
