@@ -154,6 +154,21 @@ class _SignUpPageState extends State<SignUpPage> {
     'female': 'F',
   };
 
+  // ==========================
+  //  PASSWORD POLICY (STRICT)
+  // ==========================
+  // Règles attendues (comme ton UI) :
+  // - min 8
+  // - 1 majuscule
+  // - 1 chiffre
+  // - 1 spécial (dans la même liste que _passHasSpec)
+  // - et on interdit les espaces (évite les contournements et divergences front/back)
+  final RegExp _pwdPolicy = RegExp(
+    r'^(?=.*[A-Z])(?=.*\d)(?=.*[!@#\$%^&*(),.?":{}|<>_\-+=~;\\/\[\]])[^\s]{8,}$',
+  );
+
+  bool _passwordMeetsPolicy(String s) => _pwdPolicy.hasMatch(s);
+
   // ----------- GEOLOCALISATION -----------
   Future<({double lat, double lon})> _getLatLon() async {
     try {
@@ -225,7 +240,8 @@ class _SignUpPageState extends State<SignUpPage> {
     return ok ? null : t.emailHintInvalid;
   }
 
-  bool get _passHasMinLen => _pwdCtrl.text.trim().length >= 8;
+  // ✅ IMPORTANT : on ne "trim" plus pour la longueur, sinon on valide autre chose que ce qu’on envoie.
+  bool get _passHasMinLen => _pwdCtrl.text.length >= 8;
   bool get _passHasUpper => RegExp(r'[A-Z]').hasMatch(_pwdCtrl.text);
   bool get _passHasDigit => RegExp(r'\d').hasMatch(_pwdCtrl.text);
   bool get _passHasSpec =>
@@ -233,11 +249,14 @@ class _SignUpPageState extends State<SignUpPage> {
 
   String? _passwordError(String? v) {
     final t = AppLocalizations.of(context)!;
-    final s = (v ?? '').trim();
-    if (s.isEmpty) return t.passwordRequired;
-    if (_passHasMinLen && _passHasUpper && _passHasDigit && _passHasSpec) {
-      return null;
-    }
+    final s = (v ?? '');
+
+    // Pour détecter "vide" on peut trim, mais on ne doit PAS valider sur une version différente de celle envoyée.
+    if (s.trim().isEmpty) return t.passwordRequired;
+
+    // Validation STRICTE : impossible d'envoyer un password hors règles
+    if (_passwordMeetsPolicy(s)) return null;
+
     return t.signupPasswordTooWeak;
   }
 
@@ -548,7 +567,17 @@ class _SignUpPageState extends State<SignUpPage> {
     final t = AppLocalizations.of(context)!;
     setState(() => _triedSubmit = true);
 
+    // 1) Validation Form (champ par champ)
     if (!(_formKey.currentState?.validate() ?? false)) return;
+
+    // 2) GUARD supplémentaire (anti-bypass) : on refuse d'aller plus loin si password invalide
+    final pwdErr = _passwordError(_pwdCtrl.text);
+    if (pwdErr != null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(pwdErr)));
+      return;
+    }
 
     if (_genderKey == null || _genderKey!.isEmpty) {
       ScaffoldMessenger.of(
@@ -612,7 +641,10 @@ class _SignUpPageState extends State<SignUpPage> {
       birthDate: _birthDate!,
       genotype: genotypeApi,
       email: _emailCtrl.text.trim(),
+
+      // ✅ On envoie EXACTEMENT ce qu’on a validé (pas de trim ici).
       password: _pwdCtrl.text,
+
       photoBytes: _photoBytes,
       photoFilename: _pickedFile?.name,
       photoMimeType: _inferMime(_pickedFile?.name),
@@ -773,7 +805,12 @@ class _SignUpPageState extends State<SignUpPage> {
       body: SafeArea(
         child: Form(
           key: _formKey,
-          autovalidateMode: AutovalidateMode.disabled,
+
+          // ✅ Après une tentative de submit, on affiche les erreurs dès interaction
+          autovalidateMode: _triedSubmit
+              ? AutovalidateMode.onUserInteraction
+              : AutovalidateMode.disabled,
+
           child: ListView(
             controller: _listCtrl,
             keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
