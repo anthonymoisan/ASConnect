@@ -389,9 +389,9 @@ class _ASConnexionState extends State<ASConnexion> with WidgetsBindingObserver {
 
   void _setLocale(Locale? locale) => setState(() => _locale = locale);
 
-  /// ✅ Badge app icon :
-  /// - flutter_app_badger (selon launcher)
-  /// - + Android: notification silencieuse avec "number" pour déclencher badge
+  // ✅ Badge app icon :
+  // - flutter_app_badger (selon launcher)
+  // - + Android: notification silencieuse avec "number" pour déclencher badge
   Future<void> _setLauncherBadge(int count) async {
     // WEB => rien
     if (kIsWeb) return;
@@ -408,7 +408,7 @@ class _ASConnexionState extends State<ASConnexion> with WidgetsBindingObserver {
       }
     } catch (_) {}
 
-    // 2) Android: badge via notification "number"
+    // 2) Android (Samsung inclus) : badge via notification "number"
     if (defaultTargetPlatform == TargetPlatform.android) {
       try {
         final androidImpl = _localNotifs
@@ -418,6 +418,8 @@ class _ASConnexionState extends State<ASConnexion> with WidgetsBindingObserver {
 
         if (androidImpl == null) return;
 
+        // ✅ sur Samsung, si tu veux un badge, il faut une notification "réelle"
+        // donc on garde un titre/texte discrets (pas vides) + ongoing + onlyAlertOnce.
         if (count <= 0) {
           await _localNotifs.cancel(_badgeNotificationId);
           return;
@@ -435,13 +437,21 @@ class _ASConnexionState extends State<ASConnexion> with WidgetsBindingObserver {
             showWhen: false,
             ongoing: true,
             onlyAlertOnce: true,
-            // ⭐️ C’est ça qui alimente le badge (si launcher compatible)
+            silent: true,
+
+            // ⭐️ c’est ce champ qui alimente le badge (si launcher compatible)
             number: count,
           ),
         );
 
-        // Titre/texte vides ou discrets (sinon tu “pollues” la zone de notif)
-        await _localNotifs.show(_badgeNotificationId, '', '', details);
+        // ⚠️ NE PAS laisser vide sur Samsung (sinon badge parfois ignoré)
+        await _localNotifs.show(
+          _badgeNotificationId,
+          'ASConnexion',
+          'Messages non lus',
+          details,
+          payload: 'badge',
+        );
       } catch (_) {}
     }
   }
