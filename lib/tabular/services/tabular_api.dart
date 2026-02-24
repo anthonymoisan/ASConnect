@@ -364,10 +364,7 @@ class TabularApi {
     required Map<String, dynamic> payload,
     bool dedup = true,
   }) async {
-    final uri = Uri.https(
-      'anthonymoisan.eu.pythonanywhere.com',
-      '/api/public/conversations/private',
-    );
+    final uri = Uri.parse('$_baseUrl/conversations/private');
 
     final headers = <String, String>{
       ..._headers,

@@ -67,6 +67,17 @@ class _LoginPageState extends State<LoginPage> {
     defaultValue: '',
   );
 
+  // ✅ langues autorisées par le backend
+  static const Set<String> _allowedLangs = {
+    'fr',
+    'en',
+    'es',
+    'pt',
+    'pl',
+    'de',
+    'it',
+  };
+
   @override
   void initState() {
     super.initState();
@@ -147,6 +158,23 @@ class _LoginPageState extends State<LoginPage> {
     return null;
   }
 
+  // ✅ calcule une langue backend valide (2 lettres) + fallback si locale non supportée
+  String _backendLang(BuildContext context) {
+    // langue effective de l'app (système / locale MaterialApp)
+    final effectiveCode = Localizations.localeOf(context).languageCode;
+
+    // priorité au choix utilisateur si présent
+    String lang = (_selectedLangCode?.trim().isNotEmpty ?? false)
+        ? _selectedLangCode!
+        : effectiveCode;
+
+    // sécurité : backend n'accepte que 7 langues => fallback en anglais
+    if (!_allowedLangs.contains(lang)) {
+      lang = 'en';
+    }
+    return lang;
+  }
+
   Future<void> _submit() async {
     final t = AppLocalizations.of(context)!;
 
@@ -167,11 +195,18 @@ class _LoginPageState extends State<LoginPage> {
         if (_publicAppKey.isNotEmpty) 'X-App-Key': _publicAppKey,
       };
 
+      // ✅ ajoute la langue attendue par le backend
+      final lang = _backendLang(context);
+
       final resp = await http
           .post(
             uri,
             headers: headers,
-            body: jsonEncode({'email': email, 'password': pass}),
+            body: jsonEncode({
+              'email': email,
+              'password': pass,
+              'lang': lang, // ✅ IMPORTANT
+            }),
           )
           .timeout(const Duration(seconds: 12));
 
