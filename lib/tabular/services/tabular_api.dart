@@ -251,11 +251,9 @@ class TabularApi {
     bool force = false,
   }) async {
     final loc = locale.trim().toLowerCase();
-    final uri = Uri.https(
-      'anthonymoisan.eu.pythonanywhere.com',
-      '/api/public/people/countriesTranslated',
-      {'locale': loc},
-    );
+    final uri = Uri.parse(
+      '$_baseUrl/people/countriesTranslated',
+    ).replace(queryParameters: {'locale': loc});
 
     final cacheKey = 'countriesTranslated:$loc';
 
