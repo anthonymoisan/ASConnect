@@ -57,6 +57,10 @@ class SignUpData {
   final String genotype; // envoyé à l’API (valeur FR)
   final String email;
   final String password;
+
+  /// ✅ NOUVEAU : langue attendue par le backend (fr/en/es/pt/pl/de/it)
+  final String lang;
+
   final Uint8List? photoBytes;
   final String? photoFilename;
   final String? photoMimeType;
@@ -75,6 +79,7 @@ class SignUpData {
     required this.genotype,
     required this.email,
     required this.password,
+    required this.lang, // ✅ ajouté
     this.photoBytes,
     this.photoFilename,
     this.photoMimeType,
@@ -89,8 +94,16 @@ class SignUpData {
 //   PAGE
 // =====================
 class SignUpPage extends StatefulWidget {
-  const SignUpPage({super.key, this.onSubmit});
+  const SignUpPage({
+    super.key,
+    this.onSubmit,
+    this.langCode, // ✅ ajouté (vient de la page d'auth si tu veux)
+  });
+
   final Future<void> Function(SignUpData data)? onSubmit;
+
+  /// ✅ Langue choisie sur Login (ex: "fr"). Si null -> langue système effective.
+  final String? langCode;
 
   @override
   State<SignUpPage> createState() => _SignUpPageState();
@@ -137,6 +150,33 @@ class _SignUpPageState extends State<SignUpPage> {
   // ---- Modal progress state (Check Email / Check GPS / Create)
   int _progressStep = 0; // 0..2
   bool _progressOpen = false;
+
+  // ✅ langues autorisées par le backend
+  static const Set<String> _allowedLangs = {
+    'fr',
+    'en',
+    'es',
+    'pt',
+    'pl',
+    'de',
+    'it',
+  };
+
+  // ✅ calcule une langue backend valide (2 lettres) + fallback si locale non supportée
+  String _backendLang(BuildContext context) {
+    // priorité au code transmis par Login si présent
+    final fromLogin = (widget.langCode ?? '').trim();
+    if (fromLogin.isNotEmpty && _allowedLangs.contains(fromLogin)) {
+      return fromLogin;
+    }
+
+    // sinon langue effective de l'app
+    final effectiveCode = Localizations.localeOf(context).languageCode;
+    if (_allowedLangs.contains(effectiveCode)) return effectiveCode;
+
+    // fallback sûr
+    return 'en';
+  }
 
   // --- Génotypes (clé UI -> valeur API FR) ---
   static const Map<String, String> _genotypeApiValueFr = {
@@ -485,7 +525,8 @@ class _SignUpPageState extends State<SignUpPage> {
       ).toString()
       ..fields['rSecrete'] = data.secretAnswer
       ..fields['consent'] = data.consent ? 'true' : 'false'
-      ..fields['is_info'] = data.acceptAngelmanInfo ? '1' : '0';
+      ..fields['is_info'] = data.acceptAngelmanInfo ? '1' : '0'
+      ..fields['lang'] = data.lang; // ✅ IMPORTANT (data["lang"])
 
     if (data.photoBytes != null && data.photoBytes!.isNotEmpty) {
       final filename = data.photoFilename ?? 'photo.jpg';
@@ -644,6 +685,9 @@ class _SignUpPageState extends State<SignUpPage> {
 
       // ✅ On envoie EXACTEMENT ce qu’on a validé (pas de trim ici).
       password: _pwdCtrl.text,
+
+      // ✅ IMPORTANT : langue backend (data["lang"])
+      lang: _backendLang(context),
 
       photoBytes: _photoBytes,
       photoFilename: _pickedFile?.name,

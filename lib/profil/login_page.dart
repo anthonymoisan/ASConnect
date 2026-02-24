@@ -283,10 +283,13 @@ class _LoginPageState extends State<LoginPage> {
       return;
     }
 
+    // ✅ On passe à signup la langue "backend-ready" (fr/en/es/pt/pl/de/it)
+    final signupLang = _backendLang(context);
+
     await Navigator.of(context).push(
       MaterialPageRoute(
         settings: const RouteSettings(name: '/signup'),
-        builder: (_) => const SignUpPage(),
+        builder: (_) => SignUpPage(langCode: signupLang), // ✅ ici
       ),
     );
 
