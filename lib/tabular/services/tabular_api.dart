@@ -21,6 +21,13 @@ class _CacheEntry<T> {
   bool get isValid => DateTime.now().isBefore(expiresAt);
 }
 
+class LanguagesResponse {
+  final int count;
+  final List<String> languages;
+
+  LanguagesResponse({required this.count, required this.languages});
+}
+
 /// ----------------------------------------------------------------------------
 /// TabularApi
 /// - Cache TTL
@@ -35,6 +42,7 @@ class TabularApi {
 
   static const Duration _ttlPeople = Duration(minutes: 5);
   static const Duration _ttlCountries = Duration(hours: 12);
+  static const Duration _ttlLanguages = Duration(hours: 12);
 
   static final Map<String, _CacheEntry<dynamic>> _cache = {};
   static final Map<String, Future<dynamic>> _inFlight = {};
@@ -354,6 +362,106 @@ class TabularApi {
         '[TABULAR] countriesTranslated($loc) cached ttl=${_ttlCountries.inHours}h',
       );
       return map;
+    });
+  }
+
+  /// ✅ GET /people/langues
+  ///
+  /// Returns:
+  /// {
+  ///   "count": 3,
+  ///   "languages": ["de","en","fr"]
+  /// }
+  static Future<LanguagesResponse> fetchPeopleLangues({
+    bool force = false,
+  }) async {
+    final uri = Uri.parse('$_baseUrl/people/langues').replace(
+      queryParameters: force
+          ? {'t': DateTime.now().millisecondsSinceEpoch.toString()}
+          : null,
+    );
+
+    const cacheKey = 'people:langues';
+    if (!force) {
+      final cached = _getCache<LanguagesResponse>(cacheKey);
+      if (cached != null) {
+        _log('[TABULAR] people/langues cache HIT count=${cached.count}');
+        return cached;
+      }
+      _log('[TABULAR] people/langues cache MISS');
+    } else {
+      _cache.remove(cacheKey);
+      _log('[TABULAR] people/langues force=true (cache cleared + buster)');
+    }
+
+    final inFlightKey = force ? '$cacheKey:force' : cacheKey;
+
+    return _dedup<LanguagesResponse>(inFlightKey, () async {
+      final headers = <String, String>{
+        ..._headers,
+        if (force) ...{'Cache-Control': 'no-cache', 'Pragma': 'no-cache'},
+      };
+
+      // Network
+      final netSw = Stopwatch()..start();
+      final resp = await _client
+          .get(uri, headers: headers)
+          .timeout(const Duration(seconds: 60));
+      netSw.stop();
+
+      final status = resp.statusCode;
+      final bytes = resp.bodyBytes.length;
+      final kb = (bytes / 1024).toStringAsFixed(1);
+
+      _log('[TABULAR] GET $uri');
+      _log(
+        '[TABULAR] people/langues network=${netSw.elapsedMilliseconds}ms '
+        'status=$status size=${kb}KB force=$force',
+      );
+
+      if (status != 200) {
+        throw Exception('Erreur people/langues ($status) : ${resp.body}');
+      }
+
+      // Decode
+      final decodeSw = Stopwatch()..start();
+      final dynamic decoded;
+      final useIso = _logEnabled && useIsolateParsingInDebug && !kIsWeb;
+
+      if (useIso) {
+        decoded = await compute(_jsonDecodeString, resp.body);
+        decodeSw.stop();
+        _log(
+          '[TABULAR] people/langues jsonDecode=${decodeSw.elapsedMilliseconds}ms (isolate)',
+        );
+      } else {
+        decoded = jsonDecode(resp.body);
+        decodeSw.stop();
+        _log(
+          '[TABULAR] people/langues jsonDecode=${decodeSw.elapsedMilliseconds}ms (main)',
+        );
+      }
+
+      if (decoded is! Map) {
+        throw Exception('Format inattendu people/langues: ${resp.body}');
+      }
+
+      final langsAny = decoded['languages'] ?? decoded['LANGUAGES'];
+      final list = (langsAny is List) ? langsAny : const [];
+
+      final languages = list.map((e) => e.toString()).toList()..sort();
+      final count = (decoded['count'] is num)
+          ? (decoded['count'] as num).toInt()
+          : languages.length;
+
+      final result = LanguagesResponse(count: count, languages: languages);
+
+      if (!force) {
+        _setCache(cacheKey, result, _ttlLanguages);
+        _log('[TABULAR] people/langues cached ttl=${_ttlLanguages.inHours}h');
+      }
+
+      return result;
     });
   }
 

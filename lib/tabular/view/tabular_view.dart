@@ -100,6 +100,16 @@ class _TabularViewState extends State<TabularView> with WidgetsBindingObserver {
   Timer? _pollTimer;
   bool _reloading = false;
 
+  // Options langues (chargées depuis l’API)
+  List<String> _languageOptions = <String>[];
+
+  // Sélection actuelle
+  final Set<String> _selectedLanguages = <String>{};
+
+  // Cache/hash optionnel si tu veux (pas indispensable ici)
+  int _languageOptionsCacheHash = 0;
+  List<String> _languageOptionsCache = <String>[];
+
   // ✅ You set it to 60s
   static const Duration _pollInterval = Duration(seconds: 60);
 
@@ -436,6 +446,29 @@ class _TabularViewState extends State<TabularView> with WidgetsBindingObserver {
       _error = e;
     } finally {
       _reloading = false;
+    }
+  }
+
+  Future<void> _loadLanguagesIfNeeded({bool force = false}) async {
+    if (!force && _languageOptions.isNotEmpty) return;
+
+    try {
+      final res = await TabularApi.fetchPeopleLangues(force: force);
+      setState(() {
+        _languageOptions = res.languages;
+        // par défaut : tout sélectionner (si rien sélectionné)
+        if (_selectedLanguages.isEmpty) {
+          _selectedLanguages.addAll(_languageOptions);
+        } else {
+          // clamp au cas où des langues ont disparu
+          _selectedLanguages.removeWhere((l) => !_languageOptions.contains(l));
+          if (_selectedLanguages.isEmpty)
+            _selectedLanguages.addAll(_languageOptions);
+        }
+      });
+    } catch (e) {
+      // En cas d’erreur API, on ne bloque pas l’UI
+      // (le filtre langues sera juste vide)
     }
   }
 

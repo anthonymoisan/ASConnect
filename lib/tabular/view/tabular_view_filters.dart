@@ -32,6 +32,8 @@ extension _TabularFilters on _TabularViewState {
   // ----------------------------
   String _normIso2(String? raw) => (raw ?? '').trim().toUpperCase();
   bool _isIso2(String s) => s.length == 2;
+  String _normLang(String? raw) => (raw ?? '').trim().toLowerCase();
+  bool _isLang(String s) => s.isNotEmpty; // tu peux durcir si besoin
 
   // ----------------------------
   // Distance helper (Haversine) — km
@@ -102,6 +104,13 @@ extension _TabularFilters on _TabularViewState {
     return (translated == null || translated.trim().isEmpty)
         ? code
         : translated.trim();
+  }
+
+  List<String> get _languageOptionsSorted {
+    final list = List<String>.from(_languageOptions)
+      ..removeWhere((e) => e.trim().isEmpty)
+      ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+    return list;
   }
 
   // ----------------------------
@@ -209,6 +218,8 @@ extension _TabularFilters on _TabularViewState {
     required double? originLat,
     required double? originLng,
     required double? maxKm,
+    required bool languageActive,
+    required Set<String> selectedLanguagesNorm,
   }) {
     // distance
     if (distanceEnabled) {
@@ -232,6 +243,12 @@ extension _TabularFilters on _TabularViewState {
     if (genotypeActive) {
       if (!_matchesGenotypeWithSelection(p, selectedGenotypesNorm))
         return false;
+    }
+
+    // language
+    if (languageActive) {
+      final l = _normLang(p.lang); // <-- suppose que Person a un champ lang
+      if (!_isLang(l) || !selectedLanguagesNorm.contains(l)) return false;
     }
 
     // country
@@ -264,6 +281,17 @@ extension _TabularFilters on _TabularViewState {
     final genotypeActive =
         _selectedGenotypes.isNotEmpty &&
         _selectedGenotypes.length != kGenotypeOptions.length;
+
+    final languageOpts = _languageOptionsSorted;
+
+    final languageActive =
+        _selectedLanguages.isNotEmpty &&
+        languageOpts.isNotEmpty &&
+        _selectedLanguages.length != languageOpts.length;
+
+    final selectedLanguagesNorm = languageActive
+        ? _selectedLanguages.map((e) => _normLang(e)).toSet()
+        : const <String>{};
 
     final countryActive =
         _selectedCountries.isNotEmpty &&
@@ -301,6 +329,8 @@ extension _TabularFilters on _TabularViewState {
         p,
         genotypeActive: genotypeActive,
         selectedGenotypesNorm: selectedGenotypesNorm,
+        languageActive: languageActive,
+        selectedLanguagesNorm: selectedLanguagesNorm,
         countryActive: countryActive,
         selectedCountriesNorm: selectedCountriesNorm,
         connectedOnly: _connectedOnly,
@@ -335,6 +365,16 @@ extension _TabularFilters on _TabularViewState {
         _selectedGenotypes.length != kGenotypeOptions.length;
     final genoPart = genoActive
         ? l10n.mapGenotypeCount(_selectedGenotypes.length)
+        : null;
+
+    final allLangs = _languageOptionsSorted;
+    final langActive =
+        allLangs.isNotEmpty &&
+        _selectedLanguages.isNotEmpty &&
+        _selectedLanguages.length != allLangs.length;
+
+    final langPart = langActive
+        ? '${_selectedLanguages.length} ${_selectedLanguages.length > 1 ? "langues" : "langue"}'
         : null;
 
     final allCountries = _countryOptions;
@@ -373,6 +413,7 @@ extension _TabularFilters on _TabularViewState {
 
     final parts = <String?>[
       genoPart,
+      langPart,
       countryPart,
       agePart,
       distPart,
@@ -389,6 +430,10 @@ extension _TabularFilters on _TabularViewState {
     _selectedGenotypes
       ..clear()
       ..addAll(kGenotypeOptions);
+
+    _selectedLanguages
+      ..clear()
+      ..addAll(_languageOptionsSorted);
 
     _selectedCountries
       ..clear()
@@ -413,10 +458,12 @@ extension _TabularFilters on _TabularViewState {
   // - pas de recalcul dynamique min/max âge
   // ----------------------------
   Future<void> _openTabularFiltersSheet() async {
+    await _loadLanguagesIfNeeded();
     await _loadCountriesIfNeeded();
     _recomputeAgeDomainFromAllPeople();
 
     bool localConnectedOnly = _connectedOnly;
+    final tempLangs = Set<String>.from(_selectedLanguages);
     final tempCountries = Set<String>.from(_selectedCountries);
     final tempGenos = Set<String>.from(_selectedGenotypes);
 
@@ -433,6 +480,16 @@ extension _TabularFilters on _TabularViewState {
 
       final genotypeActive =
           tempGenos.isNotEmpty && tempGenos.length != kGenotypeOptions.length;
+
+      final langOpts = _languageOptionsSorted;
+      final languageActive =
+          tempLangs.isNotEmpty &&
+          langOpts.isNotEmpty &&
+          tempLangs.length != langOpts.length;
+
+      final selectedLanguagesNorm = languageActive
+          ? tempLangs.map((e) => _normLang(e)).toSet()
+          : const <String>{};
 
       final countryActive =
           tempCountries.isNotEmpty &&
@@ -468,6 +525,8 @@ extension _TabularFilters on _TabularViewState {
           p,
           genotypeActive: genotypeActive,
           selectedGenotypesNorm: selectedGenotypesNorm,
+          languageActive: languageActive,
+          selectedLanguagesNorm: selectedLanguagesNorm,
           countryActive: countryActive,
           selectedCountriesNorm: selectedCountriesNorm,
           connectedOnly: localConnectedOnly,
@@ -685,6 +744,70 @@ extension _TabularFilters on _TabularViewState {
 
                       const SizedBox(height: 16),
 
+                      // Langues
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          'Langues', // ou l10n.mapLanguageTitle si tu ajoutes une clé
+                          style: const TextStyle(fontWeight: FontWeight.w700),
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Theme(
+                        data: Theme.of(
+                          ctx,
+                        ).copyWith(dividerColor: Colors.transparent),
+                        child: ExpansionTile(
+                          tilePadding: EdgeInsets.zero,
+                          title: Text(
+                            tempLangs.length == _languageOptionsSorted.length
+                                ? 'Toutes les langues'
+                                : '${tempLangs.length} langue(s)',
+                          ),
+                          children: [
+                            Row(
+                              children: [
+                                TextButton(
+                                  onPressed: () => setModalState(() {
+                                    tempLangs
+                                      ..clear()
+                                      ..addAll(_languageOptionsSorted);
+                                  }),
+                                  child: Text(l10n.mapSelectAll),
+                                ),
+                                TextButton(
+                                  onPressed: () => setModalState(() {
+                                    tempLangs.clear();
+                                  }),
+                                  child: Text(l10n.mapClear),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 6),
+                            ..._languageOptionsSorted.map((lg) {
+                              final checked = tempLangs.contains(lg);
+                              return CheckboxListTile(
+                                value: checked,
+                                title: Text(lg),
+                                dense: true,
+                                controlAffinity:
+                                    ListTileControlAffinity.leading,
+                                onChanged: (v) {
+                                  setModalState(() {
+                                    if (v == true) {
+                                      tempLangs.add(lg);
+                                    } else {
+                                      tempLangs.remove(lg);
+                                    }
+                                  });
+                                },
+                              );
+                            }),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+
                       // Pays
                       Align(
                         alignment: Alignment.centerLeft,
@@ -841,6 +964,10 @@ extension _TabularFilters on _TabularViewState {
                                 ..clear()
                                 ..addAll(kGenotypeOptions);
 
+                              tempLangs
+                                ..clear()
+                                ..addAll(_languageOptionsSorted);
+
                               tempCountries
                                 ..clear()
                                 ..addAll(sortedCountryOptions);
@@ -874,6 +1001,10 @@ extension _TabularFilters on _TabularViewState {
                               _selectedGenotypes
                                 ..clear()
                                 ..addAll(tempGenos);
+
+                              _selectedLanguages
+                                ..clear()
+                                ..addAll(tempLangs);
 
                               _selectedCountries
                                 ..clear()
