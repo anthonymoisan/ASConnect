@@ -665,5 +665,13 @@
   "groupDeleteBody": "Esto eliminará permanentemente la conversación del grupo para todos los miembros.",
   "groupDeleteConfirm": "Eliminar",
   
-  "editProfilePhotoConverting": "Convirtiendo…"
+  "editProfilePhotoConverting": "Convirtiendo…",
+  
+  "mapLanguagesSectionTitle": "Idiomas",
+  "mapAllLanguagesSelected": "Todos los idiomas",
+  "mapLanguagesSelectedCount": "{count, plural, one{# idioma} other{# idiomas}}",
+  "@mapLanguagesSelectedCount": {
+    "description": "Número de idiomas seleccionados",
+    "placeholders": { "count": { "type": "int" } }
+  }
 }

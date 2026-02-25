@@ -1334,4 +1334,21 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get editProfilePhotoConverting => 'Convirtiendo…';
+
+  @override
+  String get mapLanguagesSectionTitle => 'Idiomas';
+
+  @override
+  String get mapAllLanguagesSelected => 'Todos los idiomas';
+
+  @override
+  String mapLanguagesSelectedCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '# idiomas',
+      one: '# idioma',
+    );
+    return '$_temp0';
+  }
 }

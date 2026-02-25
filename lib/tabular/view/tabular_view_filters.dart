@@ -6,7 +6,7 @@ extension _TabularFilters on _TabularViewState {
   // Objectif (cohérence + simplification)
   // - Min/Max âge = domaine du dataset (=_allPeople), PAS recalculé selon autres critères
   // - Les filtres appliqués doivent prendre en compte :
-  //   âge + pays + génotypes + connecté + distance
+  //   âge + pays + génotypes + connecté + distance + langues
   //
   // IMPORTANT :
   // - Pour éviter d'exclure des personnes "sans âge" quand le slider est full-range,
@@ -32,12 +32,21 @@ extension _TabularFilters on _TabularViewState {
   // ----------------------------
   String _normIso2(String? raw) => (raw ?? '').trim().toUpperCase();
   bool _isIso2(String s) => s.length == 2;
+
   String _normLang(String? raw) => (raw ?? '').trim().toLowerCase();
-  bool _isLang(String s) => s.isNotEmpty; // tu peux durcir si besoin
+  bool _isLang(String s) => s.isNotEmpty;
+
+  String _langBase(String raw) =>
+      _normLang(raw).split('_').first; // "pt_BR"->"pt"
+
+  String _capitalizeFirst(String s) {
+    final t = s.trim();
+    if (t.isEmpty) return t;
+    return t[0].toUpperCase() + t.substring(1);
+  }
 
   // ----------------------------
   // Distance helper (Haversine) — km
-  // (garde ta version : OK)
   // ----------------------------
   double _haversineKm({
     required double lat1,
@@ -68,7 +77,6 @@ extension _TabularFilters on _TabularViewState {
     final oLat = _distanceOriginLat;
     final oLng = _distanceOriginLng;
 
-    // origine/max non définis => filtre OFF
     if (maxKm == null || oLat == null || oLng == null) return true;
 
     final lat = p.latitude;
@@ -106,15 +114,44 @@ extension _TabularFilters on _TabularViewState {
         : translated.trim();
   }
 
+  /// ✅ Nom de langue “joli” :
+  /// 1) priorité à la nouvelle API (map _languageLabelByCode remplie par _loadLanguagesIfNeeded)
+  /// 2) fallback code
+  /// + première lettre en majuscule
+  String _prettyLanguageNameForCode(BuildContext ctx, String rawCode) {
+    final base = _langBase(rawCode);
+    if (base.isEmpty) return rawCode;
+
+    final fromApi = _languageLabelByCode[base];
+    if (fromApi != null && fromApi.trim().isNotEmpty) {
+      return _capitalizeFirst(fromApi.trim());
+    }
+
+    return _capitalizeFirst(base);
+  }
+
+  /// ✅ options langues :
+  /// - normalise en base ("fr_FR" -> "fr")
+  /// - tri par libellé (traduit) plutôt que par code
   List<String> get _languageOptionsSorted {
-    final list = List<String>.from(_languageOptions)
-      ..removeWhere((e) => e.trim().isEmpty)
-      ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+    final set = <String>{};
+    for (final e in _languageOptions) {
+      final base = _langBase(e);
+      if (base.isNotEmpty) set.add(base);
+    }
+
+    final list = set.toList()
+      ..sort(
+        (a, b) => _prettyLanguageNameForCode(context, a)
+            .toLowerCase()
+            .compareTo(_prettyLanguageNameForCode(context, b).toLowerCase()),
+      );
+
     return list;
   }
 
   // ----------------------------
-  // Domaine âge (dataset) : uniquement basé sur _allPeople
+  // Domaine âge (dataset)
   // ----------------------------
   void _recomputeAgeDomainFromAllPeople() {
     final ages = _allPeople.map((p) => p.age).whereType<int>().toList()..sort();
@@ -127,11 +164,9 @@ extension _TabularFilters on _TabularViewState {
     _datasetMinAge = ages.first;
     _datasetMaxAge = ages.last;
 
-    // default full-range
     _selectedMinAge ??= _datasetMinAge;
     _selectedMaxAge ??= _datasetMaxAge;
 
-    // clamp
     _selectedMinAge = _selectedMinAge!.clamp(_datasetMinAge!, _datasetMaxAge!);
     _selectedMaxAge = _selectedMaxAge!.clamp(_datasetMinAge!, _datasetMaxAge!);
 
@@ -142,7 +177,6 @@ extension _TabularFilters on _TabularViewState {
   }
 
   List<String> get _countryOptions {
-    // Hash cheap : longueur + 3 ids (début/milieu/fin)
     final n = _allPeople.length;
     int h = n;
     if (n > 0) {
@@ -174,10 +208,9 @@ extension _TabularFilters on _TabularViewState {
   }
 
   // ----------------------------
-  // Matching genotype (optimisé + robuste)
+  // Matching genotype (robuste)
   // ----------------------------
   bool _matchGenotypeNorm(String genotypeNorm, String selNorm) {
-    // cas "délétion" / "deletion" / "del"
     final selIsDeletion = selNorm.contains('dél') || selNorm.contains('del');
     if (selIsDeletion &&
         (genotypeNorm.contains('dél') ||
@@ -185,8 +218,6 @@ extension _TabularFilters on _TabularViewState {
             genotypeNorm.contains('deletion'))) {
       return true;
     }
-
-    // match générique
     return genotypeNorm.contains(selNorm) || selNorm.contains(genotypeNorm);
   }
 
@@ -202,7 +233,7 @@ extension _TabularFilters on _TabularViewState {
   }
 
   // ----------------------------
-  // "Predicate" unique : utilisé partout (liste + compteur live)
+  // Predicate unique
   // ----------------------------
   bool _matchesAllFilters(
     Person p, {
@@ -221,10 +252,8 @@ extension _TabularFilters on _TabularViewState {
     required bool languageActive,
     required Set<String> selectedLanguagesNorm,
   }) {
-    // distance
     if (distanceEnabled) {
       if (originLat == null || originLng == null || maxKm == null) {
-        // si on dit "enabled" mais pas prêt => on exclut (cohérent avec UI distance)
         return false;
       }
       final lat = p.latitude;
@@ -239,28 +268,25 @@ extension _TabularFilters on _TabularViewState {
       if (d > maxKm) return false;
     }
 
-    // genotype
     if (genotypeActive) {
-      if (!_matchesGenotypeWithSelection(p, selectedGenotypesNorm))
+      if (!_matchesGenotypeWithSelection(p, selectedGenotypesNorm)) {
         return false;
+      }
     }
 
-    // language
+    // ✅ language : compare sur la BASE (fr, en, es)
     if (languageActive) {
-      final l = _normLang(p.lang); // <-- suppose que Person a un champ lang
+      final l = _langBase(p.lang ?? '');
       if (!_isLang(l) || !selectedLanguagesNorm.contains(l)) return false;
     }
 
-    // country
     if (countryActive) {
       final code = _normIso2(p.countryCode);
       if (!_isIso2(code) || !selectedCountriesNorm.contains(code)) return false;
     }
 
-    // connected
     if (connectedOnly && !p.isConnected) return false;
 
-    // age
     if (ageActive) {
       final a = p.age;
       if (a == null) return false;
@@ -273,7 +299,7 @@ extension _TabularFilters on _TabularViewState {
   }
 
   // ----------------------------
-  // Apply filters -> _view (unique)
+  // Apply filters -> _view
   // ----------------------------
   void _applyTabularFilters({bool keepSort = true}) {
     final countryOpts = _countryOptions;
@@ -289,8 +315,9 @@ extension _TabularFilters on _TabularViewState {
         languageOpts.isNotEmpty &&
         _selectedLanguages.length != languageOpts.length;
 
+    // ✅ sélection normalisée en base ("fr_FR" -> "fr")
     final selectedLanguagesNorm = languageActive
-        ? _selectedLanguages.map((e) => _normLang(e)).toSet()
+        ? _selectedLanguages.map((e) => _langBase(e)).toSet()
         : const <String>{};
 
     final countryActive =
@@ -316,7 +343,6 @@ extension _TabularFilters on _TabularViewState {
         ? _selectedCountries.map((e) => _normIso2(e)).toSet()
         : const <String>{};
 
-    // distance config
     final distanceEnabled =
         _distanceFilterEnabled &&
         _distanceOriginLat != null &&
@@ -373,8 +399,9 @@ extension _TabularFilters on _TabularViewState {
         _selectedLanguages.isNotEmpty &&
         _selectedLanguages.length != allLangs.length;
 
+    // ✅ utilise la clé ARB: mapLanguagesSelectedCount
     final langPart = langActive
-        ? '${_selectedLanguages.length} ${_selectedLanguages.length > 1 ? "langues" : "langue"}'
+        ? l10n.mapLanguagesSelectedCount(_selectedLanguages.length)
         : null;
 
     final allCountries = _countryOptions;
@@ -454,10 +481,9 @@ extension _TabularFilters on _TabularViewState {
 
   // ----------------------------
   // BottomSheet filtres
-  // - utilise EXACTEMENT le même predicate que la liste
-  // - pas de recalcul dynamique min/max âge
   // ----------------------------
   Future<void> _openTabularFiltersSheet() async {
+    // ✅ charge la nouvelle API de traduction des langues (déjà dans tabular_view.dart)
     await _loadLanguagesIfNeeded();
     await _loadCountriesIfNeeded();
     _recomputeAgeDomainFromAllPeople();
@@ -488,7 +514,7 @@ extension _TabularFilters on _TabularViewState {
           tempLangs.length != langOpts.length;
 
       final selectedLanguagesNorm = languageActive
-          ? tempLangs.map((e) => _normLang(e)).toSet()
+          ? tempLangs.map((e) => _langBase(e)).toSet()
           : const <String>{};
 
       final countryActive =
@@ -603,7 +629,6 @@ extension _TabularFilters on _TabularViewState {
                           ),
                         ],
                       ),
-
                       Padding(
                         padding: const EdgeInsets.only(top: 6, bottom: 12),
                         child: Row(
@@ -635,9 +660,7 @@ extension _TabularFilters on _TabularViewState {
                         ),
                       ),
 
-                      // -----------------------------------------------------------------
                       // Distance
-                      // -----------------------------------------------------------------
                       Align(
                         alignment: Alignment.centerLeft,
                         child: Text(
@@ -744,11 +767,11 @@ extension _TabularFilters on _TabularViewState {
 
                       const SizedBox(height: 16),
 
-                      // Langues
+                      // Langues (✅ i18n ARB)
                       Align(
                         alignment: Alignment.centerLeft,
                         child: Text(
-                          'Langues', // ou l10n.mapLanguageTitle si tu ajoutes une clé
+                          l10n.mapLanguagesSectionTitle,
                           style: const TextStyle(fontWeight: FontWeight.w700),
                         ),
                       ),
@@ -761,8 +784,10 @@ extension _TabularFilters on _TabularViewState {
                           tilePadding: EdgeInsets.zero,
                           title: Text(
                             tempLangs.length == _languageOptionsSorted.length
-                                ? 'Toutes les langues'
-                                : '${tempLangs.length} langue(s)',
+                                ? l10n.mapAllLanguagesSelected
+                                : l10n.mapLanguagesSelectedCount(
+                                    tempLangs.length,
+                                  ),
                           ),
                           children: [
                             Row(
@@ -788,7 +813,9 @@ extension _TabularFilters on _TabularViewState {
                               final checked = tempLangs.contains(lg);
                               return CheckboxListTile(
                                 value: checked,
-                                title: Text(lg),
+                                title: Text(
+                                  _prettyLanguageNameForCode(ctx, lg),
+                                ),
                                 dense: true,
                                 controlAffinity:
                                     ListTileControlAffinity.leading,
@@ -806,6 +833,7 @@ extension _TabularFilters on _TabularViewState {
                           ],
                         ),
                       ),
+
                       const SizedBox(height: 16),
 
                       // Pays

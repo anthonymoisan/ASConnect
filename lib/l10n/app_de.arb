@@ -667,6 +667,14 @@
   "groupDeleteBody": "Dadurch wird die Gruppenkonversation dauerhaft für alle Mitglieder gelöscht.",
   "groupDeleteConfirm": "Löschen",
   
-  "editProfilePhotoConverting": "Wird konvertiert…"
+  "editProfilePhotoConverting": "Wird konvertiert…",
+  
+  "mapLanguagesSectionTitle": "Sprachen",
+  "mapAllLanguagesSelected": "Alle Sprachen",
+  "mapLanguagesSelectedCount": "{count, plural, one{# Sprache} other{# Sprachen}}",
+  "@mapLanguagesSelectedCount": {
+    "description": "Anzahl ausgewählter Sprachen",
+    "placeholders": { "count": { "type": "int" } }
+  }
 
 }

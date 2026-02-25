@@ -665,5 +665,13 @@
   "groupDeleteBody": "This will permanently delete the group conversation for all members.",
   "groupDeleteConfirm": "Delete",
   
-  "editProfilePhotoConverting": "Converting…"
+  "editProfilePhotoConverting": "Converting…",
+  
+  "mapLanguagesSectionTitle": "Languages",
+  "mapAllLanguagesSelected": "All languages",
+  "mapLanguagesSelectedCount": "{count, plural, one{# language} other{# languages}}",
+  "@mapLanguagesSelectedCount": {
+    "description": "Number of selected languages",
+    "placeholders": { "count": { "type": "int" } }
+  }
 }

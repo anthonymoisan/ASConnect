@@ -2474,6 +2474,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Converting…'**
   String get editProfilePhotoConverting;
+
+  /// No description provided for @mapLanguagesSectionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Languages'**
+  String get mapLanguagesSectionTitle;
+
+  /// No description provided for @mapAllLanguagesSelected.
+  ///
+  /// In en, this message translates to:
+  /// **'All languages'**
+  String get mapAllLanguagesSelected;
+
+  /// Number of selected languages
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, one{# language} other{# languages}}'**
+  String mapLanguagesSelectedCount(int count);
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

@@ -100,11 +100,19 @@ class _TabularViewState extends State<TabularView> with WidgetsBindingObserver {
   Timer? _pollTimer;
   bool _reloading = false;
 
-  // Options langues (chargées depuis l’API)
-  List<String> _languageOptions = <String>[];
-
-  // Sélection actuelle
-  final Set<String> _selectedLanguages = <String>{};
+  // ---------------------------------------------------------------------------
+  // ✅ LANGUES (API changed)
+  //
+  // New API:
+  //   TabularApi.fetchPeopleLanguagesTranslated(locale: "fr"/"en"/"es", force: ...)
+  // returns something like:
+  //   { locale, count, langues: [ { code, name }, ... ] }
+  //
+  // We keep filter values as "code" (stable), and we keep a map code->label for UI.
+  // ---------------------------------------------------------------------------
+  List<String> _languageOptions = <String>[]; // codes, ex: ["fr","en","es"]
+  final Set<String> _selectedLanguages = <String>{}; // selected codes
+  Map<String, String> _languageLabelByCode = <String, String>{}; // code -> name
 
   // Cache/hash optionnel si tu veux (pas indispensable ici)
   int _languageOptionsCacheHash = 0;
@@ -187,9 +195,11 @@ class _TabularViewState extends State<TabularView> with WidgetsBindingObserver {
   void didChangeDependencies() {
     super.didChangeDependencies();
     // Évite setState() pendant build
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (!mounted) return;
-      _loadCountriesIfNeeded();
+      await _loadCountriesIfNeeded();
+      // ✅ load languages list for current locale (non-blocking if error)
+      await _loadLanguagesIfNeeded(force: false);
       _updateHorizontalHints();
     });
   }
@@ -449,26 +459,61 @@ class _TabularViewState extends State<TabularView> with WidgetsBindingObserver {
     }
   }
 
+  // ---------------------------------------------------------------------------
+  // ✅ NEW Languages loader (API changed)
+  // ---------------------------------------------------------------------------
   Future<void> _loadLanguagesIfNeeded({bool force = false}) async {
+    // If already loaded and not forcing, skip.
     if (!force && _languageOptions.isNotEmpty) return;
 
+    // Use current UI locale languageCode (expects "fr"/"en"/"es"...)
+    final localeCode = Localizations.localeOf(
+      context,
+    ).languageCode.toLowerCase().trim();
+    final cleanLocale = localeCode.isEmpty ? 'fr' : localeCode;
+
     try {
-      final res = await TabularApi.fetchPeopleLangues(force: force);
+      final res = await TabularApi.fetchPeopleLanguagesTranslated(
+        locale: cleanLocale,
+        force: force,
+      );
+
+      // Build stable code list + label map for UI
+      final items = res.langues;
+      final codes = <String>[];
+      final labels = <String, String>{};
+
+      for (final it in items) {
+        final code = (it.code).trim();
+        if (code.isEmpty) continue;
+        codes.add(code);
+        final name = (it.name).trim();
+        if (name.isNotEmpty) labels[code] = name;
+      }
+
       setState(() {
-        _languageOptions = res.languages;
-        // par défaut : tout sélectionner (si rien sélectionné)
+        _languageOptions = codes;
+
+        _languageLabelByCode = labels;
+
+        // default: select all if nothing selected
         if (_selectedLanguages.isEmpty) {
           _selectedLanguages.addAll(_languageOptions);
         } else {
-          // clamp au cas où des langues ont disparu
-          _selectedLanguages.removeWhere((l) => !_languageOptions.contains(l));
-          if (_selectedLanguages.isEmpty)
+          // clamp if options changed
+          _selectedLanguages.removeWhere((c) => !_languageOptions.contains(c));
+          if (_selectedLanguages.isEmpty) {
             _selectedLanguages.addAll(_languageOptions);
+          }
         }
+
+        // optional local cache (if you use it in filters part)
+        _languageOptionsCache = List<String>.from(_languageOptions);
+        _languageOptionsCacheHash = Object.hashAll(_languageOptionsCache);
       });
-    } catch (e) {
+    } catch (_) {
       // En cas d’erreur API, on ne bloque pas l’UI
-      // (le filtre langues sera juste vide)
+      // (le filtre langues sera juste vide / inchangé)
     }
   }
 
@@ -932,6 +977,7 @@ class _TabularViewState extends State<TabularView> with WidgetsBindingObserver {
       return RefreshIndicator(
         onRefresh: () async {
           await _loadCountriesIfNeeded();
+          await _loadLanguagesIfNeeded(force: true);
           await _reload(silent: false);
         },
         child: ListView(
@@ -952,6 +998,7 @@ class _TabularViewState extends State<TabularView> with WidgetsBindingObserver {
     return RefreshIndicator(
       onRefresh: () async {
         await _loadCountriesIfNeeded();
+        await _loadLanguagesIfNeeded(force: true);
         await _reload(silent: false);
       },
       child: Stack(

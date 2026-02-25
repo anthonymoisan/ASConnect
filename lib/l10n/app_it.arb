@@ -666,6 +666,14 @@
   "groupDeleteBody": "Questa azione eliminerà definitivamente la conversazione di gruppo per tutti i membri.",
   "groupDeleteConfirm": "Elimina",
   
-  "editProfilePhotoConverting": "Conversione in corso…"
+  "editProfilePhotoConverting": "Conversione in corso…",
+  
+  "mapLanguagesSectionTitle": "Lingue",
+  "mapAllLanguagesSelected": "Tutte le lingue",
+  "mapLanguagesSelectedCount": "{count, plural, one{# lingua} other{# lingue}}",
+  "@mapLanguagesSelectedCount": {
+    "description": "Numero di lingue selezionate",
+    "placeholders": { "count": { "type": "int" } }
+  }
 
 }

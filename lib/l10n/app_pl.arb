@@ -665,5 +665,13 @@
   "groupDeleteBody": "Spowoduje to trwałe usunięcie rozmowy grupowej dla wszystkich członków.",
   "groupDeleteConfirm": "Usuń",
   
-  "editProfilePhotoConverting": "Trwa konwersja…"
+  "editProfilePhotoConverting": "Trwa konwersja…",
+  
+  "mapLanguagesSectionTitle": "Języki",
+  "mapAllLanguagesSelected": "Wszystkie języki",
+  "mapLanguagesSelectedCount": "{count, plural, one{# język} few{# języki} many{# języków} other{# języka}}",
+  "@mapLanguagesSelectedCount": {
+    "description": "Liczba wybranych języków",
+    "placeholders": { "count": { "type": "int" } }
+  }
 }

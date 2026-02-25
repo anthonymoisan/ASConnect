@@ -21,11 +21,36 @@ class _CacheEntry<T> {
   bool get isValid => DateTime.now().isBefore(expiresAt);
 }
 
-class LanguagesResponse {
-  final int count;
-  final List<String> languages;
+class LanguageItem {
+  final String code; // ex: "fr"
+  final String name; // ex: "français"
 
-  LanguagesResponse({required this.count, required this.languages});
+  const LanguageItem({required this.code, required this.name});
+
+  factory LanguageItem.fromJson(dynamic json) {
+    if (json is! Map) {
+      throw Exception('Invalid language item: $json');
+    }
+    final code = (json['code'] ?? json['CODE'] ?? '').toString().trim();
+    final name = (json['name'] ?? json['NAME'] ?? '').toString().trim();
+    if (code.isEmpty) {
+      throw Exception('Missing "code" in language item: $json');
+    }
+    // name peut être vide si backend bug => on fallback sur code
+    return LanguageItem(code: code, name: name.isNotEmpty ? name : code);
+  }
+}
+
+class LanguagesTranslatedResponse {
+  final String locale; // locale effectivement utilisée par l’API
+  final int count;
+  final List<LanguageItem> langues;
+
+  const LanguagesTranslatedResponse({
+    required this.locale,
+    required this.count,
+    required this.langues,
+  });
 }
 
 /// ----------------------------------------------------------------------------
@@ -365,38 +390,45 @@ class TabularApi {
     });
   }
 
-  /// ✅ GET /people/langues
-  ///
-  /// Returns:
-  /// {
-  ///   "count": 3,
-  ///   "languages": ["de","en","fr"]
-  /// }
-  static Future<LanguagesResponse> fetchPeopleLangues({
+  static Future<LanguagesTranslatedResponse> fetchPeopleLanguagesTranslated({
+    required String locale, // ex: "fr" / "en" / "es"
     bool force = false,
   }) async {
-    final uri = Uri.parse('$_baseUrl/people/langues').replace(
-      queryParameters: force
-          ? {'t': DateTime.now().millisecondsSinceEpoch.toString()}
-          : null,
+    final cleanLocale = locale.trim().isEmpty ? 'fr' : locale.trim();
+
+    final uri = Uri.parse('$_baseUrl/people/languagesTranslated').replace(
+      queryParameters: {
+        'locale': cleanLocale,
+        if (force) 't': DateTime.now().millisecondsSinceEpoch.toString(),
+      },
     );
 
-    const cacheKey = 'people:langues';
+    // ✅ cache dépend de locale
+    final cacheKey = 'people:languagesTranslated:$cleanLocale';
+
     if (!force) {
-      final cached = _getCache<LanguagesResponse>(cacheKey);
+      final cached = _getCache<LanguagesTranslatedResponse>(cacheKey);
       if (cached != null) {
-        _log('[TABULAR] people/langues cache HIT count=${cached.count}');
+        _log(
+          '[TABULAR] people/languagesTranslated cache HIT '
+          'locale=${cached.locale} count=${cached.count}',
+        );
         return cached;
       }
-      _log('[TABULAR] people/langues cache MISS');
+      _log(
+        '[TABULAR] people/languagesTranslated cache MISS locale=$cleanLocale',
+      );
     } else {
       _cache.remove(cacheKey);
-      _log('[TABULAR] people/langues force=true (cache cleared + buster)');
+      _log(
+        '[TABULAR] people/languagesTranslated force=true '
+        '(cache cleared + buster) locale=$cleanLocale',
+      );
     }
 
     final inFlightKey = force ? '$cacheKey:force' : cacheKey;
 
-    return _dedup<LanguagesResponse>(inFlightKey, () async {
+    return _dedup<LanguagesTranslatedResponse>(inFlightKey, () async {
       final headers = <String, String>{
         ..._headers,
         if (force) ...{'Cache-Control': 'no-cache', 'Pragma': 'no-cache'},
@@ -415,12 +447,14 @@ class TabularApi {
 
       _log('[TABULAR] GET $uri');
       _log(
-        '[TABULAR] people/langues network=${netSw.elapsedMilliseconds}ms '
-        'status=$status size=${kb}KB force=$force',
+        '[TABULAR] people/languagesTranslated network=${netSw.elapsedMilliseconds}ms '
+        'status=$status size=${kb}KB force=$force locale=$cleanLocale',
       );
 
       if (status != 200) {
-        throw Exception('Erreur people/langues ($status) : ${resp.body}');
+        throw Exception(
+          'Erreur people/languagesTranslated ($status) : ${resp.body}',
+        );
       }
 
       // Decode
@@ -432,33 +466,59 @@ class TabularApi {
         decoded = await compute(_jsonDecodeString, resp.body);
         decodeSw.stop();
         _log(
-          '[TABULAR] people/langues jsonDecode=${decodeSw.elapsedMilliseconds}ms (isolate)',
+          '[TABULAR] people/languagesTranslated jsonDecode=${decodeSw.elapsedMilliseconds}ms (isolate)',
         );
       } else {
         decoded = jsonDecode(resp.body);
         decodeSw.stop();
         _log(
-          '[TABULAR] people/langues jsonDecode=${decodeSw.elapsedMilliseconds}ms (main)',
+          '[TABULAR] people/languagesTranslated jsonDecode=${decodeSw.elapsedMilliseconds}ms (main)',
         );
       }
 
       if (decoded is! Map) {
-        throw Exception('Format inattendu people/langues: ${resp.body}');
+        throw Exception(
+          'Format inattendu people/languagesTranslated: ${resp.body}',
+        );
       }
 
-      final langsAny = decoded['languages'] ?? decoded['LANGUAGES'];
-      final list = (langsAny is List) ? langsAny : const [];
+      final apiLocale = (decoded['locale'] ?? decoded['LOCALE'] ?? cleanLocale)
+          .toString()
+          .trim();
 
-      final languages = list.map((e) => e.toString()).toList()..sort();
+      final languesAny = decoded['langues'] ?? decoded['LANGUES'];
+      final list = (languesAny is List) ? languesAny : const [];
+
+      final langues = <LanguageItem>[];
+      for (final e in list) {
+        try {
+          langues.add(LanguageItem.fromJson(e));
+        } catch (err) {
+          _log('[TABULAR] people/languagesTranslated skip item: $err');
+        }
+      }
+
+      // ✅ tri par nom (normalement déjà trié backend, mais on sécurise)
+      langues.sort(
+        (a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()),
+      );
+
       final count = (decoded['count'] is num)
           ? (decoded['count'] as num).toInt()
-          : languages.length;
+          : langues.length;
 
-      final result = LanguagesResponse(count: count, languages: languages);
+      final result = LanguagesTranslatedResponse(
+        locale: apiLocale,
+        count: count,
+        langues: langues,
+      );
 
       if (!force) {
         _setCache(cacheKey, result, _ttlLanguages);
-        _log('[TABULAR] people/langues cached ttl=${_ttlLanguages.inHours}h');
+        _log(
+          '[TABULAR] people/languagesTranslated cached ttl=${_ttlLanguages.inHours}h '
+          'locale=$cleanLocale',
+        );
       }
 
       return result;
