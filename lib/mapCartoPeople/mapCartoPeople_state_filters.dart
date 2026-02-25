@@ -37,6 +37,54 @@ extension _MapPeopleFilters on _MapPeopleByCityState {
   }
 
   // ---------------------------------------------------------------------------
+  // ✅ Languages (independent filter like Audience/Tabular)
+  // ---------------------------------------------------------------------------
+
+  // Normalize language code for comparisons
+  String? _normLang(String? v) {
+    final s = (v ?? '').trim().toLowerCase();
+    if (s.isEmpty) return null;
+    if (s.contains('-')) return s.split('-').first.trim();
+    if (s.contains('_')) return s.split('_').first.trim();
+    return s;
+  }
+
+  // Build language options once from dataset (independent from countries)
+  void _ensureLanguageOptionsFromDataset() {
+    if (_languageOptions.isNotEmpty) return;
+
+    final langs = <String>{};
+    for (final c in _allClusters) {
+      for (final p in c.people) {
+        final v = _normLang(p.lang);
+        if (v == null) continue;
+        langs.add(v);
+      }
+    }
+
+    _languageOptions
+      ..clear()
+      ..addAll(langs.toList()..sort());
+
+    // default: all languages selected
+    if (_selectedLanguages.isEmpty && _languageOptions.isNotEmpty) {
+      _selectedLanguages.addAll(_languageOptions);
+    }
+  }
+
+  bool _matchesLanguage(String? lang, Set<String> selected, List<String> opts) {
+    final active =
+        selected.isNotEmpty &&
+        opts.isNotEmpty &&
+        selected.length != opts.length;
+    if (!active) return true;
+
+    final v = _normLang(lang);
+    if (v == null) return false;
+    return selected.contains(v);
+  }
+
+  // ---------------------------------------------------------------------------
   // FIT OPTIM (inchangé)
   // ---------------------------------------------------------------------------
 
@@ -105,7 +153,7 @@ extension _MapPeopleFilters on _MapPeopleByCityState {
   }
 
   // ---------------------------------------------------------------------------
-  // Reset (inchangé)
+  // Reset (inchangé + ✅ langues)
   // ---------------------------------------------------------------------------
 
   void _resetFiltersToDefault({bool rebuild = true}) {
@@ -116,6 +164,12 @@ extension _MapPeopleFilters on _MapPeopleByCityState {
     _selectedCountries
       ..clear()
       ..addAll(_countryOptions);
+
+    // ✅ Languages: reset to all (independent from countries)
+    _ensureLanguageOptionsFromDataset();
+    _selectedLanguages
+      ..clear()
+      ..addAll(_languageOptions);
 
     _connectedOnly = false;
 
@@ -183,6 +237,11 @@ extension _MapPeopleFilters on _MapPeopleByCityState {
       _selectedCountries.isNotEmpty &&
       _countryOptions.isNotEmpty &&
       _selectedCountries.length != _countryOptions.length;
+
+  bool get _languageFilterActive =>
+      _selectedLanguages.isNotEmpty &&
+      _languageOptions.isNotEmpty &&
+      _selectedLanguages.length != _languageOptions.length;
 
   bool get _ageFilterActive {
     final minA = _selectedMinAge;
@@ -257,6 +316,10 @@ extension _MapPeopleFilters on _MapPeopleByCityState {
 
           final people = <_Person>[];
           for (final p in c.people) {
+            // ✅ Language filter (independent from country)
+            if (!_matchesLanguage(p.lang, _selectedLanguages, _languageOptions))
+              continue;
+
             if (!_matchesGenotype(p.genotype, _selectedGenotypes)) continue;
             if (!_matchesCountry(
               p.countryCode,
@@ -333,11 +396,19 @@ extension _MapPeopleFilters on _MapPeopleByCityState {
   }
 
   // ---------------------------------------------------------------------------
-  // Tooltip (inchangé, mais “genoPart” devrait être actif seulement si filtre actif)
+  // Tooltip (inchangé + ✅ langues)
   // ---------------------------------------------------------------------------
 
   String _filtersTooltipText(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+
+    final langActive =
+        _languageOptions.isNotEmpty &&
+        _selectedLanguages.isNotEmpty &&
+        _selectedLanguages.length != _languageOptions.length;
+    final langPart = langActive
+        ? l10n.mapLanguagesSelectedCount(_selectedLanguages.length)
+        : null;
 
     final genoActive =
         _selectedGenotypes.isNotEmpty &&
@@ -379,6 +450,7 @@ extension _MapPeopleFilters on _MapPeopleByCityState {
         : null;
 
     final parts = [
+      langPart,
       genoPart,
       countryPart,
       agePart,
@@ -439,9 +511,13 @@ extension _MapPeopleFilters on _MapPeopleByCityState {
 
     await _ensureCountryLabelsForLocale(context);
 
+    // ✅ Init languages (independent)
+    _ensureLanguageOptionsFromDataset();
+
     bool localConnectedOnly = _connectedOnly;
     final tempCountries = Set<String>.from(_selectedCountries);
     final tempGenos = Set<String>.from(_selectedGenotypes);
+    final tempLangs = Set<String>.from(_selectedLanguages);
 
     // ✅ Domaine âge FIXE dataset
     final hasAges = _datasetMinAge != null && _datasetMaxAge != null;
@@ -454,6 +530,12 @@ extension _MapPeopleFilters on _MapPeopleByCityState {
 
     int countResultsWithLocalFilters() {
       final countryOpts = _countryOptions;
+      final langOpts = _languageOptions;
+
+      final langActive =
+          tempLangs.isNotEmpty &&
+          langOpts.isNotEmpty &&
+          tempLangs.length != langOpts.length;
 
       final genoActive =
           tempGenos.isNotEmpty && tempGenos.length != kGenotypeOptions.length;
@@ -478,6 +560,12 @@ extension _MapPeopleFilters on _MapPeopleByCityState {
         }
 
         for (final p in c.people) {
+          // ✅ language (independent)
+          if (langActive) {
+            final v = _normLang(p.lang);
+            if (v == null || !tempLangs.contains(v)) continue;
+          }
+
           // genotype
           if (genoActive) {
             if (!_matchesGenotype(p.genotype, tempGenos)) continue;
@@ -514,6 +602,8 @@ extension _MapPeopleFilters on _MapPeopleByCityState {
           a,
         ).toLowerCase().compareTo(_countryLabel(context, b).toLowerCase()),
       );
+
+    final sortedLanguageOptions = [..._languageOptions]..sort();
 
     await showModalBottomSheet<void>(
       context: context,
@@ -703,6 +793,72 @@ extension _MapPeopleFilters on _MapPeopleByCityState {
 
                       const SizedBox(height: 16),
 
+                      // ✅ Langues (independent, above countries)
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          l10n.mapLanguagesSectionTitle,
+                          style: const TextStyle(fontWeight: FontWeight.w700),
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Theme(
+                        data: Theme.of(
+                          ctx,
+                        ).copyWith(dividerColor: Colors.transparent),
+                        child: ExpansionTile(
+                          tilePadding: EdgeInsets.zero,
+                          title: Text(
+                            tempLangs.length == _languageOptions.length
+                                ? l10n.mapAllLanguagesSelected
+                                : l10n.mapLanguagesSelectedCount(
+                                    tempLangs.length,
+                                  ),
+                          ),
+                          children: [
+                            Row(
+                              children: [
+                                TextButton(
+                                  onPressed: () => setModalState(() {
+                                    tempLangs
+                                      ..clear()
+                                      ..addAll(_languageOptions);
+                                  }),
+                                  child: Text(l10n.mapSelectAll),
+                                ),
+                                TextButton(
+                                  onPressed: () =>
+                                      setModalState(() => tempLangs.clear()),
+                                  child: Text(l10n.mapClear),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 6),
+                            ...sortedLanguageOptions.map((code) {
+                              final checked = tempLangs.contains(code);
+                              return CheckboxListTile(
+                                value: checked,
+                                title: Text(code.toUpperCase()),
+                                dense: true,
+                                controlAffinity:
+                                    ListTileControlAffinity.leading,
+                                onChanged: (v) {
+                                  setModalState(() {
+                                    if (v == true) {
+                                      tempLangs.add(code);
+                                    } else {
+                                      tempLangs.remove(code);
+                                    }
+                                  });
+                                },
+                              );
+                            }),
+                          ],
+                        ),
+                      ),
+
+                      const SizedBox(height: 16),
+
                       // Pays
                       Align(
                         alignment: Alignment.centerLeft,
@@ -855,6 +1011,11 @@ extension _MapPeopleFilters on _MapPeopleByCityState {
                             onPressed: () => setModalState(() {
                               localConnectedOnly = false;
 
+                              // ✅ reset languages
+                              tempLangs
+                                ..clear()
+                                ..addAll(_languageOptions);
+
                               tempCountries
                                 ..clear()
                                 ..addAll(_countryOptions);
@@ -882,6 +1043,11 @@ extension _MapPeopleFilters on _MapPeopleByCityState {
                             label: Text(l10n.mapApply),
                             onPressed: () async {
                               _connectedOnly = localConnectedOnly;
+
+                              // ✅ save languages
+                              _selectedLanguages
+                                ..clear()
+                                ..addAll(tempLangs);
 
                               _selectedGenotypes
                                 ..clear()

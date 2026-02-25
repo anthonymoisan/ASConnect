@@ -86,6 +86,10 @@ class _MapPeopleByCityState extends State<MapPeopleByCity>
     'Mosaïque',
   ];
 
+  final List<String> _languageOptions = <String>[];
+
+  final Set<String> _selectedLanguages = <String>{};
+
   final Set<String> _selectedGenotypes = <String>{}; // tous cochés par défaut
 
   int? _datasetMinAge;

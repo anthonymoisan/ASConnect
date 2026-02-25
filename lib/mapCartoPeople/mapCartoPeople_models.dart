@@ -14,6 +14,7 @@ class _Person {
   final int? ageInt; // âge (années)
   final String? genotype;
   final bool isConnected;
+  final String? lang;
 
   _Person({
     this.id,
@@ -27,6 +28,7 @@ class _Person {
     this.ageInt,
     this.genotype,
     this.isConnected = false,
+    this.lang,
   });
 
   factory _Person.fromJson(Map<String, dynamic> json) {
@@ -36,8 +38,28 @@ class _Person {
       return double.tryParse('$v');
     }
 
+    String? parseLang(dynamic v) {
+      if (v == null) return null;
+      final s = v.toString().trim();
+      if (s.isEmpty) return null;
+
+      // Normalize typical values like "fr-FR" -> "fr"
+      final lower = s.toLowerCase();
+      if (lower.contains('-')) return lower.split('-').first.trim();
+      if (lower.contains('_')) return lower.split('_').first.trim();
+      return lower;
+    }
+
     final lat = parseDouble(json['latitude'] ?? json['lat']);
     final lon = parseDouble(json['longitude'] ?? json['lon']);
+
+    // Try several possible keys without breaking existing payloads
+    final lang = parseLang(
+      json['language_code'] ??
+          json['language'] ??
+          json['lang'] ??
+          json['locale'],
+    );
 
     return _Person(
       id: json['id'] is num
@@ -53,6 +75,7 @@ class _Person {
       ageInt: _parseAgeInt(json['age']),
       genotype: json['genotype']?.toString(),
       isConnected: _parseIsConnected(json['is_connected']),
+      lang: lang,
     );
   }
 
