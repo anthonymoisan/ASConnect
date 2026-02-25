@@ -72,6 +72,15 @@ class _MapPeopleByCityState extends State<MapPeopleByCity>
   // Connected-only filter (if you use it server-side)
   bool _connectedOnly = false;
 
+  // langues (options + sélection)
+  List<String> _languageOptions = <String>[];
+  final Set<String> _selectedLanguages = <String>{};
+
+  // labels langue traduits par API
+  Map<String, String> _languageLabelsByCode = {};
+  String _languageLabelsLocale = '';
+  bool _loadingLanguageLabels = false;
+
   // ---------------------------------------------------------------------------
   // Filters
   // ---------------------------------------------------------------------------
@@ -85,10 +94,6 @@ class _MapPeopleByCityState extends State<MapPeopleByCity>
     'Clinique',
     'Mosaïque',
   ];
-
-  final List<String> _languageOptions = <String>[];
-
-  final Set<String> _selectedLanguages = <String>{};
 
   final Set<String> _selectedGenotypes = <String>{}; // tous cochés par défaut
 

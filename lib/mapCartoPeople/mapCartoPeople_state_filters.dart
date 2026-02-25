@@ -49,6 +49,14 @@ extension _MapPeopleFilters on _MapPeopleByCityState {
     return s;
   }
 
+  // Capitalize first letter (for translated labels)
+  String _capitalizeFirst(String s) {
+    final t = s.trim();
+    if (t.isEmpty) return t;
+    final first = t[0].toUpperCase();
+    return t.length == 1 ? first : '$first${t.substring(1)}';
+  }
+
   // Build language options once from dataset (independent from countries)
   void _ensureLanguageOptionsFromDataset() {
     if (_languageOptions.isNotEmpty) return;
@@ -56,6 +64,8 @@ extension _MapPeopleFilters on _MapPeopleByCityState {
     final langs = <String>{};
     for (final c in _allClusters) {
       for (final p in c.people) {
+        // NOTE: you currently use `p.lang` in your codebase.
+        // If your model uses another field (e.g. languageCode), change here too.
         final v = _normLang(p.lang);
         if (v == null) continue;
         langs.add(v);
@@ -82,6 +92,12 @@ extension _MapPeopleFilters on _MapPeopleByCityState {
     final v = _normLang(lang);
     if (v == null) return false;
     return selected.contains(v);
+  }
+
+  String _languageShownLabel(String code) {
+    final raw = (_languageLabelsByCode[code] ?? '').trim();
+    final shown = raw.isNotEmpty ? _capitalizeFirst(raw) : code.toUpperCase();
+    return shown;
   }
 
   // ---------------------------------------------------------------------------
@@ -317,16 +333,22 @@ extension _MapPeopleFilters on _MapPeopleByCityState {
           final people = <_Person>[];
           for (final p in c.people) {
             // ✅ Language filter (independent from country)
-            if (!_matchesLanguage(p.lang, _selectedLanguages, _languageOptions))
+            if (!_matchesLanguage(
+              p.lang,
+              _selectedLanguages,
+              _languageOptions,
+            )) {
               continue;
+            }
 
             if (!_matchesGenotype(p.genotype, _selectedGenotypes)) continue;
             if (!_matchesCountry(
               p.countryCode,
               _selectedCountries,
               _countryOptions,
-            ))
+            )) {
               continue;
+            }
             if (!_matchesConnected(p, _connectedOnly)) continue;
             if (!_matchesAge(
               p.ageInt,
@@ -334,8 +356,9 @@ extension _MapPeopleFilters on _MapPeopleByCityState {
               _selectedMaxAge,
               _datasetMinAge,
               _datasetMaxAge,
-            ))
+            )) {
               continue;
+            }
 
             people.add(p);
           }
@@ -510,6 +533,7 @@ extension _MapPeopleFilters on _MapPeopleByCityState {
     if (_level == _MapLevel.city) return;
 
     await _ensureCountryLabelsForLocale(context);
+    await _ensureLanguageLabelsForLocale(context);
 
     // ✅ Init languages (independent)
     _ensureLanguageOptionsFromDataset();
@@ -603,7 +627,13 @@ extension _MapPeopleFilters on _MapPeopleByCityState {
         ).toLowerCase().compareTo(_countryLabel(context, b).toLowerCase()),
       );
 
-    final sortedLanguageOptions = [..._languageOptions]..sort();
+    // ✅ Sort by displayed label (translated + capitalized) ASC
+    final sortedLanguageOptions = [..._languageOptions]
+      ..sort(
+        (a, b) => _languageShownLabel(
+          a,
+        ).toLowerCase().compareTo(_languageShownLabel(b).toLowerCase()),
+      );
 
     await showModalBottomSheet<void>(
       context: context,
@@ -836,9 +866,16 @@ extension _MapPeopleFilters on _MapPeopleByCityState {
                             const SizedBox(height: 6),
                             ...sortedLanguageOptions.map((code) {
                               final checked = tempLangs.contains(code);
+
+                              final rawLabel =
+                                  (_languageLabelsByCode[code] ?? '').trim();
+                              final shown = rawLabel.isNotEmpty
+                                  ? _capitalizeFirst(rawLabel)
+                                  : code.toUpperCase();
+
                               return CheckboxListTile(
                                 value: checked,
-                                title: Text(code.toUpperCase()),
+                                title: Text(shown),
                                 dense: true,
                                 controlAffinity:
                                     ListTileControlAffinity.leading,

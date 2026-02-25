@@ -46,6 +46,35 @@ extension _MapPeopleData on _MapPeopleByCityState {
         ..addAll(_countryOptions);
     }
 
+    // ✅ Langues options (indépendant du filtre pays)
+    //
+    String? normLang(String? v) {
+      final s = (v ?? '').trim().toLowerCase();
+      if (s.isEmpty) return null;
+      if (s.contains('-')) return s.split('-').first.trim();
+      if (s.contains('_')) return s.split('_').first.trim();
+      return s;
+    }
+
+    final languages =
+        _allClusters
+            .expand((c) => c.people)
+            .map((p) => normLang(p.lang))
+            .whereType<String>()
+            .toSet()
+            .toList()
+          ..sort();
+
+    _languageOptions = languages;
+
+    if (_selectedLanguages.isEmpty ||
+        (_languageOptions.isNotEmpty &&
+            _selectedLanguages.length != _languageOptions.length)) {
+      _selectedLanguages
+        ..clear()
+        ..addAll(_languageOptions);
+    }
+
     // Niveau & clusters pays
     _level = _MapLevel.country;
     _activeCountry = null;
@@ -171,6 +200,113 @@ extension _MapPeopleData on _MapPeopleByCityState {
       }
     } finally {
       _loadingCountryLabels = false;
+    }
+  }
+
+  // ------------------------------
+  // ✅ Language labels (ISO alpha-2 -> translated) via API
+  // Endpoint: /api/public/people/languagesTranslated?locale=fr
+  // Response:
+  // { "locale":"fr", "langues":[{"code":"fr","name":"Français"}, ...], "count": N }
+  // ------------------------------
+  Future<void> _ensureLanguageLabelsForLocale(BuildContext context) async {
+    final loc = Localizations.localeOf(context);
+
+    // Use "pt_BR" style if countryCode exists, else "fr"
+    final String locale =
+        (loc.countryCode != null && loc.countryCode!.trim().isNotEmpty)
+        ? '${loc.languageCode}_${loc.countryCode}'
+        : loc.languageCode;
+
+    // ⚠️ Nécessite que votre State déclare :
+    //   Map<String, String> _languageLabelsByCode = {};
+    //   String _languageLabelsLocale = '';
+    //   bool _loadingLanguageLabels = false;
+    //
+    // Convention: codes langue en lower-case ("fr", "en"...)
+    if (_languageLabelsLocale == locale && _languageLabelsByCode.isNotEmpty) {
+      return;
+    }
+    if (_loadingLanguageLabels) return;
+
+    _loadingLanguageLabels = true;
+
+    try {
+      const String _env = String.fromEnvironment('ENV', defaultValue: 'prod');
+
+      const String _base = _env == 'prod'
+          ? 'anthonymoisan.eu.pythonanywhere.com'
+          : 'test-anthonymoisan.eu.pythonanywhere.com';
+
+      final uri = Uri.https(_base, '/api/public/people/languagesTranslated', {
+        'locale': locale,
+      });
+
+      final res = await http
+          .get(
+            uri,
+            headers: {'Accept': 'application/json', 'X-App-Key': _publicAppKey},
+          )
+          .timeout(const Duration(seconds: 30));
+
+      if (res.statusCode != 200) {
+        throw Exception(
+          "HTTP map Carto issue with languages ${res.statusCode}",
+        );
+      }
+
+      final decoded = json.decode(res.body);
+
+      final Map<String, String> map = {};
+
+      if (decoded is Map) {
+        final langues = decoded['langues'];
+        if (langues is List) {
+          for (final e in langues) {
+            if (e is Map) {
+              final code = (e['code'] ?? '').toString().trim().toLowerCase();
+              final name = (e['name'] ?? '').toString().trim();
+              if (code.isNotEmpty && name.isNotEmpty) {
+                // normalise "fr-FR" -> "fr"
+                final norm = code.contains('-')
+                    ? code.split('-').first.trim()
+                    : (code.contains('_')
+                          ? code.split('_').first.trim()
+                          : code);
+                if (norm.isNotEmpty) map[norm] = name;
+              }
+            }
+          }
+        }
+      }
+
+      // On ne garde que les langues présentes dans le dataset (options)
+      final present = _languageOptions
+          .map((e) => e.trim().toLowerCase())
+          .toSet();
+
+      final filtered = <String, String>{};
+      for (final code in present) {
+        final label = map[code];
+        if (label != null && label.isNotEmpty) filtered[code] = label;
+      }
+
+      if (mounted) {
+        setState(() {
+          _languageLabelsByCode = filtered;
+          _languageLabelsLocale = locale;
+        });
+      }
+    } catch (_) {
+      // Fallback : labels vides => l'UI affichera le code (FR/EN/...)
+      if (mounted) {
+        setState(() {
+          _languageLabelsByCode = {};
+          _languageLabelsLocale = locale;
+        });
+      }
+    } finally {
+      _loadingLanguageLabels = false;
     }
   }
 
