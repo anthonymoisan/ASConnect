@@ -6,6 +6,11 @@
 //    - si je suis ADMIN => confirmer + DELETE le groupe
 //    - sinon => confirmer + LEAVE le groupe
 // - Tap sur l’avatar => plein écran (AvatarViewer.open)
+//
+// ✅ Audience (BottomSheet) :
+// - Ajout filtre LANGUES multi-lingue (via .arb : mapLanguagesSectionTitle / mapAllLanguagesSelected / mapLanguagesSelectedCount)
+// - Les libellés de langues proviennent de l’API (languagesTranslated) via TabularApi
+//   et sont passés au sheet via `languagesByCode`.
 
 import 'dart:async';
 import 'dart:typed_data';
@@ -488,7 +493,6 @@ class _ConversationsgroupPageState extends State<ConversationsgroupPage>
             horizontal: 16,
             vertical: 10,
           ),
-
           leading: PeoplePhotoAvatar(
             peopleId: adminId,
             radius: 26,
@@ -496,7 +500,6 @@ class _ConversationsgroupPageState extends State<ConversationsgroupPage>
                 ? null
                 : () => AvatarViewer.open(context, peopleId: adminId),
           ),
-
           title: Row(
             children: [
               Expanded(
@@ -527,7 +530,6 @@ class _ConversationsgroupPageState extends State<ConversationsgroupPage>
               ),
             ],
           ),
-
           subtitle: Padding(
             padding: const EdgeInsets.only(top: 4),
             child: Text(
@@ -537,7 +539,6 @@ class _ConversationsgroupPageState extends State<ConversationsgroupPage>
               style: TextStyle(color: Colors.grey.shade700),
             ),
           ),
-
           trailing: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -549,10 +550,8 @@ class _ConversationsgroupPageState extends State<ConversationsgroupPage>
               ),
             ],
           ),
-
           // ✅ Tap => chat
           onTap: () => _openConversation(conv),
-
           // ✅ Long press => delete si admin / leave si membre
           onLongPress: () => _handleLongPress(conv),
         );
@@ -562,7 +561,8 @@ class _ConversationsgroupPageState extends State<ConversationsgroupPage>
 }
 
 // ============================================================================
-// Dialog : controllers + Audience Filters (inchangé)
+// Dialog : controllers + Audience Filters
+// ✅ MODIF : dataset langues + passage au sheet + matchesPerson inclut lang
 // ============================================================================
 
 class _CreateGroupDialog extends StatefulWidget {
@@ -584,6 +584,9 @@ class _CreateGroupDialogState extends State<_CreateGroupDialog> {
   List<Person>? _allPeople;
   AudienceFilters<Person>? _audience;
   Map<String, String> _countriesByCode = const {};
+
+  // ✅ NEW: libellés langues (base code -> label traduit dans la locale UI)
+  Map<String, String> _languagesByCode = const {};
 
   int _audienceCount = 0;
 
@@ -639,10 +642,30 @@ class _CreateGroupDialogState extends State<_CreateGroupDialog> {
       final listPerson = await TabularApi.fetchPeopleMapRepresentation();
       final people = listPerson.items;
 
+      // Countries translated
       Map<String, String> cMap = const {};
       try {
         final locale = Localizations.localeOf(context).languageCode;
         cMap = await TabularApi.fetchCountriesTranslated(locale: locale);
+      } catch (_) {}
+
+      // ✅ Languages translated (NEW API)
+      Map<String, String> lMap = const {};
+      try {
+        final locale = Localizations.localeOf(context).languageCode.trim();
+        final res = await TabularApi.fetchPeopleLanguagesTranslated(
+          locale: locale.isEmpty ? 'fr' : locale,
+        );
+
+        final tmp = <String, String>{};
+        for (final item in res.langues) {
+          final code = (item.code).trim().toLowerCase();
+          final name = (item.name).trim();
+          if (code.isNotEmpty && name.isNotEmpty) {
+            tmp[code] = name;
+          }
+        }
+        lMap = tmp;
       } catch (_) {}
 
       if (!mounted) return;
@@ -651,12 +674,13 @@ class _CreateGroupDialogState extends State<_CreateGroupDialog> {
         people,
         countryOf: (p) => p.countryCode,
         ageOf: (p) => p.age,
-        genotypeOf: (p) => p.genotype,
+        languageOf: (p) => p.lang, // ✅
       );
 
       setState(() {
         _allPeople = people;
         _countriesByCode = cMap;
+        _languagesByCode = lMap;
         _audience = initial;
         _audienceCount = people.length;
       });
@@ -667,6 +691,8 @@ class _CreateGroupDialogState extends State<_CreateGroupDialog> {
         _allPeople = null;
         _audience = null;
         _audienceCount = 0;
+        _countriesByCode = const {};
+        _languagesByCode = const {};
       });
     }
   }
@@ -684,7 +710,7 @@ class _CreateGroupDialogState extends State<_CreateGroupDialog> {
       all,
       (p) => p.countryCode,
     );
-    final genoOpts = AudienceFilters.genotypeOptions(all, (p) => p.genotype);
+    final langOpts = AudienceFilters.languageOptions(all, (p) => p.lang); // ✅
 
     int count = 0;
     for (final p in all) {
@@ -692,12 +718,13 @@ class _CreateGroupDialogState extends State<_CreateGroupDialog> {
         p,
         countryOf: (pp) => pp.countryCode,
         ageOf: (pp) => pp.age,
-        genotypeOf: (pp) => pp.genotype,
+        genotypeOf: (pp) => pp.genotype, // ✅ reste nécessaire (matching)
+        languageOf: (pp) => pp.lang, // ✅ NEW
         latOf: (pp) => pp.latitude,
         lngOf: (pp) => pp.longitude,
         datasetAgeDomain: ageDomain,
         datasetCountryOptions: countryOpts,
-        datasetGenotypeOptions: genoOpts,
+        datasetLanguageOptions: langOpts, // ✅ NEW
       )) {
         count++;
       }
@@ -717,9 +744,11 @@ class _CreateGroupDialogState extends State<_CreateGroupDialog> {
       countryOf: (p) => p.countryCode,
       ageOf: (p) => p.age,
       genotypeOf: (p) => p.genotype,
+      languageOf: (p) => p.lang, // ✅
       latOf: (p) => p.latitude,
       lngOf: (p) => p.longitude,
       countriesByCode: _countriesByCode,
+      languagesByCode: _languagesByCode, // ✅ si tu as la map traduite
       resolveMyLocation: () => _resolveMyLocationForAudience(context),
     );
 
@@ -744,7 +773,7 @@ class _CreateGroupDialogState extends State<_CreateGroupDialog> {
       all,
       (p) => p.countryCode,
     );
-    final genoOpts = AudienceFilters.genotypeOptions(all, (p) => p.genotype);
+    final langOpts = AudienceFilters.languageOptions(all, (p) => p.lang); // ✅
 
     final ids = <int>[];
     for (final p in all) {
@@ -752,12 +781,13 @@ class _CreateGroupDialogState extends State<_CreateGroupDialog> {
         p,
         countryOf: (pp) => pp.countryCode,
         ageOf: (pp) => pp.age,
-        genotypeOf: (pp) => pp.genotype,
+        genotypeOf: (pp) => pp.genotype, // ✅
+        languageOf: (pp) => pp.lang, // ✅
         latOf: (pp) => pp.latitude,
         lngOf: (pp) => pp.longitude,
         datasetAgeDomain: ageDomain,
         datasetCountryOptions: countryOpts,
-        datasetGenotypeOptions: genoOpts,
+        datasetLanguageOptions: langOpts, // ✅
       );
       if (ok) ids.add(p.id);
     }

@@ -9,10 +9,32 @@ typedef AgeOf<T> = int? Function(T);
 typedef GenotypeOf<T> = String? Function(T);
 typedef LatOf<T> = double? Function(T);
 typedef LngOf<T> = double? Function(T);
+typedef LanguageOf<T> = String? Function(T);
+
+// ============================================================================
+// DATA: AudienceFilters
+// - Génotypes: options CANONIQUES (comme Tabular) => UI stable + i18n stable
+// - Matching genotype: robuste (comme Tabular) sur la valeur réelle du dataset
+// ============================================================================
 
 class AudienceFilters<T> {
+  // ---------------------------------------------------------------------------
+  // ✅ Options CANONIQUES (doit rester aligné avec Tabular kGenotypeOptions)
+  // ---------------------------------------------------------------------------
+  static const List<String> kGenotypeOptions = <String>[
+    'délétion',
+    'mutation',
+    'upd',
+    'icd',
+    'clinique',
+    'mosaïque',
+  ];
+
   final Set<String> countriesIso2; // ISO2 upper
-  final Set<String> genotypes; // normalized lower
+  final Set<String>
+  genotypes; // ✅ selection = canonical values (strings ci-dessus)
+  final Set<String> languages; // base codes lower ("fr","en","es")
+
   final int? minAge;
   final int? maxAge;
 
@@ -24,6 +46,7 @@ class AudienceFilters<T> {
   const AudienceFilters({
     required this.countriesIso2,
     required this.genotypes,
+    required this.languages,
     required this.minAge,
     required this.maxAge,
     required this.distanceEnabled,
@@ -35,6 +58,7 @@ class AudienceFilters<T> {
   AudienceFilters<T> copyWith({
     Set<String>? countriesIso2,
     Set<String>? genotypes,
+    Set<String>? languages,
     int? minAge,
     int? maxAge,
     bool? distanceEnabled,
@@ -45,6 +69,7 @@ class AudienceFilters<T> {
     return AudienceFilters<T>(
       countriesIso2: countriesIso2 ?? this.countriesIso2,
       genotypes: genotypes ?? this.genotypes,
+      languages: languages ?? this.languages,
       minAge: minAge ?? this.minAge,
       maxAge: maxAge ?? this.maxAge,
       distanceEnabled: distanceEnabled ?? this.distanceEnabled,
@@ -56,7 +81,17 @@ class AudienceFilters<T> {
 
   static String _normIso2(String? raw) => (raw ?? '').trim().toUpperCase();
   static bool _isIso2(String s) => s.length == 2;
+
   static String _normGenotype(String? raw) => (raw ?? '').trim().toLowerCase();
+
+  static String _normLang(String? raw) => (raw ?? '').trim().toLowerCase();
+
+  /// "pt_BR" / "pt-BR" -> "pt"
+  static String _langBase(String raw) {
+    final t = _normLang(raw);
+    if (t.isEmpty) return '';
+    return t.split(RegExp(r'[_-]')).first;
+  }
 
   static ({int? min, int? max}) ageDomain<T>(List<T> all, AgeOf<T> ageOf) {
     final ages = <int>[];
@@ -79,11 +114,15 @@ class AudienceFilters<T> {
     return list;
   }
 
-  static List<String> genotypeOptions<T>(List<T> all, GenotypeOf<T> genoOf) {
+  /// ✅ Options langues (base codes)
+  static List<String> languageOptions<T>(
+    List<T> all,
+    LanguageOf<T> languageOf,
+  ) {
     final set = <String>{};
     for (final p in all) {
-      final g = _normGenotype(genoOf(p));
-      if (g.isNotEmpty) set.add(g);
+      final l = _langBase(languageOf(p) ?? '');
+      if (l.isNotEmpty) set.add(l);
     }
     final list = set.toList()..sort();
     return list;
@@ -93,15 +132,16 @@ class AudienceFilters<T> {
     List<T> all, {
     required CountryOf<T> countryOf,
     required AgeOf<T> ageOf,
-    required GenotypeOf<T> genotypeOf,
+    required LanguageOf<T> languageOf,
   }) {
     final countries = countryOptions(all, countryOf).toSet();
-    final genos = genotypeOptions(all, genotypeOf).toSet();
+    final langs = languageOptions(all, languageOf).toSet();
     final dom = ageDomain(all, ageOf);
 
     return AudienceFilters<T>(
       countriesIso2: countries,
-      genotypes: genos,
+      genotypes: kGenotypeOptions.toSet(), // ✅ canonical = select all
+      languages: langs, // select all
       minAge: dom.min,
       maxAge: dom.max,
       distanceEnabled: false,
@@ -133,16 +173,46 @@ class AudienceFilters<T> {
     return r * c;
   }
 
+  // ---------------------------------------------------------------------------
+  // ✅ Matching genotype robuste (copie de Tabular, sans heuristique locale)
+  // - on compare valeur dataset (normalisée) vs sélection (normalisée)
+  // ---------------------------------------------------------------------------
+  static bool _matchGenotypeNorm(String genotypeNorm, String selNorm) {
+    final selIsDeletion = selNorm.contains('dél') || selNorm.contains('del');
+    if (selIsDeletion &&
+        (genotypeNorm.contains('dél') ||
+            genotypeNorm.contains('del') ||
+            genotypeNorm.contains('deletion'))) {
+      return true;
+    }
+    return genotypeNorm.contains(selNorm) || selNorm.contains(genotypeNorm);
+  }
+
+  static bool _matchesGenotypeWithSelection(
+    String? genotypeRaw,
+    Set<String> selectedNorm,
+  ) {
+    final g = (genotypeRaw ?? '').trim();
+    if (g.isEmpty) return false;
+
+    final norm = g.toLowerCase();
+    for (final sel in selectedNorm) {
+      if (_matchGenotypeNorm(norm, sel)) return true;
+    }
+    return false;
+  }
+
   bool matchesPerson(
     T p, {
     required CountryOf<T> countryOf,
     required AgeOf<T> ageOf,
     required GenotypeOf<T> genotypeOf,
+    required LanguageOf<T> languageOf,
     required LatOf<T> latOf,
     required LngOf<T> lngOf,
     required ({int? min, int? max}) datasetAgeDomain,
     required List<String> datasetCountryOptions,
-    required List<String> datasetGenotypeOptions,
+    required List<String> datasetLanguageOptions,
   }) {
     final countryActive =
         countriesIso2.isNotEmpty &&
@@ -154,16 +224,25 @@ class AudienceFilters<T> {
       if (!_isIso2(c) || !countriesIso2.contains(c)) return false;
     }
 
+    // ✅ genotype active seulement si user a “resserré” vs 6 options
     final genoActive =
-        genotypes.isNotEmpty &&
-        datasetGenotypeOptions.isNotEmpty &&
-        genotypes.length != datasetGenotypeOptions.length;
+        genotypes.isNotEmpty && genotypes.length != kGenotypeOptions.length;
 
     if (genoActive) {
-      final g = _normGenotype(genotypeOf(p));
-      if (g.isEmpty) return false;
-      final ok = genotypes.any((sel) => g.contains(sel) || sel.contains(g));
+      final selectedNorm = genotypes.map((e) => e.trim().toLowerCase()).toSet();
+      final ok = _matchesGenotypeWithSelection(genotypeOf(p), selectedNorm);
       if (!ok) return false;
+    }
+
+    // ✅ languages active seulement si user a “resserré”
+    final langActive =
+        languages.isNotEmpty &&
+        datasetLanguageOptions.isNotEmpty &&
+        languages.length != datasetLanguageOptions.length;
+
+    if (langActive) {
+      final l = _langBase(languageOf(p) ?? '');
+      if (l.isEmpty || !languages.contains(l)) return false;
     }
 
     final ageActive =
@@ -179,7 +258,6 @@ class AudienceFilters<T> {
       if (a < minAge! || a > maxAge!) return false;
     }
 
-    // Distance
     if (distanceEnabled) {
       // filtre OFF tant que pas prêt
       if (originLat == null || originLng == null || maxKm == null) return true;
@@ -202,7 +280,8 @@ class AudienceFilters<T> {
 }
 
 // ============================================================================
-// UI: BottomSheet Audience Filters (i18n, réutilise les clés TabularView)
+// UI: BottomSheet Audience Filters (i18n)
+// + Langues (.arb) + Génotypes (canonique + _genoLabel simple)
 // ============================================================================
 
 class AudienceFiltersSheet<T> extends StatefulWidget {
@@ -212,12 +291,15 @@ class AudienceFiltersSheet<T> extends StatefulWidget {
   final CountryOf<T> countryOf;
   final AgeOf<T> ageOf;
   final GenotypeOf<T> genotypeOf;
+  final LanguageOf<T> languageOf;
   final LatOf<T> latOf;
   final LngOf<T> lngOf;
 
   final Map<String, String>? countriesByCode;
 
-  /// IMPORTANT: on attend une fonction, pas un Future.
+  /// base code -> nom traduit (selon locale UI)
+  final Map<String, String>? languagesByCode;
+
   final Future<({double lat, double lng})?> Function()? resolveMyLocation;
 
   const AudienceFiltersSheet({
@@ -227,9 +309,11 @@ class AudienceFiltersSheet<T> extends StatefulWidget {
     required this.countryOf,
     required this.ageOf,
     required this.genotypeOf,
+    required this.languageOf,
     required this.latOf,
     required this.lngOf,
     this.countriesByCode,
+    this.languagesByCode,
     this.resolveMyLocation,
   });
 
@@ -240,9 +324,11 @@ class AudienceFiltersSheet<T> extends StatefulWidget {
     required CountryOf<T> countryOf,
     required AgeOf<T> ageOf,
     required GenotypeOf<T> genotypeOf,
+    required LanguageOf<T> languageOf,
     required LatOf<T> latOf,
     required LngOf<T> lngOf,
     Map<String, String>? countriesByCode,
+    Map<String, String>? languagesByCode,
     Future<({double lat, double lng})?> Function()? resolveMyLocation,
   }) {
     return showModalBottomSheet<AudienceFilters<T>>(
@@ -255,9 +341,11 @@ class AudienceFiltersSheet<T> extends StatefulWidget {
         countryOf: countryOf,
         ageOf: ageOf,
         genotypeOf: genotypeOf,
+        languageOf: languageOf,
         latOf: latOf,
         lngOf: lngOf,
         countriesByCode: countriesByCode,
+        languagesByCode: languagesByCode,
         resolveMyLocation: resolveMyLocation,
       ),
     );
@@ -273,6 +361,9 @@ class _AudienceFiltersSheetState<T> extends State<AudienceFiltersSheet<T>> {
 
   late final ({int? min, int? max}) _ageDomain;
   late final List<String> _countryOptions;
+  late final List<String> _languageOptions;
+
+  // ✅ Génotypes: CANONIQUES
   late final List<String> _genotypeOptions;
 
   int _resultsCount = 0;
@@ -290,11 +381,14 @@ class _AudienceFiltersSheetState<T> extends State<AudienceFiltersSheet<T>> {
       widget.allPeople,
       widget.countryOf,
     );
-    _genotypeOptions = AudienceFilters.genotypeOptions(
+    _languageOptions = AudienceFilters.languageOptions(
       widget.allPeople,
-      widget.genotypeOf,
+      widget.languageOf,
     );
 
+    _genotypeOptions = AudienceFilters.kGenotypeOptions;
+
+    // Clamp âge
     if (_ageDomain.min != null && _ageDomain.max != null) {
       final mi = _ageDomain.min!;
       final ma = _ageDomain.max!;
@@ -304,6 +398,30 @@ class _AudienceFiltersSheetState<T> extends State<AudienceFiltersSheet<T>> {
         minAge: min(curMin, curMax),
         maxAge: max(curMin, curMax),
       );
+    }
+
+    // Clamp langues (si vide -> all)
+    if (_languageOptions.isNotEmpty) {
+      if (_local.languages.isEmpty) {
+        _local = _local.copyWith(languages: _languageOptions.toSet());
+      } else {
+        final opts = _languageOptions.toSet();
+        final next = Set<String>.from(_local.languages)
+          ..removeWhere((l) => !opts.contains(l));
+        if (next.isEmpty) next.addAll(opts);
+        _local = _local.copyWith(languages: next);
+      }
+    }
+
+    // Clamp génotypes (si vide -> all canonical)
+    if (_local.genotypes.isEmpty) {
+      _local = _local.copyWith(genotypes: _genotypeOptions.toSet());
+    } else {
+      final opts = _genotypeOptions.toSet();
+      final next = Set<String>.from(_local.genotypes)
+        ..removeWhere((g) => !opts.contains(g));
+      if (next.isEmpty) next.addAll(opts);
+      _local = _local.copyWith(genotypes: next);
     }
 
     WidgetsBinding.instance.addPostFrameCallback((_) => _scheduleCount());
@@ -337,7 +455,22 @@ class _AudienceFiltersSheetState<T> extends State<AudienceFiltersSheet<T>> {
     return name.trim();
   }
 
-  // ✅ Réutilise tes libellés de génotype (comme tabular_view_filters.dart)
+  String _capitalizeFirst(String s) {
+    final t = s.trim();
+    if (t.isEmpty) return t;
+    return t[0].toUpperCase() + t.substring(1);
+  }
+
+  String _prettyLanguageLabel(String baseCode) {
+    final code = baseCode.trim().toLowerCase();
+    final fromMap = widget.languagesByCode?[code];
+    if (fromMap != null && fromMap.trim().isNotEmpty) {
+      return _capitalizeFirst(fromMap.trim());
+    }
+    return _capitalizeFirst(code);
+  }
+
+  // ✅ EXACTEMENT ta fonction (calée Tabular)
   String _genoLabel(BuildContext ctx, String raw) {
     final l10n = AppLocalizations.of(ctx)!;
     final g = raw.trim().toLowerCase();
@@ -362,8 +495,12 @@ class _AudienceFiltersSheetState<T> extends State<AudienceFiltersSheet<T>> {
 
     final genoActive =
         f.genotypes.isNotEmpty &&
-        _genotypeOptions.isNotEmpty &&
-        f.genotypes.length != _genotypeOptions.length;
+        f.genotypes.length != AudienceFilters.kGenotypeOptions.length;
+
+    final langActive =
+        f.languages.isNotEmpty &&
+        _languageOptions.isNotEmpty &&
+        f.languages.length != _languageOptions.length;
 
     final ageActive =
         _ageDomain.min != null &&
@@ -382,8 +519,12 @@ class _AudienceFiltersSheetState<T> extends State<AudienceFiltersSheet<T>> {
         ? f.countriesIso2.map((e) => e.trim().toUpperCase()).toSet()
         : const <String>{};
 
-    final selectedGenos = genoActive
+    final selectedGenosNorm = genoActive
         ? f.genotypes.map((e) => e.trim().toLowerCase()).toSet()
+        : const <String>{};
+
+    final selectedLangs = langActive
+        ? f.languages.map((e) => e.trim().toLowerCase()).toSet()
         : const <String>{};
 
     double? minLat, maxLat, minLng, maxLng;
@@ -408,8 +549,9 @@ class _AudienceFiltersSheetState<T> extends State<AudienceFiltersSheet<T>> {
         final lng = widget.lngOf(p);
         if (lat == null || lng == null) continue;
 
-        if (lat < minLat! || lat > maxLat! || lng < minLng! || lng > maxLng!)
+        if (lat < minLat! || lat > maxLat! || lng < minLng! || lng > maxLng!) {
           continue;
+        }
 
         final d = AudienceFilters._haversineKm(
           lat1: f.originLat!,
@@ -421,16 +563,18 @@ class _AudienceFiltersSheetState<T> extends State<AudienceFiltersSheet<T>> {
       }
 
       if (genoActive) {
-        final g = (widget.genotypeOf(p) ?? '').trim().toLowerCase();
-        if (g.isEmpty) continue;
-        bool ok = false;
-        for (final sel in selectedGenos) {
-          if (g.contains(sel) || sel.contains(g)) {
-            ok = true;
-            break;
-          }
-        }
-        if (!ok) continue;
+        final g = (widget.genotypeOf(p) ?? '').trim();
+        if (!AudienceFilters._matchesGenotypeWithSelection(
+          g,
+          selectedGenosNorm,
+        ))
+          continue;
+      }
+
+      if (langActive) {
+        final raw = (widget.languageOf(p) ?? '').trim().toLowerCase();
+        final base = raw.isEmpty ? '' : raw.split(RegExp(r'[_-]')).first;
+        if (base.isEmpty || !selectedLangs.contains(base)) continue;
       }
 
       if (countryActive) {
@@ -454,7 +598,7 @@ class _AudienceFiltersSheetState<T> extends State<AudienceFiltersSheet<T>> {
       widget.allPeople,
       countryOf: widget.countryOf,
       ageOf: widget.ageOf,
-      genotypeOf: widget.genotypeOf,
+      languageOf: widget.languageOf,
     );
     _setLocal(def);
   }
@@ -525,13 +669,12 @@ class _AudienceFiltersSheetState<T> extends State<AudienceFiltersSheet<T>> {
             padding: EdgeInsets.zero,
             keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
             children: [
-              // Title
               Row(
                 children: [
                   const Icon(Icons.groups),
                   const SizedBox(width: 8),
                   Text(
-                    l10n.audience, // ✅ déjà utilisé dans conversationsGroup_page.dart
+                    l10n.audience,
                     style: const TextStyle(
                       fontWeight: FontWeight.w800,
                       fontSize: 16,
@@ -542,7 +685,6 @@ class _AudienceFiltersSheetState<T> extends State<AudienceFiltersSheet<T>> {
 
               const SizedBox(height: 8),
 
-              // Results line
               Row(
                 children: [
                   Icon(
@@ -653,7 +795,73 @@ class _AudienceFiltersSheetState<T> extends State<AudienceFiltersSheet<T>> {
 
               const SizedBox(height: 16),
 
-              // Countries
+              // Langues (.arb)
+              Text(
+                l10n.mapLanguagesSectionTitle,
+                style: const TextStyle(fontWeight: FontWeight.w700),
+              ),
+              const SizedBox(height: 6),
+              Theme(
+                data: Theme.of(
+                  context,
+                ).copyWith(dividerColor: Colors.transparent),
+                child: ExpansionTile(
+                  tilePadding: EdgeInsets.zero,
+                  title: Text(
+                    _languageOptions.isEmpty
+                        ? l10n.mapAllLanguagesSelected
+                        : (_local.languages.length == _languageOptions.length
+                              ? l10n.mapAllLanguagesSelected
+                              : l10n.mapLanguagesSelectedCount(
+                                  _local.languages.length,
+                                )),
+                  ),
+                  children: [
+                    Row(
+                      children: [
+                        TextButton(
+                          onPressed: _languageOptions.isEmpty
+                              ? null
+                              : () => _setLocal(
+                                  _local.copyWith(
+                                    languages: _languageOptions.toSet(),
+                                  ),
+                                ),
+                          child: Text(l10n.mapSelectAll),
+                        ),
+                        TextButton(
+                          onPressed: () =>
+                              _setLocal(_local.copyWith(languages: <String>{})),
+                          child: Text(l10n.mapClear),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    ..._languageOptions.map((code) {
+                      final checked = _local.languages.contains(code);
+                      return CheckboxListTile(
+                        value: checked,
+                        title: Text(_prettyLanguageLabel(code)),
+                        dense: true,
+                        controlAffinity: ListTileControlAffinity.leading,
+                        onChanged: (v) {
+                          final next = Set<String>.from(_local.languages);
+                          if (v == true) {
+                            next.add(code);
+                          } else {
+                            next.remove(code);
+                          }
+                          _setLocal(_local.copyWith(languages: next));
+                        },
+                      );
+                    }),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 16),
+
+              // Pays
               Text(
                 l10n.mapCountryTitle,
                 style: const TextStyle(fontWeight: FontWeight.w700),
@@ -716,7 +924,7 @@ class _AudienceFiltersSheetState<T> extends State<AudienceFiltersSheet<T>> {
 
               const SizedBox(height: 16),
 
-              // Genotype
+              // Génotypes (✅ canonique + label i18n stable)
               Text(
                 l10n.mapGenotypeTitle,
                 style: const TextStyle(fontWeight: FontWeight.w700),
@@ -743,7 +951,7 @@ class _AudienceFiltersSheetState<T> extends State<AudienceFiltersSheet<T>> {
 
               const SizedBox(height: 16),
 
-              // Age
+              // Âge
               Text(
                 l10n.mapAgeTitle,
                 style: const TextStyle(fontWeight: FontWeight.w700),
