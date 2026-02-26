@@ -35,16 +35,19 @@ bash ~/bin/backup_mysql_to_gdrive.sh tâche managée qui permet de faire une cop
 
 
 2) Sauvegarde rapide avant restauration
-mysqldump --no-tablespaces 'AnthonyMoisan$ASConnexion' | gzip > ~/restore/backup_before_restore.sql.gz
+mysqldump --no-tablespaces \
+  -h AnthonyMoisan.mysql.eu.pythonanywhere-services.com \
+  -u AnthonyMoisan -p \
+  'AnthonyMoisan$ASConnexion' | gzip > ~/restore/backup_before_restore.sql.gz
 
 3) Remplacement de la base de données
-a) recréer la base sous Database > ASConnexion
+a) recréer la base sous Database > ASConnexion (étape facultative, on peut passer à b)
 
 b) regénérer la base de données à partir du fichier compressé
 gunzip -c ~/restore/mysql_'AnthonyMoisan$ASConnexion'_2026-02-17_02-30.sql.gz | \
 mysql -h AnthonyMoisan.mysql.eu.pythonanywhere-services.com -u AnthonyMoisan -p AnthonyMoisan\$ASConnexion
 
-//Pour la base de test
-gunzip -c ~/restore/mysql_'AnthonyMoisan$ASConnexion'_2026-02-17_02-30.sql.gz | \
+//Pour la base de test en l'écrasant avec la base de prod
+gunzip -c ~/restore/backup_before_restore.sql.gz | \
 mysql -h AnthonyMoisan.mysql.eu.pythonanywhere-services.com -u AnthonyMoisan -p AnthonyMoisan\$ASConnexionTest
 
