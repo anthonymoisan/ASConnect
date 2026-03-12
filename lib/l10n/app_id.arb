@@ -1,0 +1,680 @@
+{
+  "@@locale": "id",
+
+  "appTitle": "ASConnexion",
+  "systemLanguage": "Sistem",
+
+  "menu": "Menu",
+  "menuNavigation": "Navigasi",
+  "menuMyProfile": "Profil saya",
+  "menuContact": "Hubungi kami",
+  "menuPrivacyPolicy": "Kebijakan privasi",
+  "menuVersion": "Versi",
+  "menuContactSubject": "Kontak melalui aplikasi",
+
+  "languageLabel": "Bahasa",
+  "currentLanguage": "Saat ini: {label}",
+  "@currentLanguage": {
+    "placeholders": {
+      "label": { "type": "String" }
+    }
+  },
+
+  "cancel": "Batal",
+  "confirm": "Konfirmasi",
+  "ok": "OK",
+
+  "logoutTitle": "Keluar",
+  "logoutConfirm": "Apakah Anda yakin ingin keluar dari aplikasi?",
+
+  "tabCommunity": "Terhubung dengan komunitas",
+  "tabChats": "Percakapan saya",
+  "tabPoi": "Tempat menarik",
+
+  "profileUpdated": "Profil diperbarui ✅",
+
+  "loginTitle": "Masuk",
+  "loginIntro": "Aplikasi ASConnect ditujukan hanya bagi para pendamping yang memiliki anak dengan sindrom Angelman, suatu penyakit genetik langka.",
+  "loginButton": "Masuk",
+  "loginLoading": "Sedang masuk…",
+  "createAccount": "Buat akun",
+  "forgotPassword": "Lupa kata sandi Anda?",
+
+  "emailLabel": "Alamat email",
+  "emailHintRequired": "Masukkan email Anda",
+  "emailHintInvalid": "Email tidak valid",
+
+  "passwordLabel": "Kata sandi",
+  "passwordRequired": "Masukkan kata sandi Anda",
+  "show": "Tampilkan",
+  "hide": "Sembunyikan",
+
+  "invalidCredentials": "Kredensial tidak valid.",
+  "accessDeniedKey": "Akses ditolak: kunci aplikasi hilang atau tidak valid.",
+  "badRequest": "Permintaan tidak valid (400).",
+  "tooManyAttempts": "Terlalu banyak percobaan. Coba lagi sebentar lagi.",
+  "serviceUnavailable": "Layanan tidak tersedia. Coba lagi nanti.",
+  "serverErrorWithCode": "Kesalahan server ({code}).",
+  "unexpectedServerResponse": "Respons server tidak terduga.",
+  "cannotConnectServer": "Tidak dapat terhubung ke server.",
+  "timeoutCheckConnection": "Waktu habis. Periksa koneksi Anda.",
+  "errorWithMessage": "Kesalahan: {message}",
+
+  "missingAppKeyWarning": "⚠️ Kunci aplikasi tidak ada. Jalankan aplikasi dengan --dart-define=PUBLIC_APP_KEY=your_public_key",
+
+  "signupTitle": "Buat akun",
+  "signupSectionPerson": "Orang dengan SA",
+  "signupSectionAuth": "Autentikasi",
+  "consentTitle": "Persetujuan",
+
+  "firstNameLabel": "Nama depan",
+  "firstNameRequired": "Nama depan wajib diisi",
+  "lastNameLabel": "Nama belakang",
+  "lastNameRequired": "Nama belakang wajib diisi",
+
+  "birthdateLabel": "Tanggal lahir (hh/bb/tttt)",
+  "birthdateRequired": "Tanggal lahir wajib diisi",
+  "chooseDate": "Pilih tanggal",
+  "signupBirthdateHelp": "Tanggal lahir",
+
+  "genotypeLabel": "Genotipe",
+  "genotypeRequired": "Genotipe wajib diisi",
+  "genotypeDeletion": "Delesi",
+  "genotypeMutation": "Mutasi",
+  "genotypeUpd": "UPD",
+  "genotypeIcd": "ICD",
+  "genotypeClinical": "Klinis",
+  "genotypeMosaic": "Mosaik",
+
+  "signupPhotoHint": "Foto anak (wajib, < 4 MB)",
+  "importPhoto": "Impor foto",
+  "takePhoto": "Ambil foto",
+  "deletePhoto": "Hapus foto",
+  "signupPhotoRequired": "Foto wajib",
+  "signupAddPhotoToContinue": "Tambahkan foto untuk melanjutkan",
+  "signupPhotoTooLarge": "Ukuran foto melebihi 4 MB ({mb} MB).",
+  "@signupPhotoTooLarge": {
+    "placeholders": {
+      "mb": { "type": "String" }
+    }
+  },
+  "signupPhotoCannotLoad": "Tidak dapat mengambil foto: {message}",
+  "@signupPhotoCannotLoad": {
+    "placeholders": {
+      "message": { "type": "String" }
+    }
+  },
+
+  "signupPasswordTooWeak": "Kata sandi terlalu lemah",
+  "signupPwdRuleMin8": "Min. 8 karakter",
+  "signupPwdRuleUpper": "1 huruf besar",
+  "signupPwdRuleDigit": "1 angka",
+  "signupPwdRuleSpecial": "1 karakter khusus",
+
+  "secretQuestionLabel": "Pertanyaan rahasia",
+  "secretQuestionRequired": "Pertanyaan rahasia wajib diisi",
+  "secretQuestion1": "Nama keluarga ibu saat lahir?",
+  "secretQuestion2": "Nama aktor film favorit Anda?",
+  "secretQuestion3": "Nama hewan peliharaan favorit Anda?",
+
+  "secretAnswerLabel": "Jawaban",
+  "secretAnswerRequired": "Jawaban wajib diisi",
+
+  "consentCheckbox": "Saya menyetujui syarat penggunaan data saya dan memberikan persetujuan saya.",
+  "signupConsentNotGiven": "Anda belum memberikan persetujuan",
+
+  "signupCreating": "Membuat…",
+  "signupCreateBtn": "Buat akun saya",
+
+  "signupSuccess": "Akun berhasil dibuat.",
+  "signupEmailAlreadyExistsRedirect": "Email Anda sudah ada di basis data kami! Gunakan alamat email lain atau buka bagian lupa kata sandi.",
+  "signupSelectBirthdate": "Pilih tanggal lahir",
+  "signupChooseGenotype": "Pilih genotipe",
+  "signupChooseSecretQuestion": "Pilih pertanyaan rahasia",
+  "signupEnterSecretAnswer": "Masukkan jawaban rahasia",
+
+  "signupApiFailed": "API gagal ({code}): {body}",
+  "@signupApiFailed": {
+    "placeholders": {
+      "code": { "type": "int" },
+      "body": { "type": "String" }
+    }
+  },
+
+  "forgotPasswordTitle": "Lupa kata sandi",
+  "forgotEmailLabel": "Alamat email",
+  "forgotFetchQuestionTooltip": "Ambil pertanyaan",
+  "forgotEnterValidEmail": "Masukkan email yang valid.",
+  "forgotUnknownEmail": "Email tidak dikenal.",
+  "forgotErrorCode": "Kesalahan ({code})",
+  "@forgotErrorCode": {
+    "placeholders": {
+      "code": { "type": "int" }
+    }
+  },
+  "forgotTimeoutRetry": "Waktu habis. Coba lagi.",
+  "forgotErrorWithMessage": "Kesalahan: {message}",
+  "@forgotErrorWithMessage": {
+    "placeholders": {
+      "message": { "type": "String" }
+    }
+  },
+
+  "forgotQuestionFallback": "Pertanyaan rahasia",
+  "forgotQuestionLabel": "Pertanyaan",
+
+  "forgotSecretAnswerLabel": "Jawaban rahasia",
+  "forgotAnswerRequired": "Jawaban wajib diisi",
+  "forgotEnterYourAnswer": "Masukkan jawaban Anda.",
+
+  "forgotVerify": "Verifikasi",
+  "forgotAnswerCorrectSnack": "Jawaban benar 👍",
+  "forgotAnswerIncorrectAttempts": "Jawaban salah ({attempts}/3).",
+  "@forgotAnswerIncorrectAttempts": {
+    "placeholders": {
+      "attempts": { "type": "int" }
+    }
+  },
+  "forgotFailedAttempts": "Percobaan gagal: {attempts} / 3",
+  "@forgotFailedAttempts": {
+    "placeholders": {
+      "attempts": { "type": "int" }
+    }
+  },
+  "forgotAnswerOkHint": "✅ Jawaban benar, Anda dapat memasukkan kata sandi baru.",
+
+  "forgotNewPasswordLabel": "Kata sandi baru",
+  "forgotPasswordRequired": "Kata sandi wajib diisi",
+  "forgotPasswordTooWeak": "Kata sandi terlalu lemah",
+  "forgotPwdRuleMin8": "Setidaknya 8 karakter",
+  "forgotPwdRuleUpper": "Setidaknya 1 huruf besar",
+  "forgotPwdRuleSpecial": "Setidaknya 1 karakter khusus",
+
+  "forgotConfirmPasswordLabel": "Konfirmasi kata sandi",
+  "forgotEnterNewPasswordFirst": "Masukkan kata sandi baru terlebih dahulu",
+  "forgotPasswordsDoNotMatch": "Kata sandi tidak cocok",
+  "forgotPasswordsMatch": "Kata sandi cocok",
+
+  "forgotResetSuccess": "Kata sandi berhasil diatur ulang ✅",
+  "forgotResetFailed": "Gagal ({code}).",
+  "@forgotResetFailed": {
+    "placeholders": {
+      "code": { "type": "int" }
+    }
+  },
+
+  "tooManyAttemptsTitle": "Terlalu banyak percobaan",
+  "tooManyAttemptsMessage": "Jumlah percobaan terlampaui.\n\nTulis ke contact@angelmananalytics.org untuk menjelaskan masalah koneksi Anda.",
+
+  "forgotValidating": "Memvalidasi…",
+
+  "editProfileTitle": "Ubah profil",
+  "loadingProfile": "Memuat profil…",
+  "timeoutLoadingProfile": "Waktu habis saat memuat profil.",
+  "errorLoadingProfile": "Kesalahan saat memuat: {message}",
+  "@errorLoadingProfile": {
+    "placeholders": {
+      "message": { "type": "String" }
+    }
+  },
+
+  "import": "Impor",
+  "deleteMyPhoto": "Hapus foto saya",
+  "cancelSelection": "Batalkan pilihan",
+
+  "photoTooLarge": "Ukuran foto melebihi 4 MB ({size} MB).",
+  "@photoTooLarge": {
+    "placeholders": {
+      "size": { "type": "String" }
+    }
+  },
+  "cannotGetPhoto": "Tidak dapat mengambil foto: {message}",
+  "@cannotGetPhoto": {
+    "placeholders": {
+      "message": { "type": "String" }
+    }
+  },
+
+  "photoRequired": "Foto wajib",
+  "photoRequiredAddToSave": "Tambahkan foto untuk menyimpan",
+  "photoRequiredAfterDelete": "Foto wajib: impor atau ambil foto baru.",
+  "photoDeleted": "Foto dihapus ✅",
+
+  "profileInfoSection": "Informasi profil",
+
+  "firstName": "Nama depan",
+  "lastName": "Nama belakang",
+  "birthDateLabel": "Tanggal lahir (hh/bb/tttt)",
+  "birthDateRequired": "Tanggal lahir wajib diisi",
+
+  "genotype": "Genotipe",
+
+  "city": "Kota",
+  "geolocateMe": "Geolokasikan saya",
+  "locationUpdated": "Lokasi diperbarui",
+  "locationUpdatedWithCity": "Lokasi diperbarui ({city})",
+  "@locationUpdatedWithCity": {
+    "placeholders": {
+      "city": { "type": "String" }
+    }
+  },
+
+  "geolocation": "Geolokasi",
+  "geolocationHint": "Harap ubah geolokasi Anda jika lokasinya telah berubah sejak pendaftaran.",
+
+  "secretQuestionSection": "Pertanyaan rahasia",
+  "question": "Pertanyaan",
+  "answer": "Jawaban",
+
+  "changeMyPassword": "Ubah kata sandi saya",
+  "changePasswordTitle": "Ubah kata sandi saya",
+  "newPasswordLabel": "Kata sandi baru",
+  "confirmPasswordLabel": "Konfirmasi kata sandi",
+  "passwordTooWeak": "Kata sandi terlalu lemah",
+  "enterPassword": "Masukkan kata sandi",
+  "passwordsDoNotMatch": "Kata sandi tidak cocok",
+  "passwordsMatch": "Kata sandi cocok",
+  "pwdRuleMin8": "Setidaknya 8 karakter",
+  "pwdRuleUpper": "Setidaknya 1 huruf besar",
+  "pwdRuleSpecial": "Setidaknya 1 karakter khusus",
+  "passwordChanged": "Kata sandi diubah ✅",
+
+  "save": "Simpan",
+  "saving": "Menyimpan…",
+  "savedChanges": "Perubahan disimpan ✅",
+
+  "timeoutTryAgain": "Waktu habis. Coba lagi.",
+
+  "failedWithCode": "Gagal ({code})",
+  "@failedWithCode": {
+    "placeholders": {
+      "code": { "type": "int" }
+    }
+  },
+
+  "versionMadeByFastFrance": "Aplikasi ini dibuat oleh Angelman Analytics (www.angelmananalytics.org)",
+  "versionNumber": "Versi {version}",
+  "@versionNumber": {
+    "placeholders": {
+      "version": { "type": "String" }
+    }
+  },
+
+  "privacyTitle": "Kebijakan privasi",
+  "privacyRightToBeForgotten": "Hak untuk dilupakan",
+
+  "privacyDeleteTitle": "Perhatian",
+  "privacyDeleteConfirmBody": "Tindakan ini tidak dapat dibatalkan.\n\nProfil Anda dan data terkait akan dihapus secara permanen.\n\nApakah Anda ingin melanjutkan?",
+
+  "privacyDeletedOkTitle": "Akun dihapus",
+  "privacyDeletedOkBody": "Akun Anda telah berhasil dihapus.\nAnda akan diarahkan ke halaman masuk.",
+
+  "privacyDeleteFailedWithCode": "Tidak dapat menghapus (kode {code}).",
+  "@privacyDeleteFailedWithCode": {
+    "placeholders": {
+      "code": { "type": "int" }
+    }
+  },
+
+  "timeoutRetry": "Waktu habis. Coba lagi.",
+
+  "consentText":"Kebijakan privasi – Aplikasi ASConnect\n\n1) Identitas pengendali data\nData yang dikumpulkan dalam aplikasi ASConnect diproses oleh AngelmanAnalytics, sebagai pengendali data.\nUntuk setiap pertanyaan terkait data Anda atau pelaksanaan hak-hak Anda, Anda dapat menghubungi kami di: contact@angelmananalytics.org.\n____________________________________________\n2) Tujuan pemrosesan\nPemrosesan data yang dilakukan melalui aplikasi memiliki tujuan sebagai berikut:\no Pembuatan dan pengelolaan akun pengguna Anda untuk akses bernama ke aplikasi ASConnect;\no Penggunaan fitur geolokasi untuk menampilkan:\no Profil orang yang terdampak, menurut berbagai kriteria (jarak geografis, genotipe, kelompok usia);\no Peningkatan layanan dan personalisasi pengalaman pengguna, termasuk kemungkinan bagi pengguna.\no Ekstraksi data yang tidak memungkinkan identifikasi individu untuk tujuan statistik: jumlah orang dengan sindrom Angelman, distribusi berdasarkan usia...\n____________________________________________\n3) Kategori data yang dikumpulkan\nData berikut dapat dikumpulkan:\n• Data identifikasi:\no jenis kelamin, nama belakang, nama depan, alamat email, kata sandi, foto,\no pertanyaan dan jawaban rahasia (jika lupa kata sandi);\n• Data sensitif:\no genotipe, lokasi.\nDasar hukum untuk pemrosesan ini adalah persetujuan eksplisit dan terinformasi dari pengguna.\n____________________________________________\n4) Masa penyimpanan data\nData disimpan selama masa penggunaan akun, lalu dihapus paling lambat dalam 12 bulan setelah aktivitas terakhir.\nPengguna dapat kapan saja menggunakan hak untuk dilupakan langsung di aplikasi, melalui menu:\nKebijakan privasi → Hak untuk dilupakan.\n____________________________________________\n5) Penerima dan hosting data\nData dihosting secara aman di server PythonAnywhere.\nData disimpan di Uni Eropa.\n(Untuk informasi lebih lanjut tentang kebijakan perlindungan data penyedia hosting, lihat https://www.pythonanywhere.com/privacy/. )\nAplikasi web dihosting oleh O2Switch di Prancis, lihat https://www.o2switch.fr/du-rgpd.pdf.\n____________________________________________\n6) Hak pengguna\nSesuai dengan Peraturan (UE) 2016/679 (GDPR), pengguna memiliki hak berikut:\no Hak akses, perbaikan, dan penghapusan (“hak untuk dilupakan”) — langsung melalui profil mereka atau menu Kebijakan privasi → Hak untuk dilupakan;\no Hak untuk menolak, portabilitas, dan pembatasan pemrosesan;\no Hak untuk menarik persetujuan kapan saja.\nUntuk menggunakan hak-hak ini (selain hak untuk dilupakan yang tersedia dari aplikasi), Anda dapat mengirim email ke contact@angelmananalytics.org.\n____________________________________________\n7) Keamanan dan kerahasiaan\nSemua data dienkripsi selama penyimpanan dan transmisi.\nKata sandi di-hash sesuai praktik keamanan terbaik, dan semua komunikasi dengan layanan dilakukan melalui protokol HTTPS.\n____________________________________________\n8) Persetujuan eksplisit\nPendaftaran ke aplikasi ASConnect memerlukan persetujuan eksplisit dan terinformasi dari pengguna untuk pemrosesan yang dijelaskan pada bagian 2.\nPengguna dapat menarik persetujuan ini kapan saja melalui pengaturan akun mereka atau dengan menghubungi contact@angelmananalytics.org.\n____________________________________________\n9) Aturan penggunaan yang baik untuk pesan yang dipertukarkan\no Jangan mempublikasikan serangan atau komentar negatif mengenai kelompok. Setiap komentar yang bertujuan untuk melecehkan, merendahkan, mengancam, atau menyalahgunakan seseorang akan dihapus.\no Bersikaplah baik dan sopan. Kita semua terlibat dalam menciptakan lingkungan yang positif, informatif, dan penuh hormat. Perdebatan sehat adalah hal yang wajar, tetapi kebaikan wajib dijunjung.\no Tidak ada komentar yang tidak sopan. Intimidasi dalam bentuk apa pun tidak diizinkan dan komentar yang merendahkan tidak ditoleransi. Jangan mempublikasikan pernyataan yang menghina, mencemarkan nama baik, ofensif, atau penuh kekerasan.\no Penyampaian saran tidak boleh dianggap sebagai rekomendasi medis.\no Tidak ada iklan.\no Ketidakpatuhan terhadap aturan dapat menyebabkan administrator menghapus profil.",
+
+  "contactPageTitle": "Hubungi kami",
+  "contactSendMessageTitle": "Kirim pesan",
+  "contactSubjectLabel": "Judul",
+  "contactSubjectHint": "Subjek permintaan Anda",
+  "contactMessageLabel": "Pesan",
+  "contactMessageHint": "Jelaskan permintaan Anda…",
+  "contactAntiSpamTitle": "Verifikasi anti-spam",
+  "contactRefresh": "Segarkan",
+  "contactCaptchaQuestion": "Berapakah {a} + {b}?",
+  "@contactCaptchaQuestion": {
+    "placeholders": {
+      "a": { "type": "int" },
+      "b": { "type": "int" }
+    }
+  },
+  "contactCaptchaAnswerLabel": "Jawaban",
+  "contactCaptchaRequired": "Captcha wajib diisi",
+  "contactCaptchaIncorrect": "Captcha salah.",
+  "contactSend": "Kirim",
+  "contactSending": "Mengirim…",
+  "contactCancel": "Batal",
+  "contactMessageSent": "Pesan terkirim ✅",
+  "contactSendFailedWithCode": "Gagal mengirim ({code})",
+  "@contactSendFailedWithCode": {
+    "placeholders": { "code": { "type": "int" } }
+  },
+  "contactAccessDenied": "Akses ditolak (kunci aplikasi hilang atau tidak valid).",
+  "contactTooManyRequests": "Terlalu banyak permintaan. Coba lagi dalam beberapa detik.",
+  "contactServiceUnavailable": "Layanan sementara tidak tersedia. Coba lagi nanti.",
+  "contactCheckInternet": "Periksa koneksi internet Anda.",
+  "contactTimeout": "Waktu habis. Coba lagi nanti.",
+  "contactFooterNote": "Pesan Anda dikirim melalui API publik kami yang aman. Terima kasih!",
+  "contactMissingAppKey": "⚠️ Kunci aplikasi tidak ada. Jalankan aplikasi dengan {command}",
+  "@contactMissingAppKey": {
+    "placeholders": { "command": { "type": "String" } }
+  },
+  "fieldRequired": "{field} wajib diisi",
+  "@fieldRequired": {
+    "placeholders": { "field": { "type": "String" } }
+  },
+  "unexpectedError": "Kesalahan tak terduga: {message}",
+  "@unexpectedError": {
+    "placeholders": { "message": { "type": "String" } }
+  },
+  "@errorWithMessage": {
+    "description": "Generic error message with details",
+    "placeholders": {
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "@serverErrorWithCode": {
+    "description": "Server error with HTTP/status code",
+    "placeholders": {
+      "code": {
+        "type": "int"
+      }
+    }
+  },
+  "commonOk": "OK",
+  "commonCancel": "Batal",
+  "commonConfirm": "Konfirmasi",
+  "emailRequired": "Email wajib diisi",
+  "emailInvalid": "Email tidak valid",
+  "editProfileImport": "Impor",
+  "editProfileTakePhoto": "Ambil foto",
+  "editProfileDeletePhoto": "Hapus foto saya",
+  "editProfileCancelSelection": "Batalkan pilihan",
+  "editProfilePhotoRequired": "Foto wajib",
+  "editProfilePhotoRequiredHint": "Foto wajib: impor atau ambil foto baru.",
+  "editProfileAddPhotoToSave": "Tambahkan foto untuk menyimpan",
+  "editProfilePhotoDeleted": "Foto dihapus ✅",
+  "editProfilePhotoTooLarge": "Ukuran foto melebihi 4 MB ({size} MB).",
+  "@editProfilePhotoTooLarge": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "editProfilePhotoPickError": "Tidak dapat mengambil foto: {message}",
+  "@editProfilePhotoPickError": {
+    "placeholders": {
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "editProfileProfileInfoTitle": "Informasi profil",
+  "editProfileFirstNameLabel": "Nama depan",
+  "editProfileLastNameLabel": "Nama belakang",
+  "editProfileEmailLabel": "Alamat email",
+  "editProfileBirthDateLabel": "Tanggal lahir (hh/bb/tttt)",
+  "editProfileBirthDateHelp": "Tanggal lahir",
+  "editProfileBirthDatePickTooltip": "Pilih tanggal",
+  "editProfileBirthDateRequired": "Tanggal lahir wajib diisi",
+  "editProfileGenotypeLabel": "Genotipe",
+  "editProfileGenotypeRequired": "Genotipe wajib diisi",
+  "editProfileCityLabel": "Kota",
+  "editProfileGeolocate": "Geolokasikan saya",
+  "editProfileGeoTooltip": "Harap ubah geolokasi Anda jika lokasinya telah berubah sejak pendaftaran.",
+  "geoTitle": "Geolokasi",
+  "geoInfoText": "Harap ubah geolokasi Anda jika lokasinya telah berubah sejak pendaftaran.",
+  "editProfileLocationUpdated": "Lokasi diperbarui{cityPart}",
+  "@editProfileLocationUpdated": {
+    "placeholders": {
+      "cityPart": {
+        "type": "String"
+      }
+    }
+  },
+  "editProfileSecretSectionTitle": "Pertanyaan rahasia",
+  "editProfileSecretQuestionLabel": "Pertanyaan",
+  "editProfileSecretAnswerLabel": "Jawaban rahasia",
+  "editProfileChangePassword": "Ubah kata sandi saya",
+  "passwordEnterFirst": "Masukkan kata sandi",
+  "passwordMismatch": "Kata sandi tidak cocok",
+  "passwordMatch": "Kata sandi cocok",
+  "editProfilePasswordChanged": "Kata sandi diubah ✅",
+  "editProfileSave": "Simpan",
+  "editProfileSaving": "Menyimpan…",
+  "editProfileChangesSaved": "Perubahan disimpan ✅",
+  "editProfileTimeoutLoading": "Waktu habis saat memuat profil.",
+  "editProfileLoadError": "Kesalahan saat memuat: {message}",
+  "@editProfileLoadError": {
+    "placeholders": {
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "editProfileTimeoutGeneric": "Waktu habis. Coba lagi.",
+  "editProfileErrorGeneric": "Kesalahan: {message}",
+  "@editProfileErrorGeneric": {
+    "placeholders": {
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "genotypeUPD": "UPD",
+  "genotypeICD": "ICD",
+  "secretQ1": "Nama keluarga ibu Anda saat lahir?",
+  "secretQ2": "Nama aktor film favorit Anda?",
+  "secretQ3": "Nama hewan peliharaan favorit Anda?",
+    "mapPersonTileIsMeHint": "Ini profil Anda",
+  "mapPersonTileSendHint": "Kirim pesan…",
+  "mapPersonTileCannotWriteTooltip": "Tidak dapat menulis kepada Anda",
+  "mapPersonTileSendTooltip": "Kirim",
+
+  "mapPersonTileSendFailed": "Gagal mengirim: {error}",
+  "@mapPersonTileSendFailed": {
+    "placeholders": { "error": {} }
+  },
+
+  "mapPersonTileAge": "{age} tahun",
+  "@mapPersonTileAge": {
+    "placeholders": { "age": { "type": "int" } }
+  },
+  "mapFiltersButtonTooltip": "Filter",
+  "mapNoFilters": "Tidak ada filter",
+  "mapGenotypeCount": "{count, plural, one{{count} genotipe} other{{count} genotipe}}",
+  "mapAgeRangeYears": "{min}–{max} tahun",
+  "mapDistanceMaxKm": "≤ {km} km",
+  "mapPeopleCountBanner": "{count, plural, one{{count} orang} other{{count} orang}}",
+  "mapReloadFromNetworkTooltip": "Muat ulang (jaringan, abaikan filter, perbarui cache)",
+  "mapTilesBlockedInReleaseMessage": "Tile OSM dinonaktifkan di produksi.\nKonfigurasikan kunci MapTiler (atau gunakan allowOsmInRelease=true).",
+  "mapInitializingDataMessage": "Kami sedang menginisialisasi seluruh data…",
+  "mapNetworkUnavailableCacheUsed": "Jaringan tidak tersedia — cache digunakan: {error}",
+  "mapLoadGenericError": "Kesalahan saat memuat: {error}",
+  "mapFilterError": "Kesalahan filter: {error}",
+  "mapLocationServiceDisabled": "Layanan lokasi dinonaktifkan",
+  "mapLocationPermissionDenied": "Izin lokasi ditolak",
+  "mapLocationUnavailable": "Lokasi tidak tersedia: {error}",
+  "mapPhotoViewerBarrierLabel": "Foto",
+  "mapClose": "Tutup",
+  "mapCityPeopleCount": "{city} • {count, plural, one{{count} orang} other{{count} orang}}",
+  "mapResultsCount": "{count, plural, one{{count} hasil} other{{count} hasil}}",
+  "mapNoResultsWithTheseFilters": "Tidak ada hasil dengan filter ini (genotipe/jarak).",
+  "mapDistanceTitle": "Jarak (dari posisi saya)",
+  "mapEnableDistanceFilter": "Aktifkan filter jarak",
+  "mapOriginDefined": "Asal: {lat}, {lon}",
+  "mapOriginUndefined": "Asal: tidak ditentukan",
+  "mapMyPosition": "Posisi saya",
+  "mapKmLabel": "{km} km",
+  "mapGenotypeTitle": "Genotipe",
+  "mapAgeTitle": "Usia (tahun)",
+  "mapMinValue": "Min: {value}",
+  "mapMaxValue": "Maks: {value}",
+  "mapReset": "Atur ulang",
+  "mapCancel": "Batal",
+  "mapApply": "Terapkan",
+  "genotypeDeletion": "Delesi",
+  "genotypeMutation": "Mutasi",
+  "genotypeUpd": "UPD",
+  "genotypeIcd": "ICD",
+  "genotypeClinical": "Klinis",
+  "genotypeMosaic": "Mosaik",
+  "mapCountryTitle": "Negara",
+  "mapAllCountriesSelected": "Semua negara",
+  "mapCountriesSelectedCount": "{count} negara dipilih",
+  "mapSelectAll": "Pilih semua",
+  "mapClear": "Batalkan semua",
+  "@mapCountriesSelectedCount": {
+    "description": "Jumlah negara yang dipilih dalam filter peta",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "mapBack": "Kembali",
+  "chatWithName": "Obrolan dengan {name}",
+  "@chatWithName": { "placeholders": { "name": {} } },
+  "conversationsReconnectToSee": "Silakan masuk kembali untuk melihat percakapan Anda.",
+  "loading": "Memuat…",
+  "conversationsEmpty": "Tidak ada percakapan",
+  "conversationsNoMessage": "Tidak ada pesan",
+
+  "conversationsLoadError": "Kesalahan saat memuat: {error}",
+  "@conversationsLoadError": {
+    "placeholders": { "error": {} }
+  },
+
+  "conversationsLeaveTitle": "Keluar dari percakapan?",
+  "conversationsLeaveBody": "Apakah Anda yakin ingin keluar dari percakapan?\nSemua pesan Anda akan dihapus.",
+  "conversationsLeaveConfirm": "Keluar",
+
+  "cancel": "Batal",
+  "close": "Tutup",
+  "photo": "Foto",
+  "yesterday": "kemarin",
+  "genericError": "Kesalahan: {error}",
+  "@genericError": {
+    "placeholders": { "error": {} }
+  },
+  "today": "Hari ini",
+  "chatNoMessagesYet": "Belum ada pesan untuk saat ini.",
+  "chatLoadMessagesError": "Kesalahan saat memuat pesan: {error}",
+  "@chatLoadMessagesError": { "placeholders": { "error": {} } },
+
+  "chatSendError": "Kesalahan saat mengirim: {error}",
+  "@chatSendError": { "placeholders": { "error": {} } },
+
+  "chatEditMessageTitle": "Ubah pesan",
+  "chatYourMessageHint": "Pesan Anda",
+  "chatEditError": "Kesalahan saat mengubah: {error}",
+  "@chatEditError": { "placeholders": { "error": {} } },
+
+  "chatDeleteMessageTitle": "Hapus pesan?",
+  "chatDeleteMessageBody": "Pesan ini akan ditandai sebagai dihapus untuk percakapan ini.",
+  "chatDeleteError": "Kesalahan saat menghapus: {error}",
+  "@chatDeleteError": { "placeholders": { "error": {} } },
+
+  "chatReactError": "Kesalahan saat memberi reaksi: {error}",
+  "@chatReactError": { "placeholders": { "error": {} } },
+
+  "chatLeaveConversationBody": "Apakah Anda yakin ingin keluar dari percakapan dan menghapus semua pesan Anda?",
+  "chatLeaveError": "Kesalahan saat keluar: {error}",
+  "@chatLeaveError": { "placeholders": { "error": {} } },
+
+  "message": "Pesan",
+  "send": "Kirim",
+  "edited": "diubah",
+  "deletedMessage": "Pesan dihapus",
+
+  "edit": "Ubah",
+  "reply": "Balas",
+  "save": "Simpan",
+  "delete": "Hapus",
+  "languageName": "Bahasa Indonesia",
+  "mapConnectionSectionTitle": "Koneksi",
+  "mapConnectedOnlyLabel": "Tampilkan hanya orang yang terhubung",
+  "mapConnectedOnlyHint": "Sembunyikan profil offline.",
+  "mapConnectedOnlyChip": "Terhubung",
+  "statusOnline": "Online",
+  "statusOffline": "Offline",
+  "tableTabular" : "Tabel",
+  "tableColumnPseudo": "Nama pengguna",
+  "tableColumnAge": "Usia",
+  "tableColumnGenotype": "Genotipe",
+  "tableColumnCountry": "Negara",
+  "tableColumnCity": "Kota",
+  "tabularColPseudo": "Nama pengguna",
+  "tabularColAge": "Usia",
+  "tabularColGenotype": "Genotipe",
+  "tabularColCountry": "Negara",
+  "tabularColCity": "Kota",
+  "tabularColAction": "Tindakan",
+
+  "tabularSendMessageTooltip": "Kirim pesan",
+  "tabularSendMessageErrorNoId": "Tidak dapat mengirim pesan: pengenal hilang.",
+  "tabularSendMessageActionStub": "Fitur pesan belum terhubung.",
+  "tabularSendMessageTitle": "Pesan kepada {name}",
+  "@tabularSendMessageTitle": { "placeholders": { "name": {} } },
+  "tabularSendMessageHint": "Tulis pesan…",
+  "tabularSendMessageSend": "Kirim",
+  "tabularSendMessageTooltip": "Kirim pesan",
+  "tabularSendMessageSentStub": "Pesan siap dikirim (belum dihubungkan).",
+  "tabularSendMessageCancel": "Batal",
+
+  "genderLabel": "Jenis kelamin",
+  "genderMale": "Laki-laki",
+  "genderFemale": "Perempuan",
+  "genderRequired": "Silakan pilih jenis kelamin",
+
+  "acceptInfoAngelman": "Saya setuju menerima informasi tentang sindrom Angelman",
+
+  "signupEnableGeolocation": "Silakan izinkan geolokasi untuk melanjutkan.",
+  "signUpCheckMail": "Memeriksa email",
+  "signUpGPS": "Menentukan koordinat kota Anda dari posisi GPS",
+  "signUpMessageCreate": "Membuat profil",
+
+  "tabGroup": "Grup",
+  "groupMembersCount": "{count, plural, one{{count} anggota} other{{count} anggota}}",
+  "@groupMembersCount": {
+    "description": "Jumlah anggota dalam grup",
+    "placeholders": { "count": { "type": "int" } }
+  },
+
+  "groupCreateTooltip": "Buat grup",
+  "groupCreateTitle": "Buat grup",
+  "groupCreateIntro": "Anda akan membuat grup. Silakan pilih judul yang bermakna, tulis pesan pertama, dan tentukan audiens melalui filter.",
+  "groupTitleLabel": "Judul grup",
+  "groupFirstMessageLabel": "Pesan pertama",
+  "groupCreateButton": "Buat",
+  "groupTitleRequired": "Judul wajib diisi",
+  "groupCreateNoMembers": "Tidak dapat membuat grup tanpa anggota",
+  "audience": "Audiens",
+  "profile": "Profil",
+  "yearsOld": "tahun",
+  "loadingGroup": "Memuat...",
+
+  "@profile": {
+    "description": "Titre générique pour un profil utilisateur"
+  },
+  "@yearsOld": {
+    "description": "Suffixe d’âge (ex: 12 ans)"
+  },
+
+  "mapLocationResolverMissing": "Geolokasi tidak tersedia.",
+  "mapLocationUnableToGet": "Tidak dapat memperoleh posisi. Periksa layanan GPS + izin.",
+
+  "groupDeleteTitle": "Hapus grup?",
+  "groupDeleteBody": "Tindakan ini akan menghapus percakapan grup secara permanen untuk semua anggota.",
+  "groupDeleteConfirm": "Hapus",
+
+  "editProfilePhotoConverting": "Sedang mengonversi…",
+
+  "mapLanguagesSectionTitle": "Bahasa",
+  "mapAllLanguagesSelected": "Semua bahasa",
+  "mapLanguagesSelectedCount": "{count, plural, one{# bahasa} other{# bahasa}}",
+  "@mapLanguagesSelectedCount": {
+    "description": "Jumlah bahasa yang dipilih",
+    "placeholders": { "count": { "type": "int" } }
+  }
+}

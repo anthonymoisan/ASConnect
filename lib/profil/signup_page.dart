@@ -160,6 +160,7 @@ class _SignUpPageState extends State<SignUpPage> {
     'pl',
     'de',
     'it',
+    'id',
   };
 
   // ✅ calcule une langue backend valide (2 lettres) + fallback si locale non supportée

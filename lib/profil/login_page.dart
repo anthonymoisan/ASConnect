@@ -76,6 +76,7 @@ class _LoginPageState extends State<LoginPage> {
     'pl',
     'de',
     'it',
+    'id',
   };
 
   @override

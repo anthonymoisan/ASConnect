@@ -1,0 +1,5 @@
+1) Générer le fichier .arb
+
+2) flutter gen-l10n
+
+3) ajouter dans _allowedLangs le code ISO-2 de la langue
