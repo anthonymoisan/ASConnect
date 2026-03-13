@@ -1,19 +1,16 @@
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:intl/intl.dart';
 
 import '../../l10n/app_localizations.dart';
+import '../../session/app_session.dart';
 import '../models/chat_message.dart';
+import '../models/translation_result.dart';
 import '../services/conversation_api.dart';
 import '../services/conversation_events.dart';
-
-import '../models/translation_result.dart';
-
-import '../../session/app_session.dart';
 
 class ChatPage extends StatefulWidget {
   final int conversationId;
@@ -42,20 +39,21 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
   ChatMessage? _replyToMessage;
   bool _didInitialScroll = false;
 
-  // ✅ Polling
   Timer? _pollTimer;
   bool _pollingEnabled = true;
   static const Duration _pollInterval = Duration(seconds: 6);
 
   bool _reloading = false;
 
-  // ✅ throttling read-sync
   DateTime? _lastReadSyncAt;
   static const Duration _readSyncMinInterval = Duration(seconds: 2);
 
-  // ✅ Scroll intelligent state
-  bool _userScrollingUp = false; // when true: do not autoscroll
-  bool _forceScrollAfterNextReload = false; // used after send/reply
+  bool _userScrollingUp = false;
+  bool _forceScrollAfterNextReload = false;
+
+  // ✅ cache de traduction à la demande
+  final Map<int, TranslationResult?> _translatedByMessageId = {};
+  final Set<int> _translatingMessageIds = <int>{};
 
   @override
   void initState() {
@@ -120,13 +118,11 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
   bool _isSameDay(DateTime a, DateTime b) =>
       a.year == b.year && a.month == b.month && a.day == b.day;
 
-  // ✅ Heure selon locale
   String _formatTime(BuildContext context, DateTime date) {
     final locale = Localizations.localeOf(context).toLanguageTag();
     return DateFormat.Hm(locale).format(date);
   }
 
-  // ✅ Date selon locale + today/yesterday via l10n
   String _formatDayLabel(BuildContext context, DateTime date) {
     final l10n = AppLocalizations.of(context)!;
     final locale = Localizations.localeOf(context).toLanguageTag();
@@ -227,32 +223,11 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
     }
   }
 
-  Future<TranslationResult?> _translateMessageForLoginLanguage(
-    ChatMessage msg,
-  ) async {
-    final text = msg.bodyText.trim();
-    if (text.isEmpty) return null;
-
-    if (!_shouldOfferTranslation(msg)) return null;
-
-    final loginLang =
-        (AppSession.loginLangCode ??
-                Localizations.localeOf(context).languageCode)
-            .trim()
-            .toLowerCase();
-
-    return ConversationApi.detectAndTranslateText(
-      sentence: text,
-      targetLang: loginLang,
-    );
-  }
-
   bool _shouldOfferTranslation(ChatMessage msg) {
     final text = msg.bodyText.trim();
     if (text.isEmpty) return false;
-
-    // Pas sur mes propres messages
     if (_isMine(msg)) return false;
+    if (_isDeleted(msg)) return false;
 
     final loginLang =
         (AppSession.loginLangCode ??
@@ -264,7 +239,6 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
 
     if (loginLang.isEmpty) return false;
 
-    // Si la langue du message est connue et identique à la langue du login
     if (messageLang.isNotEmpty && messageLang == loginLang) {
       return false;
     }
@@ -272,8 +246,11 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
     return true;
   }
 
-  Future<void> _showTranslationDialog(ChatMessage msg) async {
-    if (!mounted) return;
+  Future<void> _translateMessageOnDemand(ChatMessage msg) async {
+    final text = msg.bodyText.trim();
+    if (text.isEmpty) return;
+    if (!_shouldOfferTranslation(msg)) return;
+    if (_translatingMessageIds.contains(msg.id)) return;
 
     final loginLang =
         (AppSession.loginLangCode ??
@@ -281,58 +258,31 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
             .trim()
             .toLowerCase();
 
-    await showDialog<void>(
-      context: context,
-      builder: (ctx) {
-        return AlertDialog(
-          title: Text('Traduction ($loginLang)'),
-          content: SizedBox(
-            width: 420,
-            child: FutureBuilder<TranslationResult?>(
-              future: _translateMessageForLoginLanguage(msg),
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const SizedBox(
-                    height: 80,
-                    child: Center(child: CircularProgressIndicator()),
-                  );
-                }
+    setState(() {
+      _translatingMessageIds.add(msg.id);
+    });
 
-                if (snapshot.hasError) {
-                  return SelectableText(
-                    'Erreur de traduction : ${snapshot.error}',
-                    style: const TextStyle(fontSize: 14),
-                  );
-                }
+    try {
+      final result = await ConversationApi.detectAndTranslateText(
+        sentence: text,
+        targetLang: loginLang,
+      );
 
-                final tr = snapshot.data;
-                final translatedText = tr?.translatedText?.trim();
-
-                if (translatedText == null || translatedText.isEmpty) {
-                  return const SelectableText(
-                    'Aucune traduction disponible.',
-                    style: TextStyle(fontSize: 14),
-                  );
-                }
-
-                return SingleChildScrollView(
-                  child: SelectableText(
-                    translatedText,
-                    style: const TextStyle(fontSize: 15),
-                  ),
-                );
-              },
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(ctx).pop(),
-              child: const Text('Fermer'),
-            ),
-          ],
-        );
-      },
-    );
+      if (!mounted) return;
+      setState(() {
+        _translatedByMessageId[msg.id] = result;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _translatedByMessageId[msg.id] = null;
+      });
+    } finally {
+      if (!mounted) return;
+      setState(() {
+        _translatingMessageIds.remove(msg.id);
+      });
+    }
   }
 
   Future<void> _loadInitial() async {
@@ -542,78 +492,6 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
     }
   }
 
-  Future<void> _showDebugMessageDialog(ChatMessage msg) async {
-    if (!kDebugMode || !mounted) return;
-
-    final text = msg.bodyText.trim().isEmpty ? '(vide)' : msg.bodyText;
-
-    final userLoginLang =
-        (AppSession.loginLangCode ??
-                Localizations.localeOf(context).languageCode)
-            .trim()
-            .toLowerCase();
-
-    final messageLang = (msg.lang ?? '').trim().toLowerCase();
-
-    await showDialog<void>(
-      context: context,
-      builder: (ctx) {
-        return AlertDialog(
-          title: const Text('Debug message'),
-          content: SizedBox(
-            width: 420,
-            child: FutureBuilder<TranslationResult?>(
-              future: _translateMessageForLoginLanguage(msg),
-              builder: (context, snapshot) {
-                String translatedBlock;
-
-                if (_isMine(msg)) {
-                  translatedBlock =
-                      'traduction: non applicable (message rédigé par moi)';
-                } else if (userLoginLang.isEmpty) {
-                  translatedBlock = 'traduction: langue login inconnue';
-                } else if (messageLang.isNotEmpty &&
-                    messageLang == userLoginLang) {
-                  translatedBlock =
-                      'traduction ($userLoginLang): déjà dans la langue du login';
-                } else if (snapshot.connectionState ==
-                    ConnectionState.waiting) {
-                  translatedBlock =
-                      'traduction ($userLoginLang): chargement...';
-                } else if (snapshot.hasError) {
-                  translatedBlock =
-                      'traduction ($userLoginLang): erreur (${snapshot.error})';
-                } else {
-                  final tr = snapshot.data;
-                  translatedBlock =
-                      'traduction ($userLoginLang): ${tr?.translatedText ?? "(aucune)"}';
-                }
-
-                return SingleChildScrollView(
-                  child: SelectableText(
-                    'message_id: ${msg.id}\n'
-                    'people_id: ${msg.senderPeopleId}\n'
-                    'message.lang: ${msg.lang ?? "(null)"}\n'
-                    'login.lang: $userLoginLang\n'
-                    'texte: $text\n'
-                    '$translatedBlock',
-                    style: const TextStyle(fontSize: 14),
-                  ),
-                );
-              },
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(ctx).pop(),
-              child: const Text('Fermer'),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
   void _showMyMessageMenu(ChatMessage msg) {
     showModalBottomSheet<void>(
       context: context,
@@ -819,9 +697,15 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
                     itemCount: _messages.length,
                     itemBuilder: (context, index) {
                       final msg = _messages[index];
-                      final canTranslate = _shouldOfferTranslation(msg);
                       final isMine = _isMine(msg);
                       final isDeleted = _isDeleted(msg);
+
+                      final canTranslate = _shouldOfferTranslation(msg);
+                      final translatedText =
+                          _translatedByMessageId[msg.id]?.translatedText;
+                      final isTranslating = _translatingMessageIds.contains(
+                        msg.id,
+                      );
 
                       final showDateHeader =
                           index == 0 ||
@@ -865,9 +749,6 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
                               ),
                             ),
                           GestureDetector(
-                            onTap: kDebugMode
-                                ? () => _showDebugMessageDialog(msg)
-                                : null,
                             onLongPress: onLongPress,
                             child: _MessageBubble(
                               message: msg,
@@ -884,8 +765,10 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
                                   ? () => _showEmojiPicker(msg)
                                   : null,
                               onTranslate: canTranslate
-                                  ? () => _showTranslationDialog(msg)
+                                  ? () => _translateMessageOnDemand(msg)
                                   : null,
+                              translatedText: translatedText,
+                              isTranslating: isTranslating,
                             ),
                           ),
                         ],
@@ -973,7 +856,6 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
   }
 }
 
-/// Bandeau "Répondre à <pseudo> : <extrait>"
 class _ReplyBanner extends StatelessWidget {
   final ChatMessage message;
   final VoidCallback onCancel;
@@ -1027,7 +909,6 @@ class _ReplyBanner extends StatelessWidget {
   }
 }
 
-/// Bulle WhatsApp + reply + réactions + ✅ "vu"
 class _MessageBubble extends StatelessWidget {
   final ChatMessage message;
   final bool isMine;
@@ -1035,6 +916,8 @@ class _MessageBubble extends StatelessWidget {
   final bool showEdited;
   final VoidCallback? onAddReaction;
   final VoidCallback? onTranslate;
+  final String? translatedText;
+  final bool isTranslating;
 
   const _MessageBubble({
     required this.message,
@@ -1043,6 +926,8 @@ class _MessageBubble extends StatelessWidget {
     required this.showEdited,
     this.onAddReaction,
     this.onTranslate,
+    this.translatedText,
+    this.isTranslating = false,
   });
 
   bool get isDeleted =>
@@ -1054,7 +939,6 @@ class _MessageBubble extends StatelessWidget {
 
     final replyText = (message.replyBodyText ?? '').trim();
     final hasReply = replyText.isNotEmpty && !isDeleted;
-    final showTranslateIcon = onTranslate != null && !isDeleted;
 
     final bubbleColor = isDeleted
         ? Colors.grey.shade300
@@ -1080,10 +964,18 @@ class _MessageBubble extends StatelessWidget {
     final hasReactions = reactionCounts.isNotEmpty;
 
     final showEmojiIcon = onAddReaction != null && !isDeleted;
+    final showTranslateIcon = onTranslate != null && !isDeleted;
 
     final bool showSeenChecks = isMine && !isDeleted;
     final bool isSeen = message.isSeen == true;
     final checkColor = isSeen ? Colors.blue : Colors.grey.shade600;
+
+    final showTranslatedText =
+        !isDeleted &&
+        !isTranslating &&
+        translatedText != null &&
+        translatedText!.trim().isNotEmpty &&
+        translatedText!.trim() != message.bodyText.trim();
 
     return Align(
       alignment: align,
@@ -1172,6 +1064,28 @@ class _MessageBubble extends StatelessWidget {
                               : Colors.black,
                         ),
                       ),
+                      if (!isDeleted && isTranslating) ...[
+                        const SizedBox(height: 6),
+                        Text(
+                          '…',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontStyle: FontStyle.italic,
+                            color: Colors.grey.shade600,
+                          ),
+                        ),
+                      ],
+                      if (showTranslatedText) ...[
+                        const SizedBox(height: 6),
+                        Text(
+                          translatedText!.trim(),
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontStyle: FontStyle.italic,
+                            color: Colors.grey.shade700,
+                          ),
+                        ),
+                      ],
                       const SizedBox(height: 2),
                       Row(
                         mainAxisSize: MainAxisSize.min,
@@ -1253,10 +1167,10 @@ class _MessageBubble extends StatelessWidget {
                           ),
                         ],
                       ),
-                      child: const Icon(
+                      child: Icon(
                         Icons.translate,
                         size: 18,
-                        color: Colors.grey,
+                        color: isTranslating ? Colors.blueGrey : Colors.grey,
                       ),
                     ),
                   ),
