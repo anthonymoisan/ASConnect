@@ -1,21 +1,22 @@
 // lib/whatsApp/screens/conversationsGroup_page.dart
 //
 // ✅ Comportement demandé :
-// - TAP (onTap) sur la ligne => ouvrir le chat
-// - TAP LONG (onLongPress) sur la ligne =>
+// - TAP (onTap) sur la carte => ouvrir le chat
+// - TAP LONG (onLongPress) sur la carte =>
 //    - si je suis ADMIN => confirmer + DELETE le groupe
 //    - sinon => confirmer + LEAVE le groupe
 // - Tap sur l’avatar => plein écran (AvatarViewer.open)
 //
 // ✅ Audience (BottomSheet) :
-// - Ajout filtre LANGUES multi-lingue (via .arb : mapLanguagesSectionTitle / mapAllLanguagesSelected / mapLanguagesSelectedCount)
+// - Ajout filtre LANGUES multi-lingue
 // - Les libellés de langues proviennent de l’API (languagesTranslated) via TabularApi
-//   et sont passés au sheet via `languagesByCode`.
 //
-// ✅ NEW:
-// - Bouton translate sur le titre du groupe
-// - Traduction à la demande
-// - Affichage inline sous le titre, en italique
+// ✅ UI modernisée :
+// - Carte par groupe
+// - Titre bleu gras + icône traduction juste à côté
+// - Nb membres sous le titre
+// - Dernier message sous le nb de membres
+// - Date + unread + quitter/supprimer à droite
 
 import 'dart:async';
 import 'dart:typed_data';
@@ -503,8 +504,11 @@ class _ConversationsgroupPageState extends State<ConversationsgroupPage>
     }
 
     return Scaffold(
+      backgroundColor: const Color(0xFFF6F8FC),
       appBar: AppBar(
         automaticallyImplyLeading: false,
+        elevation: 0,
+        backgroundColor: const Color(0xFFF6F8FC),
         title: const SizedBox.shrink(),
         centerTitle: true,
         actions: [
@@ -528,8 +532,9 @@ class _ConversationsgroupPageState extends State<ConversationsgroupPage>
     if (_initialLoading && _items.isEmpty) {
       return ListView(
         physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
         children: [
-          const SizedBox(height: 160),
+          const SizedBox(height: 140),
           Center(child: Text(l10n.loadingGroup)),
         ],
       );
@@ -538,30 +543,33 @@ class _ConversationsgroupPageState extends State<ConversationsgroupPage>
     if (_items.isEmpty) {
       return ListView(
         physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
         children: [
-          const SizedBox(height: 160),
+          const SizedBox(height: 140),
           Center(child: Text(l10n.conversationsEmpty)),
         ],
       );
     }
 
-    return ListView.separated(
+    return ListView.builder(
       physics: const AlwaysScrollableScrollPhysics(),
+      padding: const EdgeInsets.fromLTRB(14, 12, 14, 24),
       itemCount: _items.length,
-      separatorBuilder: (_, __) => const Divider(height: 1),
       itemBuilder: (context, index) {
         final conv = _items[index];
-        final membersInline = _membersInline(conv);
         final last = conv.lastMessage;
-
-        final pseudo = (last?.pseudo ?? '').trim();
-        final prefix = pseudo.isEmpty ? '' : '$pseudo : ';
-        final lastText = last == null ? '' : '$prefix${last.bodyText}';
-
         final adminId = conv.idAdmin;
         final isAdmin = _amIAdmin(conv);
 
         final rawTitle = _groupTitle(context, conv);
+        final membersInline = _membersInline(conv);
+
+        final pseudo = (last?.pseudo ?? '').trim();
+        final prefix = pseudo.isEmpty ? '' : '$pseudo : ';
+        final lastText = last == null
+            ? l10n.conversationsNoMessage
+            : '$prefix${last.bodyText}';
+
         final canTranslateTitle = _canTranslateGroupTitle(conv);
         final translatedTitle = _translatedTitlesByConversationId[conv.id]
             ?.translatedText
@@ -573,126 +581,179 @@ class _ConversationsgroupPageState extends State<ConversationsgroupPage>
             translatedTitle.isNotEmpty &&
             translatedTitle != rawTitle.trim();
 
-        return ListTile(
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: 16,
-            vertical: 10,
-          ),
-          leading: PeoplePhotoAvatar(
-            peopleId: adminId,
-            radius: 26,
-            onTap: adminId == null
-                ? null
-                : () => AvatarViewer.open(context, peopleId: adminId),
-          ),
-          title: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            rawTitle,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(fontWeight: FontWeight.w700),
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: Material(
+            color: Colors.white,
+            elevation: 1,
+            shadowColor: Colors.black.withOpacity(0.05),
+            borderRadius: BorderRadius.circular(18),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(18),
+              onTap: () => _openConversation(conv),
+              onLongPress: () => _handleLongPress(conv),
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    PeoplePhotoAvatar(
+                      peopleId: adminId,
+                      radius: 28,
+                      onTap: adminId == null
+                          ? null
+                          : () => AvatarViewer.open(context, peopleId: adminId),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Row(
+                                  children: [
+                                    Expanded(
+                                      child: Text(
+                                        rawTitle,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w700,
+                                          color: Color(0xFF2563EB),
+                                        ),
+                                      ),
+                                    ),
+                                    if (canTranslateTitle) ...[
+                                      const SizedBox(width: 6),
+                                      GestureDetector(
+                                        onTap: () =>
+                                            _translateGroupTitleOnDemand(conv),
+                                        child: Container(
+                                          padding: const EdgeInsets.all(5),
+                                          decoration: BoxDecoration(
+                                            color: const Color(0xFFEAF2FF),
+                                            borderRadius: BorderRadius.circular(
+                                              10,
+                                            ),
+                                          ),
+                                          child: Icon(
+                                            Icons.translate,
+                                            size: 16,
+                                            color: isTranslatingTitle
+                                                ? Colors.blueGrey
+                                                : const Color(0xFF2563EB),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.end,
+                                children: [
+                                  Text(
+                                    _formatConversationDate(conv.lastMessageAt),
+                                    style: TextStyle(
+                                      color: Colors.grey.shade600,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      if (conv.unreadCount > 0) ...[
+                                        _UnreadBubble(count: conv.unreadCount),
+                                        const SizedBox(width: 8),
+                                      ],
+                                      Container(
+                                        padding: const EdgeInsets.all(6),
+                                        decoration: BoxDecoration(
+                                          color: isAdmin
+                                              ? Colors.red.shade50
+                                              : Colors.grey.shade100,
+                                          borderRadius: BorderRadius.circular(
+                                            10,
+                                          ),
+                                        ),
+                                        child: Icon(
+                                          isAdmin
+                                              ? Icons.delete_outline
+                                              : Icons.exit_to_app,
+                                          size: 18,
+                                          color: isAdmin
+                                              ? Colors.red.shade400
+                                              : Colors.grey.shade700,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ],
                           ),
-                        ),
-                        if (canTranslateTitle) ...[
-                          const SizedBox(width: 6),
-                          GestureDetector(
-                            onTap: () => _translateGroupTitleOnDemand(conv),
-                            child: Container(
-                              padding: const EdgeInsets.all(4),
-                              decoration: BoxDecoration(
-                                color: Colors.grey.shade200,
-                                shape: BoxShape.circle,
+                          if (isTranslatingTitle) ...[
+                            const SizedBox(height: 6),
+                            Text(
+                              '…',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontStyle: FontStyle.italic,
+                                color: Colors.grey.shade600,
                               ),
-                              child: Icon(
-                                Icons.translate,
-                                size: 16,
-                                color: isTranslatingTitle
-                                    ? Colors.blueGrey
-                                    : Colors.grey.shade700,
+                            ),
+                          ],
+                          if (!isTranslatingTitle && showTranslatedTitle) ...[
+                            const SizedBox(height: 6),
+                            Text(
+                              translatedTitle,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontStyle: FontStyle.italic,
+                                color: Colors.grey.shade700,
                               ),
+                            ),
+                          ],
+                          if (membersInline.isNotEmpty) ...[
+                            const SizedBox(height: 8),
+                            Text(
+                              membersInline,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                color: Colors.grey.shade700,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                          const SizedBox(height: 8),
+                          Text(
+                            lastText,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: Colors.grey.shade800,
+                              fontSize: 13,
+                              height: 1.3,
                             ),
                           ),
                         ],
-                      ],
-                    ),
-                  ),
-                  if (membersInline.isNotEmpty) ...[
-                    const SizedBox(width: 8),
-                    Text(
-                      membersInline,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: Colors.orange.shade800,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
                       ),
                     ),
                   ],
-                  const SizedBox(width: 10),
-                  Text(
-                    _formatConversationDate(conv.lastMessageAt),
-                    style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
-                  ),
-                ],
+                ),
               ),
-              if (isTranslatingTitle) ...[
-                const SizedBox(height: 4),
-                Text(
-                  '…',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontStyle: FontStyle.italic,
-                    color: Colors.grey.shade600,
-                  ),
-                ),
-              ],
-              if (!isTranslatingTitle && showTranslatedTitle) ...[
-                const SizedBox(height: 4),
-                Text(
-                  translatedTitle,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontStyle: FontStyle.italic,
-                    color: Colors.grey.shade700,
-                  ),
-                ),
-              ],
-            ],
-          ),
-          subtitle: Padding(
-            padding: const EdgeInsets.only(top: 4),
-            child: Text(
-              last == null ? l10n.conversationsNoMessage : lastText,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(color: Colors.grey.shade700),
             ),
           ),
-          trailing: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (conv.unreadCount > 0) _UnreadBubble(count: conv.unreadCount),
-              const SizedBox(width: 10),
-              Icon(
-                isAdmin ? Icons.delete_outline : Icons.exit_to_app,
-                color: isAdmin ? Colors.red.shade400 : Colors.grey.shade600,
-              ),
-            ],
-          ),
-          onTap: () => _openConversation(conv),
-          onLongPress: () => _handleLongPress(conv),
         );
       },
     );
