@@ -233,6 +233,27 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
     final text = msg.bodyText.trim();
     if (text.isEmpty) return null;
 
+    if (!_shouldOfferTranslation(msg)) return null;
+
+    final loginLang =
+        (AppSession.loginLangCode ??
+                Localizations.localeOf(context).languageCode)
+            .trim()
+            .toLowerCase();
+
+    return ConversationApi.detectAndTranslateText(
+      sentence: text,
+      targetLang: loginLang,
+    );
+  }
+
+  bool _shouldOfferTranslation(ChatMessage msg) {
+    final text = msg.bodyText.trim();
+    if (text.isEmpty) return false;
+
+    // Pas sur mes propres messages
+    if (_isMine(msg)) return false;
+
     final loginLang =
         (AppSession.loginLangCode ??
                 Localizations.localeOf(context).languageCode)
@@ -241,17 +262,76 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
 
     final messageLang = (msg.lang ?? '').trim().toLowerCase();
 
-    // Pas de traduction si on ne connaît pas la langue cible
-    if (loginLang.isEmpty) return null;
+    if (loginLang.isEmpty) return false;
 
-    // Pas de traduction si le message est déjà dans la langue du login
+    // Si la langue du message est connue et identique à la langue du login
     if (messageLang.isNotEmpty && messageLang == loginLang) {
-      return null;
+      return false;
     }
 
-    return ConversationApi.detectAndTranslateText(
-      sentence: text,
-      targetLang: loginLang,
+    return true;
+  }
+
+  Future<void> _showTranslationDialog(ChatMessage msg) async {
+    if (!mounted) return;
+
+    final loginLang =
+        (AppSession.loginLangCode ??
+                Localizations.localeOf(context).languageCode)
+            .trim()
+            .toLowerCase();
+
+    await showDialog<void>(
+      context: context,
+      builder: (ctx) {
+        return AlertDialog(
+          title: Text('Traduction ($loginLang)'),
+          content: SizedBox(
+            width: 420,
+            child: FutureBuilder<TranslationResult?>(
+              future: _translateMessageForLoginLanguage(msg),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const SizedBox(
+                    height: 80,
+                    child: Center(child: CircularProgressIndicator()),
+                  );
+                }
+
+                if (snapshot.hasError) {
+                  return SelectableText(
+                    'Erreur de traduction : ${snapshot.error}',
+                    style: const TextStyle(fontSize: 14),
+                  );
+                }
+
+                final tr = snapshot.data;
+                final translatedText = tr?.translatedText?.trim();
+
+                if (translatedText == null || translatedText.isEmpty) {
+                  return const SelectableText(
+                    'Aucune traduction disponible.',
+                    style: TextStyle(fontSize: 14),
+                  );
+                }
+
+                return SingleChildScrollView(
+                  child: SelectableText(
+                    translatedText,
+                    style: const TextStyle(fontSize: 15),
+                  ),
+                );
+              },
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: const Text('Fermer'),
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -487,7 +567,10 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
               builder: (context, snapshot) {
                 String translatedBlock;
 
-                if (userLoginLang.isEmpty) {
+                if (_isMine(msg)) {
+                  translatedBlock =
+                      'traduction: non applicable (message rédigé par moi)';
+                } else if (userLoginLang.isEmpty) {
                   translatedBlock = 'traduction: langue login inconnue';
                 } else if (messageLang.isNotEmpty &&
                     messageLang == userLoginLang) {
@@ -736,6 +819,7 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
                     itemCount: _messages.length,
                     itemBuilder: (context, index) {
                       final msg = _messages[index];
+                      final canTranslate = _shouldOfferTranslation(msg);
                       final isMine = _isMine(msg);
                       final isDeleted = _isDeleted(msg);
 
@@ -798,6 +882,9 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
                                   msg.editedAt != null && !_isDeleted(msg),
                               onAddReaction: canReact
                                   ? () => _showEmojiPicker(msg)
+                                  : null,
+                              onTranslate: canTranslate
+                                  ? () => _showTranslationDialog(msg)
                                   : null,
                             ),
                           ),
@@ -947,6 +1034,7 @@ class _MessageBubble extends StatelessWidget {
   final String timeLabel;
   final bool showEdited;
   final VoidCallback? onAddReaction;
+  final VoidCallback? onTranslate;
 
   const _MessageBubble({
     required this.message,
@@ -954,6 +1042,7 @@ class _MessageBubble extends StatelessWidget {
     required this.timeLabel,
     required this.showEdited,
     this.onAddReaction,
+    this.onTranslate,
   });
 
   bool get isDeleted =>
@@ -965,6 +1054,7 @@ class _MessageBubble extends StatelessWidget {
 
     final replyText = (message.replyBodyText ?? '').trim();
     final hasReply = replyText.isNotEmpty && !isDeleted;
+    final showTranslateIcon = onTranslate != null && !isDeleted;
 
     final bubbleColor = isDeleted
         ? Colors.grey.shade300
@@ -1139,6 +1229,33 @@ class _MessageBubble extends StatelessWidget {
                       child: const Icon(
                         Icons.emoji_emotions_outlined,
                         size: 20,
+                        color: Colors.grey,
+                      ),
+                    ),
+                  ),
+                ),
+              if (showTranslateIcon)
+                Positioned(
+                  bottom: -6,
+                  right: showEmojiIcon ? 38 : 0,
+                  child: GestureDetector(
+                    onTap: onTranslate,
+                    child: Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade200,
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.08),
+                            blurRadius: 3,
+                            offset: const Offset(0, 1),
+                          ),
+                        ],
+                      ),
+                      child: const Icon(
+                        Icons.translate,
+                        size: 18,
                         color: Colors.grey,
                       ),
                     ),
