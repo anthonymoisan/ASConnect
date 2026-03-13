@@ -1,4 +1,3 @@
-// lib/whatsApp/screens/chat_pageGroup.dart
 //
 // ✅ Modifs demandées :
 // - Titre AppBar = conversationTitle (passé depuis la liste)
@@ -9,6 +8,11 @@
 // - ✅ Bouton "quitter" :
 //    - si je suis admin => confirmer + DELETE group conversation
 //    - sinon => confirmer + LEAVE conversation
+// - ✅ Traduction à la demande dans les groupes :
+//    - bouton translate seulement sur les messages des autres
+//    - traduction inline dans la bulle, en italique
+//    - cible = langue du login
+//
 
 import 'dart:async';
 import 'dart:convert';
@@ -20,9 +24,11 @@ import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 
 import '../../l10n/app_localizations.dart';
+import '../../session/app_session.dart';
 import '../../tabular/models/person.dart'; // personPhotoUrl + publicAppKey
 
 import '../models/chat_message.dart';
+import '../models/translation_result.dart';
 import '../services/conversation_api.dart';
 import '../services/conversation_events.dart';
 import 'widget_avatar_viewer.dart'; // ✅ AvatarViewer.open
@@ -57,23 +63,23 @@ class _ChatPageGroupState extends State<ChatPageGroup>
   ChatMessage? _replyToMessage;
   bool _didInitialScroll = false;
 
-  // ✅ Polling
   Timer? _pollTimer;
   bool _pollingEnabled = true;
   static const Duration _pollInterval = Duration(seconds: 6);
 
   bool _reloading = false;
 
-  // ✅ throttling read-sync
   DateTime? _lastReadSyncAt;
   static const Duration _readSyncMinInterval = Duration(seconds: 2);
 
-  // ✅ Scroll intelligent state
-  bool _userScrollingUp = false; // when true: do not autoscroll
-  bool _forceScrollAfterNextReload = false; // used after send/reply
+  bool _userScrollingUp = false;
+  bool _forceScrollAfterNextReload = false;
 
-  // ✅ admin check (lazy)
   bool? _iAmAdmin;
+
+  // ✅ cache traduction à la demande
+  final Map<int, TranslationResult?> _translatedByMessageId = {};
+  final Set<int> _translatingMessageIds = <int>{};
 
   @override
   void initState() {
@@ -88,13 +94,11 @@ class _ChatPageGroupState extends State<ChatPageGroup>
     _loadInitial();
     _startPolling();
 
-    // best-effort: resolve admin once
     unawaited(_resolveAdminStatus());
   }
 
   Future<void> _resolveAdminStatus() async {
     try {
-      // Cette méthode est supposée exister chez toi car utilisée dans ConversationsgroupPage
       final list =
           await ConversationApi.fetchConversationsGroupSummaryForPerson(
             widget.currentPersonId,
@@ -264,6 +268,68 @@ class _ChatPageGroupState extends State<ChatPageGroup>
     } catch (_) {}
   }
 
+  bool _shouldOfferTranslation(ChatMessage msg) {
+    final text = msg.bodyText.trim();
+    if (text.isEmpty) return false;
+    if (_isMine(msg)) return false;
+    if (_isDeleted(msg)) return false;
+
+    final loginLang =
+        (AppSession.loginLangCode ??
+                Localizations.localeOf(context).languageCode)
+            .trim()
+            .toLowerCase();
+
+    final messageLang = (msg.lang ?? '').trim().toLowerCase();
+
+    if (loginLang.isEmpty) return false;
+
+    if (messageLang.isNotEmpty && messageLang == loginLang) {
+      return false;
+    }
+
+    return true;
+  }
+
+  Future<void> _translateMessageOnDemand(ChatMessage msg) async {
+    final text = msg.bodyText.trim();
+    if (text.isEmpty) return;
+    if (!_shouldOfferTranslation(msg)) return;
+    if (_translatingMessageIds.contains(msg.id)) return;
+
+    final loginLang =
+        (AppSession.loginLangCode ??
+                Localizations.localeOf(context).languageCode)
+            .trim()
+            .toLowerCase();
+
+    setState(() {
+      _translatingMessageIds.add(msg.id);
+    });
+
+    try {
+      final result = await ConversationApi.detectAndTranslateText(
+        sentence: text,
+        targetLang: loginLang,
+      );
+
+      if (!mounted) return;
+      setState(() {
+        _translatedByMessageId[msg.id] = result;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _translatedByMessageId[msg.id] = null;
+      });
+    } finally {
+      if (!mounted) return;
+      setState(() {
+        _translatingMessageIds.remove(msg.id);
+      });
+    }
+  }
+
   Future<void> _loadInitial() async {
     try {
       final msgs = await ConversationApi.fetchMessages(
@@ -362,10 +428,6 @@ class _ChatPageGroupState extends State<ChatPageGroup>
       if (mounted) setState(() => _sending = false);
     }
   }
-
-  // ---------------------------------------------------------------------------
-  // ✅ Quitter / Supprimer selon admin
-  // ---------------------------------------------------------------------------
 
   Future<void> _confirmDeleteGroup() async {
     final l10n = AppLocalizations.of(context)!;
@@ -478,8 +540,6 @@ class _ChatPageGroupState extends State<ChatPageGroup>
       await _confirmLeaveGroup();
     }
   }
-
-  // ---------------------------------------------------------------------------
 
   void _showMyMessageMenu(ChatMessage msg) {
     showModalBottomSheet<void>(
@@ -747,6 +807,13 @@ class _ChatPageGroupState extends State<ChatPageGroup>
                       final isMine = _isMine(msg);
                       final isDeleted = _isDeleted(msg);
 
+                      final canTranslate = _shouldOfferTranslation(msg);
+                      final translatedText =
+                          _translatedByMessageId[msg.id]?.translatedText;
+                      final isTranslating = _translatingMessageIds.contains(
+                        msg.id,
+                      );
+
                       final showDateHeader =
                           index == 0 ||
                           !_isSameDay(
@@ -778,10 +845,14 @@ class _ChatPageGroupState extends State<ChatPageGroup>
                           onAddReaction: canReact
                               ? () => _showEmojiPicker(msg)
                               : null,
+                          onTranslate: canTranslate
+                              ? () => _translateMessageOnDemand(msg)
+                              : null,
+                          translatedText: translatedText,
+                          isTranslating: isTranslating,
                         ),
                       );
 
-                      // ✅ Avatar cliquable => plein écran (AvatarViewer.open)
                       final line = isMine
                           ? bubble
                           : Row(
@@ -915,7 +986,6 @@ class _ChatPageGroupState extends State<ChatPageGroup>
   }
 }
 
-/// Bandeau "Répondre à <pseudo> : <extrait>"
 class _ReplyBanner extends StatelessWidget {
   final ChatMessage message;
   final VoidCallback onCancel;
@@ -969,13 +1039,15 @@ class _ReplyBanner extends StatelessWidget {
   }
 }
 
-/// Bulle WhatsApp + reply + réactions + ✅ "vu"
 class _MessageBubble extends StatelessWidget {
   final ChatMessage message;
   final bool isMine;
   final String timeLabel;
   final bool showEdited;
   final VoidCallback? onAddReaction;
+  final VoidCallback? onTranslate;
+  final String? translatedText;
+  final bool isTranslating;
 
   const _MessageBubble({
     required this.message,
@@ -983,6 +1055,9 @@ class _MessageBubble extends StatelessWidget {
     required this.timeLabel,
     required this.showEdited,
     this.onAddReaction,
+    this.onTranslate,
+    this.translatedText,
+    this.isTranslating = false,
   });
 
   bool get isDeleted =>
@@ -1019,10 +1094,18 @@ class _MessageBubble extends StatelessWidget {
     final hasReactions = reactionCounts.isNotEmpty;
 
     final showEmojiIcon = onAddReaction != null && !isDeleted;
+    final showTranslateIcon = onTranslate != null && !isDeleted;
 
     final bool showSeenChecks = isMine && !isDeleted;
     final bool isSeen = message.isSeen == true;
     final checkColor = isSeen ? Colors.blue : Colors.grey.shade600;
+
+    final showTranslatedText =
+        !isDeleted &&
+        !isTranslating &&
+        translatedText != null &&
+        translatedText!.trim().isNotEmpty &&
+        translatedText!.trim() != message.bodyText.trim();
 
     return Align(
       alignment: align,
@@ -1111,6 +1194,28 @@ class _MessageBubble extends StatelessWidget {
                               : Colors.black,
                         ),
                       ),
+                      if (!isDeleted && isTranslating) ...[
+                        const SizedBox(height: 6),
+                        Text(
+                          '…',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontStyle: FontStyle.italic,
+                            color: Colors.grey.shade600,
+                          ),
+                        ),
+                      ],
+                      if (showTranslatedText) ...[
+                        const SizedBox(height: 6),
+                        Text(
+                          translatedText!.trim(),
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontStyle: FontStyle.italic,
+                            color: Colors.grey.shade700,
+                          ),
+                        ),
+                      ],
                       const SizedBox(height: 2),
                       Row(
                         mainAxisSize: MainAxisSize.min,
@@ -1173,6 +1278,33 @@ class _MessageBubble extends StatelessWidget {
                     ),
                   ),
                 ),
+              if (showTranslateIcon)
+                Positioned(
+                  bottom: -6,
+                  right: showEmojiIcon ? 38 : 0,
+                  child: GestureDetector(
+                    onTap: onTranslate,
+                    child: Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade200,
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.08),
+                            blurRadius: 3,
+                            offset: const Offset(0, 1),
+                          ),
+                        ],
+                      ),
+                      child: Icon(
+                        Icons.translate,
+                        size: 18,
+                        color: isTranslating ? Colors.blueGrey : Colors.grey,
+                      ),
+                    ),
+                  ),
+                ),
             ],
           ),
           if (hasReactions)
@@ -1212,7 +1344,6 @@ class _MessageBubble extends StatelessWidget {
   }
 }
 
-// ✅ Avatar mini (cache mémoire + header X-App-Key) + ✅ onTap pour ouvrir en plein écran
 class PeopleMiniAvatar extends StatefulWidget {
   const PeopleMiniAvatar({
     super.key,
