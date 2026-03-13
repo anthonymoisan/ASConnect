@@ -10,6 +10,7 @@ import 'package:flutter_localized_locales/flutter_localized_locales.dart';
 
 import 'signup_page.dart';
 import 'forgot_password_page.dart';
+import '../session/app_session.dart';
 
 // ✅ AppLocalizations généré chez toi dans lib/l10n/
 import '../l10n/app_localizations.dart';
@@ -198,6 +199,7 @@ class _LoginPageState extends State<LoginPage> {
 
       // ✅ ajoute la langue attendue par le backend
       final lang = _backendLang(context);
+      AppSession.loginLangCode = lang;
 
       final resp = await http
           .post(

@@ -13,6 +13,8 @@ import '../services/conversation_events.dart';
 
 import '../models/translation_result.dart';
 
+import '../../session/app_session.dart';
+
 class ChatPage extends StatefulWidget {
   final int conversationId;
   final int currentPersonId;
@@ -225,17 +227,31 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
     }
   }
 
-  Future<TranslationResult?> _translateMessageToFrench(ChatMessage msg) async {
+  Future<TranslationResult?> _translateMessageForLoginLanguage(
+    ChatMessage msg,
+  ) async {
     final text = msg.bodyText.trim();
     if (text.isEmpty) return null;
 
-    if ((msg.lang ?? '').toLowerCase() == 'fr') {
+    final loginLang =
+        (AppSession.loginLangCode ??
+                Localizations.localeOf(context).languageCode)
+            .trim()
+            .toLowerCase();
+
+    final messageLang = (msg.lang ?? '').trim().toLowerCase();
+
+    // Pas de traduction si on ne connaît pas la langue cible
+    if (loginLang.isEmpty) return null;
+
+    // Pas de traduction si le message est déjà dans la langue du login
+    if (messageLang.isNotEmpty && messageLang == loginLang) {
       return null;
     }
 
     return ConversationApi.detectAndTranslateText(
       sentence: text,
-      targetLang: 'fr',
+      targetLang: loginLang,
     );
   }
 
@@ -451,6 +467,14 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
 
     final text = msg.bodyText.trim().isEmpty ? '(vide)' : msg.bodyText;
 
+    final userLoginLang =
+        (AppSession.loginLangCode ??
+                Localizations.localeOf(context).languageCode)
+            .trim()
+            .toLowerCase();
+
+    final messageLang = (msg.lang ?? '').trim().toLowerCase();
+
     await showDialog<void>(
       context: context,
       builder: (ctx) {
@@ -459,21 +483,27 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
           content: SizedBox(
             width: 420,
             child: FutureBuilder<TranslationResult?>(
-              future: _translateMessageToFrench(msg),
+              future: _translateMessageForLoginLanguage(msg),
               builder: (context, snapshot) {
                 String translatedBlock;
 
-                if ((msg.lang ?? '').toLowerCase() == 'fr') {
-                  translatedBlock = 'traduction fr: déjà en français';
+                if (userLoginLang.isEmpty) {
+                  translatedBlock = 'traduction: langue login inconnue';
+                } else if (messageLang.isNotEmpty &&
+                    messageLang == userLoginLang) {
+                  translatedBlock =
+                      'traduction ($userLoginLang): déjà dans la langue du login';
                 } else if (snapshot.connectionState ==
                     ConnectionState.waiting) {
-                  translatedBlock = 'traduction fr: chargement...';
+                  translatedBlock =
+                      'traduction ($userLoginLang): chargement...';
                 } else if (snapshot.hasError) {
-                  translatedBlock = 'traduction fr: erreur (${snapshot.error})';
+                  translatedBlock =
+                      'traduction ($userLoginLang): erreur (${snapshot.error})';
                 } else {
                   final tr = snapshot.data;
                   translatedBlock =
-                      'traduction fr: ${tr?.translatedText ?? "(aucune)"}';
+                      'traduction ($userLoginLang): ${tr?.translatedText ?? "(aucune)"}';
                 }
 
                 return SingleChildScrollView(
@@ -481,6 +511,7 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
                     'message_id: ${msg.id}\n'
                     'people_id: ${msg.senderPeopleId}\n'
                     'message.lang: ${msg.lang ?? "(null)"}\n'
+                    'login.lang: $userLoginLang\n'
                     'texte: $text\n'
                     '$translatedBlock',
                     style: const TextStyle(fontSize: 14),
