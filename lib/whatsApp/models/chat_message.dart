@@ -33,6 +33,8 @@ class ChatMessage {
   /// Liste des réactions individuelles
   final List<MessageReaction> reactions;
 
+  final String? lang; // langue du message
+
   /// ✅ Option A: vu/non vu sur les messages envoyés par le viewer
   /// Peut être null si non applicable (message de l’autre, groupe, etc.)
   final bool? isSeen;
@@ -48,6 +50,7 @@ class ChatMessage {
     this.replyBodyText,
     this.reactions = const [],
     this.isSeen,
+    this.lang,
   });
 
   factory ChatMessage.fromJson(Map<String, dynamic> json) {
@@ -72,6 +75,8 @@ class ChatMessage {
           .toList(),
 
       isSeen: json['is_seen'] as bool?,
+
+      lang: json['lang'] as String?,
     );
   }
 }

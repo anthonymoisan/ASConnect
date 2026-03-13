@@ -8,6 +8,7 @@ import '../models/conversation.dart';
 import '../models/lastMessage.dart';
 import '../models/chat_message.dart';
 import '../models/conversation_summary.dart';
+import '../models/translation_result.dart';
 
 // 🔑 Clé d'application publique — valable pour tous les endpoints /api/public/*
 const String _publicAppKey = String.fromEnvironment(
@@ -691,6 +692,28 @@ class ConversationApi {
     throw Exception(
       'Erreur deleteGroupConversation '
       '(${resp.statusCode}) : ${resp.body}',
+    );
+  }
+
+  static Future<TranslationResult> detectAndTranslateText({
+    required String sentence,
+    required String targetLang,
+  }) async {
+    final uri = Uri.parse('$_baseUrl/translate/detect');
+
+    final resp = await _client.post(
+      uri,
+      headers: {'Content-Type': 'application/json', 'X-App-Key': _appKey},
+      body: jsonEncode({'sentence': sentence, 'target_lang': targetLang}),
+    );
+
+    if (resp.statusCode == 200) {
+      final data = jsonDecode(resp.body) as Map<String, dynamic>;
+      return TranslationResult.fromJson(data);
+    }
+
+    throw Exception(
+      'Erreur detectAndTranslateText (${resp.statusCode}) : ${resp.body}',
     );
   }
 }

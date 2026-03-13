@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:intl/intl.dart';
@@ -9,6 +10,8 @@ import '../../l10n/app_localizations.dart';
 import '../models/chat_message.dart';
 import '../services/conversation_api.dart';
 import '../services/conversation_events.dart';
+
+import '../models/translation_result.dart';
 
 class ChatPage extends StatefulWidget {
   final int conversationId;
@@ -134,10 +137,6 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
     if (diff == 0) return l10n.today;
     if (diff == 1) return l10n.yesterday;
 
-    // Exemple:
-    // FR: 8 janv. 2026
-    // EN: Jan 8, 2026
-    // ES: 8 ene 2026
     return DateFormat.yMMMd(locale).format(date);
   }
 
@@ -224,6 +223,20 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
     } catch (_) {
       // silencieux
     }
+  }
+
+  Future<TranslationResult?> _translateMessageToFrench(ChatMessage msg) async {
+    final text = msg.bodyText.trim();
+    if (text.isEmpty) return null;
+
+    if ((msg.lang ?? '').toLowerCase() == 'fr') {
+      return null;
+    }
+
+    return ConversationApi.detectAndTranslateText(
+      sentence: text,
+      targetLang: 'fr',
+    );
   }
 
   Future<void> _loadInitial() async {
@@ -431,6 +444,60 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
         SnackBar(content: Text(l10n.chatDeleteError(e.toString()))),
       );
     }
+  }
+
+  Future<void> _showDebugMessageDialog(ChatMessage msg) async {
+    if (!kDebugMode || !mounted) return;
+
+    final text = msg.bodyText.trim().isEmpty ? '(vide)' : msg.bodyText;
+
+    await showDialog<void>(
+      context: context,
+      builder: (ctx) {
+        return AlertDialog(
+          title: const Text('Debug message'),
+          content: SizedBox(
+            width: 420,
+            child: FutureBuilder<TranslationResult?>(
+              future: _translateMessageToFrench(msg),
+              builder: (context, snapshot) {
+                String translatedBlock;
+
+                if ((msg.lang ?? '').toLowerCase() == 'fr') {
+                  translatedBlock = 'traduction fr: déjà en français';
+                } else if (snapshot.connectionState ==
+                    ConnectionState.waiting) {
+                  translatedBlock = 'traduction fr: chargement...';
+                } else if (snapshot.hasError) {
+                  translatedBlock = 'traduction fr: erreur (${snapshot.error})';
+                } else {
+                  final tr = snapshot.data;
+                  translatedBlock =
+                      'traduction fr: ${tr?.translatedText ?? "(aucune)"}';
+                }
+
+                return SingleChildScrollView(
+                  child: SelectableText(
+                    'message_id: ${msg.id}\n'
+                    'people_id: ${msg.senderPeopleId}\n'
+                    'message.lang: ${msg.lang ?? "(null)"}\n'
+                    'texte: $text\n'
+                    '$translatedBlock',
+                    style: const TextStyle(fontSize: 14),
+                  ),
+                );
+              },
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: const Text('Fermer'),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   void _showMyMessageMenu(ChatMessage msg) {
@@ -683,6 +750,9 @@ class _ChatPageState extends State<ChatPage> with WidgetsBindingObserver {
                               ),
                             ),
                           GestureDetector(
+                            onTap: kDebugMode
+                                ? () => _showDebugMessageDialog(msg)
+                                : null,
                             onLongPress: onLongPress,
                             child: _MessageBubble(
                               message: msg,
