@@ -11,6 +11,11 @@
 // - Ajout filtre LANGUES multi-lingue (via .arb : mapLanguagesSectionTitle / mapAllLanguagesSelected / mapLanguagesSelectedCount)
 // - Les libellés de langues proviennent de l’API (languagesTranslated) via TabularApi
 //   et sont passés au sheet via `languagesByCode`.
+//
+// ✅ NEW:
+// - Bouton translate sur le titre du groupe
+// - Traduction à la demande
+// - Affichage inline sous le titre, en italique
 
 import 'dart:async';
 import 'dart:typed_data';
@@ -20,10 +25,12 @@ import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
 
 import '../../l10n/app_localizations.dart';
+import '../../session/app_session.dart';
 import '../../tabular/models/person.dart';
 import '../../tabular/services/tabular_api.dart';
 
 import '../models/conversation_summary.dart';
+import '../models/translation_result.dart';
 import '../services/conversation_api.dart';
 import '../services/conversation_events.dart';
 import 'audience_filters.dart';
@@ -50,6 +57,9 @@ class _ConversationsgroupPageState extends State<ConversationsgroupPage>
   bool _reloading = false;
 
   static const Duration _pollInterval = Duration(seconds: 10);
+
+  final Map<int, TranslationResult?> _translatedTitlesByConversationId = {};
+  final Set<int> _translatingTitleIds = <int>{};
 
   void _onRefreshTick() => _reload(silent: true);
 
@@ -79,6 +89,8 @@ class _ConversationsgroupPageState extends State<ConversationsgroupPage>
       _items = [];
       _error = null;
       _initialLoading = true;
+      _translatedTitlesByConversationId.clear();
+      _translatingTitleIds.clear();
       _loadInitial();
       _startPolling();
     }
@@ -226,7 +238,7 @@ class _ConversationsgroupPageState extends State<ConversationsgroupPage>
         builder: (_) => ChatPageGroup(
           conversationId: conv.id,
           currentPersonId: pid,
-          conversationTitle: conv.title, // ✅ ici
+          conversationTitle: conv.title,
         ),
       ),
     );
@@ -373,8 +385,7 @@ class _ConversationsgroupPageState extends State<ConversationsgroupPage>
             builder: (_) => ChatPageGroup(
               conversationId: createdConversationId,
               currentPersonId: pid2,
-              conversationTitle:
-                  '', // on met vide, le reload rafraîchira la liste ensuite
+              conversationTitle: '',
             ),
           ),
         );
@@ -419,6 +430,68 @@ class _ConversationsgroupPageState extends State<ConversationsgroupPage>
     if (mc == null || mc <= 0) return '';
     final l10n = AppLocalizations.of(context)!;
     return l10n.groupMembersCount(mc);
+  }
+
+  String _loginLangCode(BuildContext context) {
+    return (AppSession.loginLangCode ??
+            Localizations.localeOf(context).languageCode)
+        .trim()
+        .toLowerCase();
+  }
+
+  bool _canTranslateGroupTitle(ConversationSummary conv) {
+    final raw = conv.title.trim();
+    if (raw.isEmpty) return false;
+
+    final loginLang = _loginLangCode(context);
+    if (loginLang.isEmpty) return false;
+
+    return true;
+  }
+
+  Future<void> _translateGroupTitleOnDemand(ConversationSummary conv) async {
+    final raw = conv.title.trim();
+    if (raw.isEmpty) return;
+    if (!_canTranslateGroupTitle(conv)) return;
+    if (_translatingTitleIds.contains(conv.id)) return;
+
+    final loginLang = _loginLangCode(context);
+
+    setState(() {
+      _translatingTitleIds.add(conv.id);
+    });
+
+    try {
+      final result = await ConversationApi.detectAndTranslateText(
+        sentence: raw,
+        targetLang: loginLang,
+      );
+
+      if (!mounted) return;
+
+      final translated = result.translatedText.trim();
+      final detected = result.detectedSourceLang.trim().toLowerCase();
+
+      setState(() {
+        if (translated.isEmpty ||
+            translated == raw ||
+            (detected.isNotEmpty && detected == loginLang)) {
+          _translatedTitlesByConversationId[conv.id] = null;
+        } else {
+          _translatedTitlesByConversationId[conv.id] = result;
+        }
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _translatedTitlesByConversationId[conv.id] = null;
+      });
+    } finally {
+      if (!mounted) return;
+      setState(() {
+        _translatingTitleIds.remove(conv.id);
+      });
+    }
   }
 
   @override
@@ -488,6 +561,18 @@ class _ConversationsgroupPageState extends State<ConversationsgroupPage>
         final adminId = conv.idAdmin;
         final isAdmin = _amIAdmin(conv);
 
+        final rawTitle = _groupTitle(context, conv);
+        final canTranslateTitle = _canTranslateGroupTitle(conv);
+        final translatedTitle = _translatedTitlesByConversationId[conv.id]
+            ?.translatedText
+            .trim();
+        final isTranslatingTitle = _translatingTitleIds.contains(conv.id);
+
+        final showTranslatedTitle =
+            translatedTitle != null &&
+            translatedTitle.isNotEmpty &&
+            translatedTitle != rawTitle.trim();
+
         return ListTile(
           contentPadding: const EdgeInsets.symmetric(
             horizontal: 16,
@@ -500,34 +585,90 @@ class _ConversationsgroupPageState extends State<ConversationsgroupPage>
                 ? null
                 : () => AvatarViewer.open(context, peopleId: adminId),
           ),
-          title: Row(
+          title: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(
-                child: Text(
-                  _groupTitle(context, conv),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontWeight: FontWeight.w700),
-                ),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            rawTitle,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontWeight: FontWeight.w700),
+                          ),
+                        ),
+                        if (canTranslateTitle) ...[
+                          const SizedBox(width: 6),
+                          GestureDetector(
+                            onTap: () => _translateGroupTitleOnDemand(conv),
+                            child: Container(
+                              padding: const EdgeInsets.all(4),
+                              decoration: BoxDecoration(
+                                color: Colors.grey.shade200,
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(
+                                Icons.translate,
+                                size: 16,
+                                color: isTranslatingTitle
+                                    ? Colors.blueGrey
+                                    : Colors.grey.shade700,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                  if (membersInline.isNotEmpty) ...[
+                    const SizedBox(width: 8),
+                    Text(
+                      membersInline,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: Colors.orange.shade800,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                  const SizedBox(width: 10),
+                  Text(
+                    _formatConversationDate(conv.lastMessageAt),
+                    style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
+                  ),
+                ],
               ),
-              if (membersInline.isNotEmpty) ...[
-                const SizedBox(width: 8),
+              if (isTranslatingTitle) ...[
+                const SizedBox(height: 4),
                 Text(
-                  membersInline,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+                  '…',
                   style: TextStyle(
-                    color: Colors.orange.shade800,
                     fontSize: 12,
-                    fontWeight: FontWeight.w600,
+                    fontStyle: FontStyle.italic,
+                    color: Colors.grey.shade600,
                   ),
                 ),
               ],
-              const SizedBox(width: 10),
-              Text(
-                _formatConversationDate(conv.lastMessageAt),
-                style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
-              ),
+              if (!isTranslatingTitle && showTranslatedTitle) ...[
+                const SizedBox(height: 4),
+                Text(
+                  translatedTitle,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontStyle: FontStyle.italic,
+                    color: Colors.grey.shade700,
+                  ),
+                ),
+              ],
             ],
           ),
           subtitle: Padding(
@@ -550,20 +691,13 @@ class _ConversationsgroupPageState extends State<ConversationsgroupPage>
               ),
             ],
           ),
-          // ✅ Tap => chat
           onTap: () => _openConversation(conv),
-          // ✅ Long press => delete si admin / leave si membre
           onLongPress: () => _handleLongPress(conv),
         );
       },
     );
   }
 }
-
-// ============================================================================
-// Dialog : controllers + Audience Filters
-// ✅ MODIF : dataset langues + passage au sheet + matchesPerson inclut lang
-// ============================================================================
 
 class _CreateGroupDialog extends StatefulWidget {
   final int peoplePublicId;
@@ -580,12 +714,9 @@ class _CreateGroupDialogState extends State<_CreateGroupDialog> {
 
   bool _creating = false;
 
-  // Audience
   List<Person>? _allPeople;
   AudienceFilters<Person>? _audience;
   Map<String, String> _countriesByCode = const {};
-
-  // ✅ NEW: libellés langues (base code -> label traduit dans la locale UI)
   Map<String, String> _languagesByCode = const {};
 
   int _audienceCount = 0;
@@ -642,14 +773,12 @@ class _CreateGroupDialogState extends State<_CreateGroupDialog> {
       final listPerson = await TabularApi.fetchPeopleMapRepresentation();
       final people = listPerson.items;
 
-      // Countries translated
       Map<String, String> cMap = const {};
       try {
         final locale = Localizations.localeOf(context).languageCode;
         cMap = await TabularApi.fetchCountriesTranslated(locale: locale);
       } catch (_) {}
 
-      // ✅ Languages translated (NEW API)
       Map<String, String> lMap = const {};
       try {
         final locale = Localizations.localeOf(context).languageCode.trim();
@@ -674,7 +803,7 @@ class _CreateGroupDialogState extends State<_CreateGroupDialog> {
         people,
         countryOf: (p) => p.countryCode,
         ageOf: (p) => p.age,
-        languageOf: (p) => p.lang, // ✅
+        languageOf: (p) => p.lang,
       );
 
       setState(() {
@@ -710,7 +839,7 @@ class _CreateGroupDialogState extends State<_CreateGroupDialog> {
       all,
       (p) => p.countryCode,
     );
-    final langOpts = AudienceFilters.languageOptions(all, (p) => p.lang); // ✅
+    final langOpts = AudienceFilters.languageOptions(all, (p) => p.lang);
 
     int count = 0;
     for (final p in all) {
@@ -718,13 +847,13 @@ class _CreateGroupDialogState extends State<_CreateGroupDialog> {
         p,
         countryOf: (pp) => pp.countryCode,
         ageOf: (pp) => pp.age,
-        genotypeOf: (pp) => pp.genotype, // ✅ reste nécessaire (matching)
-        languageOf: (pp) => pp.lang, // ✅ NEW
+        genotypeOf: (pp) => pp.genotype,
+        languageOf: (pp) => pp.lang,
         latOf: (pp) => pp.latitude,
         lngOf: (pp) => pp.longitude,
         datasetAgeDomain: ageDomain,
         datasetCountryOptions: countryOpts,
-        datasetLanguageOptions: langOpts, // ✅ NEW
+        datasetLanguageOptions: langOpts,
       )) {
         count++;
       }
@@ -744,11 +873,11 @@ class _CreateGroupDialogState extends State<_CreateGroupDialog> {
       countryOf: (p) => p.countryCode,
       ageOf: (p) => p.age,
       genotypeOf: (p) => p.genotype,
-      languageOf: (p) => p.lang, // ✅
+      languageOf: (p) => p.lang,
       latOf: (p) => p.latitude,
       lngOf: (p) => p.longitude,
       countriesByCode: _countriesByCode,
-      languagesByCode: _languagesByCode, // ✅ si tu as la map traduite
+      languagesByCode: _languagesByCode,
       resolveMyLocation: () => _resolveMyLocationForAudience(context),
     );
 
@@ -773,7 +902,7 @@ class _CreateGroupDialogState extends State<_CreateGroupDialog> {
       all,
       (p) => p.countryCode,
     );
-    final langOpts = AudienceFilters.languageOptions(all, (p) => p.lang); // ✅
+    final langOpts = AudienceFilters.languageOptions(all, (p) => p.lang);
 
     final ids = <int>[];
     for (final p in all) {
@@ -781,13 +910,13 @@ class _CreateGroupDialogState extends State<_CreateGroupDialog> {
         p,
         countryOf: (pp) => pp.countryCode,
         ageOf: (pp) => pp.age,
-        genotypeOf: (pp) => pp.genotype, // ✅
-        languageOf: (pp) => pp.lang, // ✅
+        genotypeOf: (pp) => pp.genotype,
+        languageOf: (pp) => pp.lang,
         latOf: (pp) => pp.latitude,
         lngOf: (pp) => pp.longitude,
         datasetAgeDomain: ageDomain,
         datasetCountryOptions: countryOpts,
-        datasetLanguageOptions: langOpts, // ✅
+        datasetLanguageOptions: langOpts,
       );
       if (ok) ids.add(p.id);
     }
@@ -939,10 +1068,6 @@ class _CreateGroupDialogState extends State<_CreateGroupDialog> {
   }
 }
 
-// ============================================================================
-// UI helpers
-// ============================================================================
-
 class _UnreadBubble extends StatelessWidget {
   final int count;
 
@@ -970,7 +1095,6 @@ class _UnreadBubble extends StatelessWidget {
   }
 }
 
-// ✅ Avatar robuste (headers X-App-Key + cache mémoire)
 class PeoplePhotoAvatar extends StatefulWidget {
   const PeoplePhotoAvatar({
     super.key,
